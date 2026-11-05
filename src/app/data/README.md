@@ -1,0 +1,15 @@
+# data/
+
+Camada de dados **sem estado**. Um service aqui só monta a requisição e devolve `Observable<Dto>`.
+
+```
+data/<dominio>/<recurso>/
+  <recurso>.service.ts     # chamadas REST/GraphQL
+  dto/                     # VerboRecursoDto (verbo-recurso.dto.ts), GetRecursoQuery (.query.ts)
+  queries/                 # documentos gql + GetRecursoQueryGql (.query-gql.ts)
+  mocks/                   # fábricas com @faker-js/faker
+```
+
+Domínios: `clientes`, `pecas`, `precificacao`, `documentos`, `portfolio`. O que é compartilhado entre domínios vai em `common/`.
+
+**Proibido:** guardar estado (signals/BehaviorSubject), nomes genéricos (`Dados`) ou voltados à UI (`FormularioPeca`).
