@@ -7,7 +7,8 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
+import { CastworkTitleStrategy } from '@core/strategies/castwork-title.strategy';
 
 import { routes } from './app.routes';
 
@@ -21,5 +22,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },
+    { provide: TitleStrategy, useClass: CastworkTitleStrategy },
   ],
 };

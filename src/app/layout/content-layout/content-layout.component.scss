@@ -1,0 +1,17 @@
+// 991.98px = abaixo do breakpoint `lg` do Bootstrap (mesmo corte do `d-lg-none` no header).
+.cw-menu {
+  width: 240px;
+  flex-shrink: 0;
+
+  @media (max-width: 991.98px) {
+    position: fixed;
+    inset: 57px auto 0 0;
+    z-index: 1040;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-out;
+
+    &.aberto {
+      transform: none;
+    }
+  }
+}

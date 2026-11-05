@@ -1,0 +1,35 @@
+import { TestBed } from '@angular/core/testing';
+import { Title } from '@angular/platform-browser';
+import { Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+
+import { appConfig } from './app.config';
+
+describe('Rotas da aplicação', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({ providers: appConfig.providers });
+  });
+
+  it('deve redirecionar a raiz para /pecas', async () => {
+    await RouterTestingHarness.create('/');
+    expect(TestBed.inject(Router).url).toBe('/pecas');
+  });
+
+  it.each([
+    ['/clientes', 'Clientes'],
+    ['/pecas', 'Peças'],
+    ['/precificacao', 'Precificação'],
+    ['/documentos', 'Documentos'],
+    ['/portfolio', 'Portfólio'],
+  ])('deve carregar %s sob demanda com o título correto', async (url, titulo) => {
+    const harness = await RouterTestingHarness.create(url);
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent).toBe(titulo);
+    expect(TestBed.inject(Title).getTitle()).toBe(`${titulo} | Castwork`);
+  });
+
+  it('deve mostrar 404 para rota inexistente', async () => {
+    const harness = await RouterTestingHarness.create('/nao-existe');
+    expect(harness.routeNativeElement!.textContent).toContain('404');
+    expect(TestBed.inject(Title).getTitle()).toBe('Página não encontrada | Castwork');
+  });
+});

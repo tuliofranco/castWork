@@ -9,6 +9,7 @@ Infraestrutura **essencial e única** da aplicação. Tudo aqui existe uma vez s
 | `error-handlers/` | `GlobalErrorHandler` |
 | `factories/` | factory do Apollo (`InMemoryCache`, `typePolicies`, `fetchPolicy`) |
 | `services/` | auth, jwt, sessão, permissão |
+| `strategies/` | `TitleStrategy` customizada |
 | `validators/` | validators de formulário com regra de negócio global |
 | `models/` | tipos globais (ex.: payload do token, permissões) |
 

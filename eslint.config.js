@@ -49,6 +49,11 @@ module.exports = tseslint.config(
   },
   {
     files: ['**/*.spec.ts'],
-    rules: { 'sonarjs/no-hardcoded-passwords': 'off' },
+    rules: {
+      'sonarjs/no-hardcoded-passwords': 'off',
+      // Em teste, falhar com TypeError num `!` é tão claro quanto um expect; componentes falsos não precisam de OnPush.
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
+    },
   },
 );

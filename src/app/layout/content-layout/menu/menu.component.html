@@ -1,0 +1,18 @@
+<nav aria-label="Menu principal">
+  <ul class="nav nav-pills flex-column gap-1">
+    @for (item of itens(); track item.caminho) {
+      <li class="nav-item">
+        <a
+          class="nav-link d-flex align-items-center gap-2"
+          [routerLink]="item.caminho"
+          routerLinkActive="active"
+          ariaCurrentWhenActive="page"
+          (click)="navegou.emit()"
+        >
+          <i class="bi" [class]="'bi-' + item.icone" aria-hidden="true"></i>
+          {{ item.titulo }}
+        </a>
+      </li>
+    }
+  </ul>
+</nav>
