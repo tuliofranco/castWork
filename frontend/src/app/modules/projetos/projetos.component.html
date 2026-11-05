@@ -1,0 +1,59 @@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0 me-auto">Projetos</h1>
+  <input
+    type="search"
+    class="form-control"
+    style="max-width: 280px"
+    placeholder="Buscar por projeto ou cliente"
+    aria-label="Buscar projetos"
+    [formControl]="busca"
+  />
+  @if (podeCriar) {
+    <a class="btn btn-primary" routerLink="novo"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo projeto</a>
+  }
+</div>
+
+@if (projetos.error()) {
+  <div class="alert alert-danger" role="alert">Não foi possível carregar os projetos.</div>
+} @else if (projetos.value(); as pagina) {
+  @if (pagina.nodes.length === 0) {
+    <div class="text-center text-body-secondary py-5">
+      <i class="bi bi-collection fs-1 d-block mb-2" aria-hidden="true"></i>
+      {{ busca.value ? 'Nenhum projeto encontrado para a busca.' : 'Nenhum projeto ainda. Crie o primeiro!' }}
+    </div>
+  } @else {
+    <div class="list-group mb-3">
+      @for (projeto of pagina.nodes; track projeto.id) {
+        @let atual = projeto.versoes[0];
+        <a class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" [routerLink]="[projeto.id]">
+          <i class="bi bi-collection fs-4 text-body-secondary" aria-hidden="true"></i>
+          <div class="me-auto">
+            <div class="fw-semibold">{{ projeto.nome }}</div>
+            <div class="small text-body-secondary">{{ projeto.cliente?.nome ?? 'Sem cliente' }}</div>
+          </div>
+          @if (atual) {
+            <span class="small text-body-secondary">v{{ atual.numero }} · {{ projeto.versoes.length }} versão(ões)</span>
+            <span class="badge {{ status[atual.status].classe }}">{{ status[atual.status].rotulo }}</span>
+          }
+        </a>
+      }
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-body-secondary small me-auto">{{ pagina.totalCount }} projeto(s) · página {{ paginacao.numero() }}</span>
+      <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="!paginacao.temAnterior()" (click)="paginacao.anterior()">
+        Anterior
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-secondary btn-sm"
+        [disabled]="!pagina.pageInfo.hasNextPage"
+        (click)="paginacao.proxima(pagina.pageInfo.endCursor)"
+      >
+        Próxima
+      </button>
+    </div>
+  }
+} @else {
+  <div class="text-center py-5"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Carregando...</span></div></div>
+}

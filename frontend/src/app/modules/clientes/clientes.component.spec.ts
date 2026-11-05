@@ -7,14 +7,14 @@ import { of } from 'rxjs';
 import { ClientesComponent } from './clientes.component';
 
 describe('ClientesComponent', () => {
-  it('deve listar clientes com documento, contato e quantidade de peças', async () => {
+  it('deve listar clientes com documento, contato e quantidade de projetos', async () => {
     const getClientes = vi.fn().mockReturnValue(
       of({
         totalCount: 2,
         pageInfo: { hasNextPage: true, endCursor: 'c1' },
         nodes: [
-          { id: 1, nome: 'Ana', documento: '529.982.247-25', email: 'ana@x.com', telefone: '(41) 99999-0000', ativo: true, pecas: [{ id: 1 }, { id: 2 }] },
-          { id: 2, nome: 'Bia', documento: null, email: null, telefone: null, ativo: false, pecas: [] },
+          { id: 1, nome: 'Ana', documento: '529.982.247-25', email: 'ana@x.com', telefone: '(41) 99999-0000', ativo: true, projetos: [{ id: 1 }, { id: 2 }] },
+          { id: 2, nome: 'Bia', documento: null, email: null, telefone: null, ativo: false, projetos: [] },
         ],
       }),
     );

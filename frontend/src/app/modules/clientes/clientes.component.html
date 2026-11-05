@@ -29,7 +29,7 @@
             <th scope="col">Nome</th>
             <th scope="col">CPF/CNPJ</th>
             <th scope="col">Contato</th>
-            <th scope="col" class="text-end">Peças</th>
+            <th scope="col" class="text-end">Projetos</th>
           </tr>
         </thead>
         <tbody>
@@ -46,7 +46,7 @@
                 <div>{{ cliente.telefone ?? '' }}</div>
                 <div class="small text-body-secondary">{{ cliente.email ?? '' }}</div>
               </td>
-              <td class="text-end">{{ cliente.pecas.length }}</td>
+              <td class="text-end">{{ cliente.projetos.length }}</td>
             </tr>
           }
         </tbody>

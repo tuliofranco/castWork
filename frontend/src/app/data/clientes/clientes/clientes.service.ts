@@ -24,7 +24,7 @@ export const GET_CLIENTES = gql`
         email
         telefone
         ativo
-        pecas {
+        projetos {
           id
         }
       }

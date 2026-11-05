@@ -1,0 +1,45 @@
+<h1 class="h3 mb-3">Novo projeto</h1>
+
+<form class="card p-4" style="max-width: 640px" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  @let nome = form.controls.nome;
+  <div class="mb-3">
+    <label for="nome" class="form-label">Nome da arte</label>
+    <input id="nome" class="form-control" formControlName="nome" placeholder="Ex.: Colar Raízes" [class.is-invalid]="nome.touched && nome.invalid" />
+    @if (nome.touched && nome.hasError('required')) {
+      <div class="invalid-feedback">Informe o nome.</div>
+    } @else if (nome.hasError('servidor')) {
+      <div class="invalid-feedback">{{ nome.getError('servidor') }}</div>
+    }
+  </div>
+
+  @let cliente = form.controls.clienteId;
+  <div class="mb-3">
+    <label for="clienteId" class="form-label">Cliente <span class="text-body-secondary">(opcional)</span></label>
+    <select id="clienteId" class="form-select" formControlName="clienteId" [class.is-invalid]="cliente.invalid">
+      <option [ngValue]="null">Sem cliente (projeto autoral)</option>
+      @for (opcao of clientes.value() ?? []; track opcao.id) {
+        <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
+      }
+    </select>
+    @if (cliente.hasError('servidor')) {
+      <div class="invalid-feedback">{{ cliente.getError('servidor') }}</div>
+    }
+  </div>
+
+  @let descricao = form.controls.descricao;
+  <div class="mb-4">
+    <label for="descricao" class="form-label">Descrição <span class="text-body-secondary">(opcional)</span></label>
+    <textarea id="descricao" class="form-control" rows="3" formControlName="descricao" [class.is-invalid]="descricao.invalid"></textarea>
+  </div>
+
+  <p class="small text-body-secondary">O projeto começa com a <strong>Versão 1</strong>, em desenvolvimento, pronta para receber peças.</p>
+
+  @for (mensagem of errosGerais(); track mensagem) {
+    <div class="alert alert-danger py-2" role="alert">{{ mensagem }}</div>
+  }
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Criando...' : 'Criar projeto' }}</button>
+    <a class="btn btn-outline-secondary" routerLink="/projetos">Cancelar</a>
+  </div>
+</form>

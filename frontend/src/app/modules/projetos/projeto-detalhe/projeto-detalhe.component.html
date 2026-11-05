@@ -1,0 +1,203 @@
+@if (projeto.error()) {
+  <div class="alert alert-danger" role="alert">Não foi possível carregar o projeto.</div>
+} @else if (projeto.value() === null) {
+  <div class="text-center text-body-secondary py-5">
+    Projeto não encontrado. <a routerLink="/projetos">Voltar para os projetos</a>
+  </div>
+} @else if (projeto.value(); as p) {
+  <a routerLink="/projetos" class="small text-decoration-none"><i class="bi bi-arrow-left" aria-hidden="true"></i> Projetos</a>
+  <div class="d-flex flex-wrap align-items-end gap-2 mt-1 mb-3">
+    <div class="me-auto">
+      <h1 class="h3 mb-0">{{ p.nome }}</h1>
+      <div class="text-body-secondary">
+        <i class="bi bi-person" aria-hidden="true"></i> {{ p.cliente?.nome ?? 'Sem cliente (projeto autoral)' }}
+      </div>
+      @if (p.descricao) {
+        <p class="mb-0 mt-1 small">{{ p.descricao }}</p>
+      }
+    </div>
+    @if (podeEditar) {
+      <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="salvando()" (click)="novaVersao()">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova versão vazia
+      </button>
+    }
+  </div>
+
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    @for (v of p.versoes; track v.id) {
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          role="tab"
+          class="nav-link"
+          [class.active]="v.id === versao()?.id"
+          [attr.aria-selected]="v.id === versao()?.id"
+          (click)="escolherVersao(v)"
+        >
+          v{{ v.numero }}
+          <i
+            class="bi ms-1"
+            [class.bi-pencil]="v.status === 'EM_DESENVOLVIMENTO'"
+            [class.bi-check-circle-fill]="v.status === 'PUBLICADA'"
+            [class.text-success]="v.status === 'PUBLICADA'"
+            aria-hidden="true"
+          ></i>
+        </button>
+      </li>
+    }
+  </ul>
+
+  @if (versao(); as v) {
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+      <div class="me-auto">
+        <span class="fw-semibold">{{ v.nome }}</span>
+        <span class="badge {{ status[v.status].classe }} ms-2">{{ status[v.status].rotulo }}</span>
+        @if (v.publicadaEm) {
+          <span class="small text-body-secondary ms-2">em {{ v.publicadaEm | date: 'dd/MM/yyyy HH:mm' }}</span>
+        }
+      </div>
+      @if (podeEditar) {
+        <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="salvando()" (click)="duplicar()">
+          <i class="bi bi-copy" aria-hidden="true"></i> Duplicar como nova versão
+        </button>
+      }
+      @if (editavel()) {
+        <button type="button" class="btn btn-success btn-sm" [disabled]="salvando() || v.itens.length === 0" (click)="publicar()">
+          <i class="bi bi-check2-circle" aria-hidden="true"></i> Publicar versão
+        </button>
+      }
+    </div>
+
+    @if (v.status === 'PUBLICADA') {
+      <div class="alert alert-light border small py-2">
+        <i class="bi bi-lock" aria-hidden="true"></i> Versão publicada: a composição está congelada. Para mudar, duplique como nova versão.
+      </div>
+    }
+
+    <div class="card mb-4">
+      <div class="card-header d-flex align-items-center">
+        <span class="me-auto">Composição</span>
+        <span class="small text-body-secondary">
+          {{ v.itens.length }} peça(s)
+          @if (pesoTotal() > 0) {
+            · {{ pesoTotal() | number: '1.3-3' }} g
+          }
+        </span>
+      </div>
+      @if (v.itens.length === 0) {
+        <div class="card-body text-center text-body-secondary">Nenhuma peça nesta versão ainda.</div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead>
+              <tr>
+                <th scope="col">Peça</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Material / teor</th>
+                <th scope="col" style="width: 130px">Quantidade</th>
+                @if (editavel()) {
+                  <th scope="col" class="text-end"><span class="visually-hidden">Ações</span></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of v.itens; track item.id) {
+                <tr>
+                  <td class="fw-semibold">
+                    {{ item.peca.nome }}
+                    @if (item.observacao) {
+                      <div class="small fw-normal text-body-secondary">{{ item.observacao }}</div>
+                    }
+                  </td>
+                  <td>{{ rotuloTipo(item.peca.tipo) }}</td>
+                  <td>{{ item.peca.material ?? '—' }} @if (item.peca.teor) { · {{ formatarTeor(item.peca.teor) }} }</td>
+                  <td>
+                    @if (editavel()) {
+                      <input
+                        #qtd
+                        type="number"
+                        min="1"
+                        class="form-control form-control-sm"
+                        [value]="item.quantidade"
+                        [attr.aria-label]="'Quantidade de ' + item.peca.nome"
+                        (change)="alterarQuantidade(item, qtd.value)"
+                      />
+                    } @else {
+                      {{ item.quantidade }}
+                    }
+                  </td>
+                  @if (editavel()) {
+                    <td class="text-end">
+                      <button
+                        type="button"
+                        class="btn btn-outline-danger btn-sm"
+                        [attr.aria-label]="'Remover ' + item.peca.nome"
+                        [disabled]="salvando()"
+                        (click)="remover(item)"
+                      >
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    @if (editavel()) {
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <span class="me-auto">Adicionar peça da biblioteca</span>
+          <a routerLink="/pecas/nova" class="small">Cadastrar peça nova</a>
+        </div>
+        <div class="card-body">
+          <input
+            type="search"
+            class="form-control mb-3"
+            placeholder="Buscar peças de todos os projetos por nome ou material"
+            aria-label="Buscar peças para adicionar"
+            [formControl]="buscaPeca"
+          />
+          @if (resultadosPeca.value(); as resultados) {
+            @if (resultados.nodes.length === 0) {
+              <div class="text-body-secondary small">Nenhuma peça encontrada.</div>
+            } @else {
+              <ul class="list-group">
+                @for (peca of resultados.nodes; track peca.id) {
+                  <li class="list-group-item d-flex align-items-center gap-2">
+                    <div class="me-auto">
+                      <div class="fw-semibold">{{ peca.nome }}</div>
+                      <div class="small text-body-secondary">
+                        {{ rotuloTipo(peca.tipo) }} · {{ peca.material ?? 'sem material' }}
+                        @if (peca.teor) {
+                          · {{ formatarTeor(peca.teor) }}
+                        }
+                      </div>
+                    </div>
+                    <input
+                      #qtdNova
+                      type="number"
+                      min="1"
+                      value="1"
+                      class="form-control form-control-sm"
+                      style="width: 80px"
+                      [attr.aria-label]="'Quantidade de ' + peca.nome"
+                    />
+                    <button type="button" class="btn btn-primary btn-sm" [disabled]="salvando()" (click)="adicionar(peca, qtdNova.value)">
+                      Adicionar
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+} @else {
+  <div class="text-center py-5"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Carregando...</span></div></div>
+}

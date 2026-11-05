@@ -1,0 +1,72 @@
+<h1 class="h3 mb-3">Nova peça</h1>
+
+<form class="card p-4" style="max-width: 640px" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <div class="row g-3 mb-3">
+    @let nome = form.controls.nome;
+    <div class="col-md-8">
+      <label for="nome" class="form-label">Nome</label>
+      <input id="nome" class="form-control" formControlName="nome" placeholder="Ex.: Elo oval" [class.is-invalid]="nome.touched && nome.invalid" />
+      @if (nome.touched && nome.hasError('required')) {
+        <div class="invalid-feedback">Informe o nome.</div>
+      } @else if (nome.hasError('servidor')) {
+        <div class="invalid-feedback">{{ nome.getError('servidor') }}</div>
+      }
+    </div>
+    @let tipo = form.controls.tipo;
+    <div class="col-md-4">
+      <label for="tipo" class="form-label">Tipo</label>
+      <select id="tipo" class="form-select" formControlName="tipo" [class.is-invalid]="tipo.invalid">
+        @for (opcao of tipos; track opcao.valor) {
+          <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+        }
+      </select>
+      @if (tipo.hasError('servidor')) {
+        <div class="invalid-feedback">{{ tipo.getError('servidor') }}</div>
+      }
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    @let material = form.controls.material;
+    <div class="col-md-6">
+      <label for="material" class="form-label">Material <span class="text-body-secondary">(opcional)</span></label>
+      <input id="material" class="form-control" formControlName="material" placeholder="Ex.: Ouro amarelo" [class.is-invalid]="material.invalid" />
+      @if (material.hasError('servidor')) {
+        <div class="invalid-feedback">{{ material.getError('servidor') }}</div>
+      }
+    </div>
+    @let teor = form.controls.teor;
+    <div class="col-md-3">
+      <label for="teor" class="form-label">Teor <span class="text-body-secondary">(opcional)</span></label>
+      <input id="teor" class="form-control" formControlName="teor" placeholder="18k ou 750" [class.is-invalid]="teor.invalid" />
+      @if (teor.hasError('servidor')) {
+        <div class="invalid-feedback">{{ teor.getError('servidor') }}</div>
+      }
+    </div>
+    @let peso = form.controls.pesoGramas;
+    <div class="col-md-3">
+      <label for="pesoGramas" class="form-label">Peso (g) <span class="text-body-secondary">(opcional)</span></label>
+      <input id="pesoGramas" type="number" step="0.001" min="0" class="form-control" formControlName="pesoGramas" [class.is-invalid]="peso.touched && peso.invalid" />
+      @if (peso.hasError('min')) {
+        <div class="invalid-feedback">O peso deve ser maior que zero.</div>
+      } @else if (peso.hasError('servidor')) {
+        <div class="invalid-feedback">{{ peso.getError('servidor') }}</div>
+      }
+    </div>
+  </div>
+
+  @let descricao = form.controls.descricao;
+  <div class="mb-4">
+    <label for="descricao" class="form-label">Descrição <span class="text-body-secondary">(opcional)</span></label>
+    <textarea id="descricao" class="form-control" rows="3" formControlName="descricao" [class.is-invalid]="descricao.invalid"></textarea>
+  </div>
+
+  @for (mensagem of errosGerais(); track mensagem) {
+    <div class="alert alert-danger py-2" role="alert">{{ mensagem }}</div>
+  }
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Salvando...' : 'Cadastrar peça' }}</button>
+    <a class="btn btn-outline-secondary" routerLink="/pecas">Cancelar</a>
+  </div>
+</form>
