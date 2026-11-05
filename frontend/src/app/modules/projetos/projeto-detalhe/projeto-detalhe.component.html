@@ -43,11 +43,31 @@
         </button>
       }
       @if (podeEditar) {
-        <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="novaVersao()">
+        <button type="button" class="btn btn-primary" [disabled]="salvando() || criandoVersao()" (click)="abrirNovaVersao()">
           <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova versão
         </button>
       }
     </div>
+
+    @if (criandoVersao()) {
+      <form class="nova-versao" (ngSubmit)="criarVersao()">
+        <label class="visually-hidden" for="nome-versao">Nome da nova versão</label>
+        <input
+          id="nome-versao"
+          name="nome"
+          class="form-control"
+          placeholder="Nome da versão, ex.: Com safira"
+          maxlength="120"
+          autocomplete="off"
+          [ngModel]="nomeNovaVersao()"
+          (ngModelChange)="nomeNovaVersao.set($event)"
+          [disabled]="salvando()"
+          autofocus
+        />
+        <button type="submit" class="btn btn-primary" [disabled]="salvando() || !nomeNovaVersao().trim()">Criar</button>
+        <button type="button" class="btn btn-sutil" (click)="criandoVersao.set(false)">Cancelar</button>
+      </form>
+    }
 
     @if (versoesVisiveis().length === 0) {
       <cw-estado-lista
@@ -57,11 +77,11 @@
         descricaoVazio="Mostre as arquivadas para desarquivar uma, ou crie uma versão nova."
       />
     } @else {
-      <ul class="cw-lista">
+      <ol class="cw-lista">
         @for (v of versoesVisiveis(); track v.id) {
           <li class="cw-linha versao" [class.arquivada]="v.status === 'ARQUIVADA'">
-            <a class="abrir" [routerLink]="['versoes', v.id]" [attr.aria-label]="'Abrir versão ' + v.numero + ', ' + v.nome">
-              <span class="numero">v{{ v.numero }}</span>
+            <a class="abrir" [routerLink]="['versoes', v.id]" [attr.aria-label]="'Abrir versão ' + v.numero + ': ' + v.nome">
+              <span class="numero">{{ v.numero }}</span>
               <span class="principal">
                 <span class="nome">{{ v.nome }}</span>
                 <span class="meta">
@@ -80,8 +100,7 @@
                     <button
                       type="button"
                       class="btn btn-secundario"
-                      [disabled]="salvando() || v.itens.length === 0"
-                      [attr.title]="v.itens.length === 0 ? 'Adicione ao menos uma peça antes de publicar' : null"
+                      [disabled]="salvando()"
                       (click)="publicar(v)"
                     >
                       <i class="bi bi-check2-circle" aria-hidden="true"></i> Publicar
@@ -100,7 +119,7 @@
             }
           </li>
         }
-      </ul>
+      </ol>
     }
   </section>
 } @else {
