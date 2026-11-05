@@ -354,6 +354,7 @@ enum SortEnumType {
 enum StatusVersao {
   EM_DESENVOLVIMENTO
   PUBLICADA
+  ARQUIVADA
 }
 
 enum TipoPeca {

@@ -125,6 +125,63 @@ public class ProjetoTests
     }
 
     [Test]
+    public void DeveArquivarVersaoEmDesenvolvimentoEBloquearAlteracoesAteDesarquivar()
+    {
+        var (projeto, v1) = ProjetoComIds();
+
+        projeto.ArquivarVersao(v1);
+        var alteracoes = new Action[]
+        {
+            () => projeto.AdicionarItem(v1, 10, 1, null),
+            () => projeto.PublicarVersao(v1, Agora),
+            () => projeto.ArquivarVersao(v1),
+        };
+
+        Versao(projeto, v1).Status.Should().Be(StatusVersao.Arquivada);
+        alteracoes.Should().AllSatisfy(a => a.Should().Throw<RegraDeNegocioException>().WithMessage("*arquivada*Desarquive*"));
+
+        projeto.DesarquivarVersao(v1);
+        projeto.AdicionarItem(v1, 10, 1, null);
+        Versao(projeto, v1).Should().BeEquivalentTo(new { Status = StatusVersao.EmDesenvolvimento }, o => o.ExcludingMissingMembers());
+    }
+
+    [Test]
+    public void DeveImpedirArquivarVersaoPublicada()
+    {
+        var (projeto, v1) = ProjetoComIds();
+        projeto.AdicionarItem(v1, 10, 1, null);
+        projeto.PublicarVersao(v1, Agora);
+
+        var arquivar = () => projeto.ArquivarVersao(v1);
+
+        arquivar.Should().Throw<RegraDeNegocioException>().WithMessage("*publicada*");
+        Versao(projeto, v1).Status.Should().Be(StatusVersao.Publicada);
+    }
+
+    [Test]
+    public void DeveRecusarDesarquivarVersaoQueNaoEstaArquivada()
+    {
+        var (projeto, v1) = ProjetoComIds();
+
+        var desarquivar = () => projeto.DesarquivarVersao(v1);
+
+        desarquivar.Should().Throw<RegraDeNegocioException>().WithMessage("*não está arquivada*");
+    }
+
+    [Test]
+    public void DeveVincularEDesvincularCliente()
+    {
+        var projeto = Projeto.Criar("Colar", null, clienteId: null);
+
+        projeto.VincularCliente(7);
+        var vinculado = projeto.ClienteId;
+        projeto.VincularCliente(null);
+
+        vinculado.Should().Be(7);
+        projeto.ClienteId.Should().BeNull();
+    }
+
+    [Test]
     public void DeveLancarNaoEncontradoParaVersaoOuItemInexistente()
     {
         var (projeto, v1) = ProjetoComIds();

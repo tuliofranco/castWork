@@ -6,3 +6,6 @@ obj/
 .idea/
 TestResults/
 appsettings.*.local.json
+
+# Credenciais de teste locais (geradas para QA visual; nunca versionar)
+.dev-credenciais

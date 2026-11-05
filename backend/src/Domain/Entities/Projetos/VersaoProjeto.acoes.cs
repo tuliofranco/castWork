@@ -7,6 +7,25 @@ namespace Castwork.Domain.Entities.Projetos;
 /// </summary>
 public sealed partial class VersaoProjeto
 {
+    /// <summary>
+    /// Só versão em desenvolvimento pode ser arquivada: a publicada é registro do que foi mostrado ao cliente.
+    /// </summary>
+    internal void Arquivar()
+    {
+        GarantirEmDesenvolvimento();
+        Status = StatusVersao.Arquivada;
+    }
+
+    internal void Desarquivar()
+    {
+        if (Status != StatusVersao.Arquivada)
+        {
+            throw new RegraDeNegocioException($"A versão {Numero} não está arquivada.");
+        }
+
+        Status = StatusVersao.EmDesenvolvimento;
+    }
+
     internal void Publicar(DateTimeOffset agora)
     {
         GarantirEmDesenvolvimento();
@@ -54,9 +73,14 @@ public sealed partial class VersaoProjeto
 
     private void GarantirEmDesenvolvimento()
     {
-        if (Status == StatusVersao.Publicada)
+        switch (Status)
         {
-            throw new RegraDeNegocioException($"A versão {Numero} está publicada e não pode mais ser alterada. Duplique-a para criar uma nova versão.");
+            case StatusVersao.Publicada:
+                throw new RegraDeNegocioException($"A versão {Numero} está publicada e não pode mais ser alterada. Duplique-a para criar uma nova versão.");
+            case StatusVersao.Arquivada:
+                throw new RegraDeNegocioException($"A versão {Numero} está arquivada. Desarquive-a para alterar.");
+            default:
+                break;
         }
     }
 }

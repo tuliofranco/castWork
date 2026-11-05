@@ -63,6 +63,24 @@ public class CadastroEndpointsTests : TesteDeIntegracao
     }
 
     [Test]
+    public async Task DeveVincularClienteEArquivarVersaoPorHttpAsync()
+    {
+        var clienteId = await CriarAsync("/api/clientes", new { nome = "Ana" });
+        var projetoId = await CriarAsync("/api/projetos", new { nome = "Brinco" });
+        var v2 = await CriarAsync($"/api/projetos/{projetoId}/versoes", new { nome = "Alternativa" });
+
+        var vincular = await _http.PutAsJsonAsync($"/api/projetos/{projetoId}/cliente", new { clienteId });
+        var arquivar = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/versoes/{v2}/arquivar", UriKind.Relative), null);
+        var arquivarDeNovo = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/versoes/{v2}/arquivar", UriKind.Relative), null);
+
+        (vincular.StatusCode, arquivar.StatusCode, arquivarDeNovo.StatusCode)
+            .Should().Be((HttpStatusCode.NoContent, HttpStatusCode.NoContent, HttpStatusCode.UnprocessableEntity));
+        var projeto = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Include(p => p.Versoes).AsNoTracking().SingleAsync(p => p.Id == projetoId));
+        projeto.ClienteId.Should().Be(clienteId);
+        projeto.Versoes.Single(v => v.Id == v2).Status.Should().Be(StatusVersao.Arquivada);
+    }
+
+    [Test]
     public async Task DeveResponder404ParaVersaoInexistenteE400ParaProjetoInvalidoAsync()
     {
         var projetoId = await CriarAsync("/api/projetos", new { nome = "Pulseira" });
