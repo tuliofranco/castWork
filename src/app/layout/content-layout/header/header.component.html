@@ -1,4 +1,4 @@
-<header class="navbar bg-body border-bottom px-3">
+<header class="navbar bg-body border-bottom px-3 gap-2">
   <button
     type="button"
     class="btn btn-outline-secondary d-lg-none"
@@ -7,5 +7,15 @@
   >
     <i class="bi bi-list" aria-hidden="true"></i>
   </button>
-  <span class="navbar-brand mb-0 h1">Castwork</span>
+  <span class="navbar-brand mb-0 h1 me-auto">Castwork</span>
+
+  @if (sessao.usuario(); as usuario) {
+    <div class="text-end small lh-sm d-none d-sm-block">
+      <div class="fw-semibold">{{ usuario.nome }}</div>
+      <div class="text-body-secondary">{{ sessao.atelie()?.nome }}</div>
+    </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm" (click)="sair()">
+      <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
+    </button>
+  }
 </header>

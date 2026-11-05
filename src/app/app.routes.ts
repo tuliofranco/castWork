@@ -1,3 +1,6 @@
+import { authGuard } from '@core/guards/auth.guard';
+import { convidadoGuard } from '@core/guards/convidado.guard';
+import { permissionGuard } from '@core/guards/permission.guard';
 import type { CastworkRoute } from '@core/models/rota-data.model';
 import { ContentLayoutComponent } from '@layout/content-layout/content-layout.component';
 import { ErrorLayoutComponent } from '@layout/error-layout/error-layout.component';
@@ -9,8 +12,17 @@ import { PaginaErroComponent } from '@layout/error-layout/pagina-erro/pagina-err
  */
 export const routes: CastworkRoute[] = [
   {
+    path: 'login',
+    canActivate: [convidadoGuard],
+    data: { title: 'Entrar' },
+    loadChildren: () => import('@modules/login/login.routes').then((m) => m.LOGIN_ROUTES),
+  },
+  {
     path: '',
     component: ContentLayoutComponent,
+    // authGuard roda uma vez ao entrar no layout; permissionGuard roda a cada rota filha.
+    canActivate: [authGuard],
+    canActivateChild: [permissionGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'pecas' },
       {
