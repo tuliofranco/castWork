@@ -1,0 +1,98 @@
+using Castwork.Application.Projetos.Commands.AdicionarItem;
+using Castwork.Application.Projetos.Commands.AlterarItem;
+using Castwork.Application.Projetos.Commands.CriarProjeto;
+using Castwork.Application.Projetos.Commands.CriarVersao;
+using Castwork.Application.Projetos.Commands.DuplicarVersao;
+using Castwork.Application.Projetos.Commands.PublicarVersao;
+using Castwork.Application.Projetos.Commands.RemoverItem;
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace Castwork.WebAPI.Controllers.Projetos;
+
+/// <summary>
+/// Escrita de projetos, versões e composição. Os Ids da rota têm precedência sobre os do corpo.
+/// </summary>
+[Route("api/projetos")]
+[Tags("Projetos")]
+public sealed class ProjetosController : ApiController
+{
+    [HttpPost]
+    [EndpointSummary("Cria um projeto (já com a Versão 1 em desenvolvimento).")]
+    [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Criar([FromBody] CriarProjetoCommand command, CancellationToken cancellationToken)
+        => Criado(await Mediator.Send(command, cancellationToken));
+
+    [HttpPost("{projetoId:long}/versoes")]
+    [EndpointSummary("Cria uma versão vazia com o próximo número.")]
+    [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CriarVersao([FromRoute] long projetoId, [FromBody] CriarVersaoCommand command, CancellationToken cancellationToken)
+    {
+        command.ProjetoId = projetoId;
+        return Criado(await Mediator.Send(command, cancellationToken));
+    }
+
+    [HttpPost("{projetoId:long}/versoes/{versaoId:long}/duplicar")]
+    [EndpointSummary("Copia a composição da versão para uma nova versão em desenvolvimento.")]
+    [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> DuplicarVersao(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromBody] DuplicarVersaoCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId) = (projetoId, versaoId);
+        return Criado(await Mediator.Send(command, cancellationToken));
+    }
+
+    [HttpPost("{projetoId:long}/versoes/{versaoId:long}/publicar")]
+    [EndpointSummary("Publica a versão: a composição fica congelada.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> PublicarVersao([FromRoute] long projetoId, [FromRoute] long versaoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = versaoId }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{projetoId:long}/versoes/{versaoId:long}/itens")]
+    [EndpointSummary("Adiciona uma peça à composição (se já estiver, soma a quantidade).")]
+    [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> AdicionarItem(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromBody] AdicionarItemCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId) = (projetoId, versaoId);
+        return Criado(await Mediator.Send(command, cancellationToken));
+    }
+
+    [HttpPut("{projetoId:long}/versoes/{versaoId:long}/itens/{itemId:long}")]
+    [EndpointSummary("Altera a quantidade ou a observação de um item da composição.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> AlterarItem(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromRoute] long itemId,
+        [FromBody] AlterarItemCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId, command.ItemId) = (projetoId, versaoId, itemId);
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{projetoId:long}/versoes/{versaoId:long}/itens/{itemId:long}")]
+    [EndpointSummary("Remove um item da composição.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoverItem([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] long itemId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new RemoverItemCommand { ProjetoId = projetoId, VersaoId = versaoId, ItemId = itemId }, cancellationToken);
+        return NoContent();
+    }
+
+    private ObjectResult Criado(long id) => StatusCode(StatusCodes.Status201Created, new IdCriado(id));
+}

@@ -1,6 +1,6 @@
 using Castwork.Application.Common.Exceptions;
 using Castwork.Application.Common.Security;
-using Castwork.Application.Pecas.Queries.GetPecas;
+using Castwork.Application.Projetos.Commands.CriarProjeto;
 using Castwork.TestBootstrap.Ambiente;
 using Castwork.TestBootstrap.Builders;
 
@@ -24,16 +24,17 @@ public class UsuariosEPerfisTests : TesteDeIntegracao
     [Test]
     public async Task DevePermitirUsuarioCujoPerfilTemARegraEBarrarQuemNaoTemAsync()
     {
-        var comRegra = await Usar(new PerfilBuilder()).ComRegras(Regras.Pecas.Consultar).BuildAsync();
-        var semRegra = await Usar(new PerfilBuilder()).ComRegras(Regras.Clientes.Consultar).BuildAsync();
+        var comRegra = await Usar(new PerfilBuilder()).ComRegras(Regras.Projetos.Criar).BuildAsync();
+        var semRegra = await Usar(new PerfilBuilder()).ComRegras(Regras.Projetos.Consultar).BuildAsync();
+        var projetos = Usar(new ProjetoBuilder());
         AmbienteDeTeste.Sessao.IsAdmin = false;
 
         AmbienteDeTeste.Sessao.PerfilId = comRegra;
-        var permitido = await AmbienteDeTeste.SendAsync(new GetPecasQuery());
+        var permitido = await projetos.SendAsync(await projetos.BuildCommandAsync());
         AmbienteDeTeste.Sessao.PerfilId = semRegra;
-        var negado = () => AmbienteDeTeste.SendAsync(new GetPecasQuery());
+        var negado = () => AmbienteDeTeste.SendAsync(new CriarProjetoCommand { Nome = "Colar" });
 
-        permitido.TotalRegistros.Should().Be(0);
+        permitido.Should().BePositive();
         await negado.Should().ThrowAsync<ForbiddenAccessException>();
     }
 

@@ -8,4 +8,5 @@ public static class Politicas
 {
     public const string ClientesLer = "clientes.ler";
     public const string PecasLer = "pecas.ler";
+    public const string ProjetosLer = "projetos.ler";
 }

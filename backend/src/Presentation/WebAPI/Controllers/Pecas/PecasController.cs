@@ -9,7 +9,7 @@ namespace Castwork.WebAPI.Controllers.Pecas;
 public sealed class PecasController : ApiController
 {
     [HttpPost]
-    [EndpointSummary("Abre uma peça em briefing para um cliente ativo.")]
+    [EndpointSummary("Cadastra uma peça na biblioteca (elo, fecho, pedra...).")]
     [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Criar([FromBody] CriarPecaCommand command, CancellationToken cancellationToken)

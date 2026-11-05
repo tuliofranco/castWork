@@ -30,15 +30,19 @@ public sealed class AuditoriaInterceptor(ISessaoService sessao, TimeProvider tim
     }
 
     /// <summary>
-    /// Filhos do agregado (coleções da raiz, ex.: etapas e observações da peça) adicionados ou alterados.
+    /// Algum descendente do agregado (em qualquer nível, ex.: Projeto → Versões → Itens) foi adicionado,
+    /// alterado ou removido. Para nas fronteiras de outros agregados.
     /// </summary>
     private static bool TemFilhoAlterado(EntityEntry raiz)
-        => raiz.Entity is IAggregateRoot
-            && raiz.Collections
-                .Where(c => c.CurrentValue is not null)
-                .SelectMany(c => c.CurrentValue!.Cast<object>())
-                .Where(filho => filho is not IAggregateRoot)
-                .Any(filho => raiz.Context.Entry(filho).State is EntityState.Added or EntityState.Modified);
+        => raiz.Entity is IAggregateRoot && TemDescendenteAlterado(raiz);
+
+    private static bool TemDescendenteAlterado(EntityEntry entrada)
+        => entrada.Collections
+            .Where(c => c.CurrentValue is not null)
+            .SelectMany(c => c.CurrentValue!.Cast<object>())
+            .Where(filho => filho is not IAggregateRoot)
+            .Select(filho => entrada.Context.Entry(filho))
+            .Any(filho => filho.State is EntityState.Added or EntityState.Modified or EntityState.Deleted || TemDescendenteAlterado(filho));
 
     private void Auditar(DbContext? context)
     {

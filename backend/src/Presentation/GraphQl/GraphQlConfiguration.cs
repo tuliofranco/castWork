@@ -5,6 +5,7 @@ using Castwork.GraphQl.Erros;
 using Castwork.GraphQl.Queries;
 using Castwork.GraphQl.Types.Clientes;
 using Castwork.GraphQl.Types.Pecas;
+using Castwork.GraphQl.Types.Projetos;
 
 using HotChocolate.AspNetCore;
 
@@ -16,6 +17,7 @@ public static class GraphQlConfiguration
 {
     public const int ProfundidadeMaxima = 8;
     public const int TamanhoMaximoDaPagina = 50;
+    public const int CustoMaximoPorRequisicao = 5_000;
 
     /// <summary>
     /// GraphQL para as leituras ricas das telas (listagens e detalhes); REST fica com commands e arquivos.
@@ -29,9 +31,11 @@ public static class GraphQlConfiguration
             .AddQueryType(d => d.Name(OperationTypeNames.Query))
             .AddTypeExtension<PecasQueries>()
             .AddTypeExtension<ClientesQueries>()
+            .AddTypeExtension<ProjetosQueries>()
             .AddTypeExtension<AtelieQueries>()
             .AddType<PecaType>()
             .AddType<ClienteType>()
+            .AddType<ProjetoType>()
 
             // DTO da Application exposto com nome de domínio, sem o sufixo técnico.
             .AddType(new ObjectType<ConfiguracaoAtelieDto>(d => d.Name("ConfiguracaoAtelie")))
@@ -46,7 +50,10 @@ public static class GraphQlConfiguration
             .AddFiltering()
             .AddSorting()
             .AddDataLoader<ClientePorIdDataLoader>()
-            .AddDataLoader<PecasPorClienteDataLoader>()
+            .AddDataLoader<PecaPorIdDataLoader>()
+            .AddDataLoader<VersoesPorProjetoDataLoader>()
+            .AddDataLoader<ItensPorVersaoDataLoader>()
+            .AddDataLoader<ProjetosPorClienteDataLoader>()
             .AddErrorFilter<ErrorFilter>()
             .ModifyPagingOptions(o =>
             {
@@ -59,7 +66,14 @@ public static class GraphQlConfiguration
                 o.IncludeExceptionDetails = desenvolvimento;
                 o.ExecutionTimeout = TimeSpan.FromSeconds(15);
             })
-            .ModifyCostOptions(o => o.EnforceCostLimits = true)
+
+            // Orçamento de custo por requisição. O detalhe de projeto (projetos → versões → itens → peça) custa ~1.000
+            // com as estimativas padrão de tamanho de lista; 5.000 deixa folga para as telas e ainda barra consultas abusivas.
+            .ModifyCostOptions(o =>
+            {
+                o.EnforceCostLimits = true;
+                o.MaxFieldCost = CustoMaximoPorRequisicao;
+            })
             .AddMaxExecutionDepthRule(ProfundidadeMaxima, skipIntrospectionFields: true)
             .DisableIntrospection(!desenvolvimento)
             .ModifyServerOptions(o =>

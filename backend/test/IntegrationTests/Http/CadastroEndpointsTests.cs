@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 using Castwork.Application.Acesso.Commands.Login;
-using Castwork.Domain.Entities.Pecas;
+using Castwork.Domain.Entities.Projetos;
 using Castwork.TestBootstrap.Ambiente;
 using Castwork.TestBootstrap.Builders;
 
@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Castwork.IntegrationTests.Http;
 
 /// <summary>
-/// Cadastro pelas telas: POST REST devolve 201 com o Id; a listagem relê pelo GraphQL.
+/// Fluxo das telas por HTTP: cliente → peça → projeto → composição → publicação.
 /// </summary>
 public class CadastroEndpointsTests : TesteDeIntegracao
 {
@@ -34,32 +34,53 @@ public class CadastroEndpointsTests : TesteDeIntegracao
     [TearDown]
     public async Task RemoverCriadosPeloHttpAsync()
     {
-        // Dados criados por HTTP não passam por builder: remove aqui, peças antes de clientes (FK).
+        // Dados criados por HTTP não passam por builder: remove aqui respeitando as FKs.
+        await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.ExecuteDeleteAsync());
         await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Pecas.ExecuteDeleteAsync());
         await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Clientes.ExecuteDeleteAsync());
         _http.Dispose();
     }
 
     [Test]
-    public async Task DeveCadastrarClienteEPecaPorHttpAsync()
+    public async Task DeveMontarEPublicarUmProjetoPorHttpAsync()
     {
-        var cliente = await _http.PostAsJsonAsync("/api/clientes", new { nome = "Maria Silva", documento = "529.982.247-25" });
-        var clienteId = (await cliente.Content.ReadFromJsonAsync<IdDto>())!.Id;
-        var peca = await _http.PostAsJsonAsync("/api/pecas", new { clienteId, titulo = "Aliança", prazoEntrega = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)) });
+        var clienteId = await CriarAsync("/api/clientes", new { nome = "Maria Silva" });
+        var eloId = await CriarAsync("/api/pecas", new { nome = "Elo oval", tipo = "Elo", material = "Ouro amarelo", teor = "18k", pesoGramas = 0.35m });
+        var projetoId = await CriarAsync("/api/projetos", new { nome = "Colar Raízes", clienteId });
+        var v1 = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Where(p => p.Id == projetoId).SelectMany(p => p.Versoes).Select(v => v.Id).SingleAsync());
 
-        (cliente.StatusCode, peca.StatusCode).Should().Be((HttpStatusCode.Created, HttpStatusCode.Created));
-        var pecaId = (await peca.Content.ReadFromJsonAsync<IdDto>())!.Id;
-        var gravada = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Pecas.AsNoTracking().SingleAsync(p => p.Id == pecaId));
-        gravada.Should().BeEquivalentTo(new { ClienteId = clienteId, Titulo = "Aliança", Status = StatusPeca.Briefing }, o => o.ExcludingMissingMembers());
+        var item = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaId = eloId, quantidade = 12 });
+        var publicar = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/versoes/{v1}/publicar", UriKind.Relative), null);
+        var depoisDePublicada = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaId = eloId, quantidade = 1 });
+
+        (item.StatusCode, publicar.StatusCode, depoisDePublicada.StatusCode)
+            .Should().Be((HttpStatusCode.Created, HttpStatusCode.NoContent, HttpStatusCode.UnprocessableEntity));
+        (await depoisDePublicada.Content.ReadFromJsonAsync<ProblemDetails>())!.Detail.Should().Contain("publicada");
+        var versao = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Where(p => p.Id == projetoId)
+            .SelectMany(p => p.Versoes).Include(v => v.Itens).AsNoTracking().SingleAsync());
+        versao.Should().BeEquivalentTo(new { Status = StatusVersao.Publicada }, o => o.ExcludingMissingMembers());
+        versao.Itens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { PecaId = eloId, Quantidade = 12 });
     }
 
     [Test]
-    public async Task DeveResponder400ComErrosPorCampoAoCriarPecaInvalidaAsync()
+    public async Task DeveResponder404ParaVersaoInexistenteE400ParaProjetoInvalidoAsync()
     {
-        var resposta = await _http.PostAsJsonAsync("/api/pecas", new { clienteId = 999_999, titulo = string.Empty });
+        var projetoId = await CriarAsync("/api/projetos", new { nome = "Pulseira" });
+        var eloId = await CriarAsync("/api/pecas", new { nome = "Elo", tipo = "Elo" });
 
-        resposta.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await resposta.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors.Keys.Should().BeEquivalentTo("clienteId", "titulo");
+        var versaoInexistente = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/999999/itens", new { pecaId = eloId, quantidade = 1 });
+        var projetoInvalido = await _http.PostAsJsonAsync("/api/projetos", new { nome = string.Empty, clienteId = 999_999 });
+
+        versaoInexistente.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        projetoInvalido.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await projetoInvalido.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors.Keys.Should().BeEquivalentTo("nome", "clienteId");
+    }
+
+    private async Task<long> CriarAsync(string rota, object corpo)
+    {
+        var resposta = await _http.PostAsJsonAsync(rota, corpo);
+        resposta.StatusCode.Should().Be(HttpStatusCode.Created, await resposta.Content.ReadAsStringAsync());
+        return (await resposta.Content.ReadFromJsonAsync<IdDto>())!.Id;
     }
 
     private sealed record IdDto(long Id);

@@ -23,15 +23,27 @@ public static class Regras
         public const string Alterar = "5b0f3c1e-8a52-4d7e-9a31-2f6c4e8d1a03";
     }
 
+    public static class Projetos
+    {
+        [Regra("projetos.ler", "Consultar projetos e versões")]
+        public const string Consultar = "3f6a8c1d-7b24-4e9f-a1c3-5d7e9f0a1b01";
+
+        [Regra("projetos.criar", "Criar projetos")]
+        public const string Criar = "3f6a8c1d-7b24-4e9f-a1c3-5d7e9f0a1b02";
+
+        [Regra("projetos.editar", "Criar versões, compor e publicar")]
+        public const string Editar = "3f6a8c1d-7b24-4e9f-a1c3-5d7e9f0a1b03";
+    }
+
     public static class Pecas
     {
-        [Regra("pecas.ler", "Consultar peças")]
+        [Regra("pecas.ler", "Consultar a biblioteca de peças")]
         public const string Consultar = "7c2e9d4a-1f63-4b8c-8e42-3a7d5f9e2b01";
 
-        [Regra("pecas.criar", "Criar peças")]
+        [Regra("pecas.criar", "Cadastrar peças na biblioteca")]
         public const string Criar = "7c2e9d4a-1f63-4b8c-8e42-3a7d5f9e2b02";
 
-        [Regra("pecas.editar", "Alterar peças e mover no pipeline")]
+        [Regra("pecas.editar", "Alterar peças da biblioteca")]
         public const string Alterar = "7c2e9d4a-1f63-4b8c-8e42-3a7d5f9e2b03";
     }
 
