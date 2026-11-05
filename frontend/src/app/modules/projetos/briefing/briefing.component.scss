@@ -1,0 +1,377 @@
+// Mesa do briefing: conversa à esquerda, resumo e documentos à direita a partir de 1024 px; empilhados abaixo.
+.introducao {
+  max-width: 44rem;
+  margin: 0 0 1.5rem;
+  color: var(--cw-ink-muted);
+}
+
+.tipos {
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+}
+
+.opcoes,
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.opcao,
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--cw-alvo);
+  padding: 0 1rem;
+  border: 1px solid var(--cw-border);
+  border-radius: 999px;
+  background: var(--cw-surface);
+  color: var(--cw-ink);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--cw-rapido) var(--cw-ease),
+    border-color var(--cw-rapido) var(--cw-ease);
+
+  &:hover {
+    background: var(--cw-surface-hover);
+  }
+
+  &:focus-within,
+  &:focus-visible {
+    box-shadow: var(--cw-focus);
+  }
+
+  &.marcada,
+  &.marcado {
+    border-color: var(--cw-accent);
+    background: var(--cw-accent-soft);
+    color: var(--cw-accent-ink);
+  }
+}
+
+.opcao input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chips {
+  margin-bottom: 0.5rem;
+}
+
+.mesa {
+  display: grid;
+  gap: 1.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+  }
+}
+
+.conversa {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mensagem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  max-width: 88%;
+
+  &.minha {
+    align-self: flex-end;
+    align-items: flex-end;
+
+    .balao {
+      border-color: transparent;
+      background: var(--cw-accent-soft);
+      color: var(--cw-ink);
+    }
+  }
+}
+
+.autor {
+  color: var(--cw-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.balao {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+  background: var(--cw-surface);
+  line-height: 1.5;
+
+  p {
+    margin: 0;
+    white-space: pre-line;
+  }
+
+  p + p {
+    margin-top: 0.625rem;
+  }
+}
+
+.pensando .balao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--cw-ink-muted);
+}
+
+.pontos {
+  display: inline-flex;
+  gap: 3px;
+
+  i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulso 1.2s var(--cw-ease) infinite;
+  }
+
+  i:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  i:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+}
+
+@keyframes pulso {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pontos i {
+    animation: none;
+  }
+}
+
+.vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: var(--cw-ink-muted);
+
+  p {
+    margin: 0;
+  }
+}
+
+// O campo de mensagem fica ao alcance do polegar: gruda no fim da área de conteúdo.
+.compositor {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+  margin-top: 1.25rem;
+  padding: 0.75rem 0;
+  background: var(--cw-bg);
+
+  textarea {
+    flex: 1 1 auto;
+    min-height: var(--cw-alvo);
+    resize: vertical;
+  }
+
+  .enviar {
+    flex: none;
+    width: 3rem;
+    height: 3rem;
+  }
+}
+
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  @media (min-width: 1024px) {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.bloco {
+  padding: 1.25rem;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+  background: var(--cw-surface);
+}
+
+.cabecalho-bloco {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+}
+
+.definicao {
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.campos {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+
+  div {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  dt {
+    color: var(--cw-ink-muted);
+    font-weight: 500;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.acoes-pdf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.documentos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 3.5rem;
+    border-top: 1px solid var(--cw-border);
+  }
+
+  .nome {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .recente {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--cw-accent-soft);
+    color: var(--cw-accent-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .sem-documentos {
+    color: var(--cw-ink-muted);
+  }
+}
+
+.acoes-documento {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+// Painel de pré-visualização: ocupa a tela, com a barra de ações sempre à mão no topo.
+.painel-pdf {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--cw-surface-2);
+  color: var(--cw-ink);
+
+  &::backdrop {
+    background: oklch(0.15 0.01 60 / 0.6);
+  }
+
+  &[open] {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.barra-pdf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--cw-border);
+  background: var(--cw-surface);
+
+  h2 {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  .acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .btn {
+    min-height: var(--cw-alvo);
+  }
+}
+
+.folha {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 1.5rem 1rem 3rem;
+  -webkit-overflow-scrolling: touch;
+}

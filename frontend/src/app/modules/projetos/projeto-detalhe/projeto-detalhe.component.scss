@@ -112,3 +112,49 @@
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
+
+.resumo-briefing {
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  color: var(--cw-ink);
+  text-decoration: none;
+
+  .principal {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .definicao {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-weight: 600;
+  }
+
+  .meta {
+    color: var(--cw-ink-muted);
+    font-size: 0.875rem;
+  }
+}
+
+.sem-briefing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+
+  p {
+    max-width: 36rem;
+    margin: 0;
+    color: var(--cw-ink-muted);
+  }
+}

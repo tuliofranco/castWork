@@ -52,6 +52,12 @@ export const routes: CastworkRoute[] = [
         loadChildren: () => import('@modules/documentos/documentos.routes').then((m) => m.DOCUMENTOS_ROUTES),
       },
       {
+        // Fora do menu: abre pelo painel do usuário.
+        path: 'atelie',
+        data: { title: 'Ateliê', permissoes: ['atelie.configurar'] },
+        loadChildren: () => import('@modules/atelie/atelie.routes').then((m) => m.ATELIE_ROUTES),
+      },
+      {
         path: 'portfolio',
         data: { title: 'Portfólio', menu: true, order: 6, icon: 'images', permissoes: ['portfolio.ler'] },
         loadChildren: () => import('@modules/portfolio/portfolio.routes').then((m) => m.PORTFOLIO_ROUTES),

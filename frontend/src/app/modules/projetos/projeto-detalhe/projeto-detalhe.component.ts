@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import { ClientesService } from '@data/clientes/clientes/clientes.service';
+import { BriefingService } from '@data/projetos/briefing/briefing.service';
 import type { VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
@@ -29,6 +30,7 @@ import { STATUS_VERSAO } from '../status-versao';
 export class ProjetoDetalheComponent {
   private readonly projetosService = inject(ProjetosService);
   private readonly clientesService = inject(ClientesService);
+  private readonly briefingService = inject(BriefingService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
@@ -43,6 +45,11 @@ export class ProjetoDetalheComponent {
   protected readonly projeto = rxResource({
     params: () => Number(this.id()),
     stream: ({ params }) => this.projetosService.getProjeto(params),
+  });
+
+  protected readonly briefing = rxResource({
+    params: () => Number(this.id()),
+    stream: ({ params }) => this.briefingService.getBriefing(params),
   });
 
   protected readonly clientes = rxResource({

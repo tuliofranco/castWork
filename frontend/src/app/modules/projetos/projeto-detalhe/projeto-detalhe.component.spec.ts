@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import { ClientesService } from '@data/clientes/clientes/clientes.service';
 import type { ProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
+import { BriefingService } from '@data/projetos/briefing/briefing.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
 import { of } from 'rxjs';
@@ -38,6 +39,7 @@ describe('ProjetoDetalheComponent', () => {
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: ProjetosService, useValue: servico },
+        { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
         { provide: ClientesService, useValue: { getClientesOpcoes: () => of([{ id: 3, nome: 'Maria Silva' }, { id: 4, nome: 'Ana Lima' }]) } },
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
         { provide: ToastService, useValue: { sucesso: vi.fn() } },

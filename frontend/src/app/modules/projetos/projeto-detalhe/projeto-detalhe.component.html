@@ -5,6 +5,35 @@
 } @else if (projeto.value(); as p) {
   <cw-cabecalho-pagina [titulo]="p.nome" voltarPara="/projetos" voltarRotulo="Projetos" [subtitulo]="p.descricao ?? undefined" />
 
+  <section class="secao" aria-labelledby="titulo-briefing">
+    <h2 id="titulo-briefing">Briefing</h2>
+    @if (briefing.value(); as b) {
+      <a class="cw-linha resumo-briefing" routerLink="briefing">
+        <span class="principal">
+          <span class="definicao">{{ b.oQueSeraFeito ?? b.oQueOClienteQuer }}</span>
+          <span class="meta">
+            {{ b.tipoJoia }}
+            @if (b.prazo) {
+              · entrega {{ b.prazo | date: 'dd/MM/yyyy' }}
+            }
+            @if (b.orcamento) {
+              · {{ b.orcamento }}
+            }
+            · {{ b.documentos.length === 0 ? 'sem PDF' : b.documentos.length === 1 ? '1 PDF' : b.documentos.length + ' PDFs' }}
+          </span>
+        </span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+    } @else if (briefing.value() === null) {
+      <div class="sem-briefing">
+        <p>Defina o que será feito antes das versões: anote o pedido e converse com a IA para completar.</p>
+        @if (podeEditar) {
+          <a class="btn btn-primary" routerLink="briefing"><i class="bi bi-journal-text" aria-hidden="true"></i> Criar briefing</a>
+        }
+      </div>
+    }
+  </section>
+
   <section class="secao" aria-labelledby="titulo-cliente">
     <h2 id="titulo-cliente">Cliente</h2>
     @if (podeEditar) {
