@@ -65,13 +65,13 @@ public class ProjetoTests
     }
 
     [Test]
-    public void DeveExigirAoMenosUmaPecaParaPublicar()
+    public void DevePublicarVersaoSemPecas()
     {
         var (projeto, v1) = ProjetoComIds();
 
-        var publicar = () => projeto.PublicarVersao(v1, Agora);
+        projeto.PublicarVersao(v1, Agora);
 
-        publicar.Should().Throw<RegraDeNegocioException>().WithMessage("*ao menos uma peça*");
+        Versao(projeto, v1).Should().BeEquivalentTo(new { Status = StatusVersao.Publicada, PublicadaEm = (DateTimeOffset?)Agora });
     }
 
     [Test]

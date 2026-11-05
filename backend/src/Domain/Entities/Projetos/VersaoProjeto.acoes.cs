@@ -29,11 +29,6 @@ public sealed partial class VersaoProjeto
     internal void Publicar(DateTimeOffset agora)
     {
         GarantirEmDesenvolvimento();
-        if (_itens.Count == 0)
-        {
-            throw new RegraDeNegocioException("Adicione ao menos uma peça antes de publicar a versão.");
-        }
-
         Status = StatusVersao.Publicada;
         PublicadaEm = agora;
     }

@@ -114,13 +114,13 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     }
 
     [Test]
-    public async Task DeveRecusarPublicarVersaoVaziaAsync()
+    public async Task DevePublicarVersaoVaziaAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
 
-        var publicar = () => AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+        await AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
 
-        await publicar.Should().ThrowAsync<RegraDeNegocioException>().WithMessage("*ao menos uma peça*");
+        (await LerAsync(projetoId)).Versoes.Single(v => v.Id == v1).Status.Should().Be(StatusVersao.Publicada);
     }
 
     [Test]
