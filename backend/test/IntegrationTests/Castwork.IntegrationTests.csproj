@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../TestBootstrap/Castwork.TestBootstrap.csproj" />
+  </ItemGroup>
+
+</Project>

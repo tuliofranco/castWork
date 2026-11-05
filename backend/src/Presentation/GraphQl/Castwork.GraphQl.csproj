@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../../Infra/Hosting/Castwork.Infra.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

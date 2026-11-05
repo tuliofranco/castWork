@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Domain/Castwork.Domain.csproj" />
+    <ProjectReference Include="../../src/DomainService/Castwork.DomainService.csproj" />
+    <ProjectReference Include="../../src/Application/Castwork.Application.csproj" />
+    <ProjectReference Include="../../src/Infra/Hosting/Castwork.Infra.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

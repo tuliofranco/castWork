@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>castwork-webapi</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <!-- Necessário só para o dotnet-ef usar a WebAPI como startup project. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Infra/Hosting/Castwork.Infra.Hosting.csproj" />
+    <ProjectReference Include="../GraphQl/Castwork.GraphQl.csproj" />
+  </ItemGroup>
+
+</Project>
