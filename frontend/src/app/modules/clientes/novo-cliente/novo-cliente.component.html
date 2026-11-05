@@ -1,53 +1,29 @@
-<h1 class="h3 mb-3">Novo cliente</h1>
+<cw-cabecalho-pagina titulo="Novo cliente" voltarPara="/clientes" voltarRotulo="Clientes" subtitulo="Só o nome é obrigatório. O resto pode ser completado depois." />
 
-<form class="card p-4" style="max-width: 640px" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
-  @let nome = form.controls.nome;
-  <div class="mb-3">
-    <label for="nome" class="form-label">Nome</label>
-    <input id="nome" class="form-control" formControlName="nome" autocomplete="off" [class.is-invalid]="nome.touched && nome.invalid" />
-    @if (nome.touched && nome.hasError('required')) {
-      <div class="invalid-feedback">Informe o nome.</div>
-    } @else if (nome.hasError('servidor')) {
-      <div class="invalid-feedback">{{ nome.getError('servidor') }}</div>
-    }
-  </div>
+<form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <div class="grade">
+    <cw-campo class="c6" rotulo="Nome" para="nome" [controle]="form.controls.nome" [mensagens]="{ required: 'Informe o nome.' }">
+      <input id="nome" class="form-control" formControlName="nome" autocomplete="off" />
+    </cw-campo>
 
-  @let documento = form.controls.documento;
-  <div class="mb-3">
-    <label for="documento" class="form-label">CPF ou CNPJ <span class="text-body-secondary">(opcional)</span></label>
-    <input id="documento" class="form-control" formControlName="documento" autocomplete="off" style="max-width: 280px" [class.is-invalid]="documento.invalid" />
-    @if (documento.hasError('servidor')) {
-      <div class="invalid-feedback">{{ documento.getError('servidor') }}</div>
-    }
-  </div>
+    <cw-campo class="c3" rotulo="CPF ou CNPJ" para="documento" [opcional]="true" [controle]="form.controls.documento">
+      <input id="documento" class="form-control" formControlName="documento" autocomplete="off" />
+    </cw-campo>
+    <cw-campo class="c3" rotulo="Telefone" para="telefone" [opcional]="true" [controle]="form.controls.telefone">
+      <input id="telefone" type="tel" inputmode="tel" class="form-control" formControlName="telefone" />
+    </cw-campo>
 
-  <div class="row g-3 mb-4">
-    @let email = form.controls.email;
-    <div class="col-md-7">
-      <label for="email" class="form-label">E-mail <span class="text-body-secondary">(opcional)</span></label>
-      <input id="email" type="email" class="form-control" formControlName="email" [class.is-invalid]="email.touched && email.invalid" />
-      @if (email.hasError('email')) {
-        <div class="invalid-feedback">E-mail inválido.</div>
-      } @else if (email.hasError('servidor')) {
-        <div class="invalid-feedback">{{ email.getError('servidor') }}</div>
-      }
-    </div>
-    @let telefone = form.controls.telefone;
-    <div class="col-md-5">
-      <label for="telefone" class="form-label">Telefone <span class="text-body-secondary">(opcional)</span></label>
-      <input id="telefone" type="tel" class="form-control" formControlName="telefone" [class.is-invalid]="telefone.invalid" />
-      @if (telefone.hasError('servidor')) {
-        <div class="invalid-feedback">{{ telefone.getError('servidor') }}</div>
-      }
-    </div>
+    <cw-campo class="c6" rotulo="E-mail" para="email" [opcional]="true" [controle]="form.controls.email" [mensagens]="{ email: 'E-mail inválido.' }">
+      <input id="email" type="email" inputmode="email" class="form-control" formControlName="email" />
+    </cw-campo>
   </div>
 
   @for (mensagem of errosGerais(); track mensagem) {
-    <div class="alert alert-danger py-2" role="alert">{{ mensagem }}</div>
+    <p class="aviso-formulario" role="alert">{{ mensagem }}</p>
   }
 
-  <div class="d-flex gap-2">
-    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Salvando...' : 'Cadastrar' }}</button>
-    <a class="btn btn-outline-secondary" routerLink="/clientes">Cancelar</a>
-  </div>
+  <cw-barra-acoes>
+    <a class="btn btn-secundario" routerLink="/clientes">Cancelar</a>
+    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Salvando...' : 'Cadastrar cliente' }}</button>
+  </cw-barra-acoes>
 </form>

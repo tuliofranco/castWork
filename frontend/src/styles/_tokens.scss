@@ -1,0 +1,83 @@
+// Tokens do Castwork (ver DESIGN.md). Neutros tingidos para o quente; pátina como único destaque.
+// Claro por padrão; escuro automático pelo sistema, com o mesmo calor.
+
+:root {
+  color-scheme: light dark;
+
+  --cw-bg: oklch(0.972 0.008 80);
+  --cw-surface: oklch(0.993 0.004 80);
+  --cw-surface-2: oklch(0.948 0.011 75);
+  --cw-surface-hover: oklch(0.955 0.01 78);
+  --cw-border: oklch(0.885 0.013 75);
+  --cw-border-strong: oklch(0.8 0.016 72);
+  --cw-ink: oklch(0.24 0.015 60);
+  --cw-ink-muted: oklch(0.47 0.016 60);
+  --cw-ink-faint: oklch(0.6 0.014 65);
+
+  --cw-accent: oklch(0.47 0.085 185);
+  --cw-accent-hover: oklch(0.41 0.085 185);
+  --cw-accent-soft: oklch(0.93 0.03 185);
+  --cw-accent-ink: oklch(0.36 0.07 185);
+  --cw-on-accent: oklch(0.985 0.006 185);
+
+  --cw-success: oklch(0.52 0.12 150);
+  --cw-success-soft: oklch(0.94 0.04 150);
+  --cw-success-ink: oklch(0.38 0.09 150);
+  --cw-warning: oklch(0.6 0.13 70);
+  --cw-warning-soft: oklch(0.95 0.05 80);
+  --cw-warning-ink: oklch(0.42 0.09 60);
+  --cw-danger: oklch(0.52 0.17 28);
+  --cw-danger-soft: oklch(0.95 0.03 28);
+  --cw-danger-ink: oklch(0.42 0.14 28);
+
+  --cw-focus: 0 0 0 3px oklch(0.47 0.085 185 / 0.35);
+  --cw-shadow-pop: 0 10px 30px -12px oklch(0.24 0.015 60 / 0.28);
+
+  --cw-font: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --cw-font-titulo: 'Fraunces Variable', Georgia, serif;
+
+  --cw-radius-sm: 0.375rem;
+  --cw-radius: 0.625rem;
+  --cw-radius-lg: 0.875rem;
+
+  --cw-alvo: 3rem; // 48 px: alvo de toque mínimo de controles
+  --cw-rail: 5.5rem; // 88 px no tablet
+  --cw-rail-expandido: 14.75rem; // 236 px no desktop
+  --cw-barra-inferior: 4rem;
+
+  --cw-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --cw-rapido: 160ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cw-bg: oklch(0.19 0.012 60);
+    --cw-surface: oklch(0.225 0.012 60);
+    --cw-surface-2: oklch(0.165 0.012 60);
+    --cw-surface-hover: oklch(0.255 0.013 60);
+    --cw-border: oklch(0.33 0.013 60);
+    --cw-border-strong: oklch(0.42 0.014 60);
+    --cw-ink: oklch(0.93 0.01 80);
+    --cw-ink-muted: oklch(0.72 0.013 75);
+    --cw-ink-faint: oklch(0.58 0.012 70);
+
+    --cw-accent: oklch(0.74 0.09 185);
+    --cw-accent-hover: oklch(0.8 0.085 185);
+    --cw-accent-soft: oklch(0.31 0.045 185);
+    --cw-accent-ink: oklch(0.82 0.08 185);
+    --cw-on-accent: oklch(0.2 0.03 185);
+
+    --cw-success: oklch(0.72 0.13 150);
+    --cw-success-soft: oklch(0.3 0.05 150);
+    --cw-success-ink: oklch(0.82 0.11 150);
+    --cw-warning: oklch(0.78 0.12 75);
+    --cw-warning-soft: oklch(0.32 0.05 70);
+    --cw-warning-ink: oklch(0.86 0.1 80);
+    --cw-danger: oklch(0.7 0.15 28);
+    --cw-danger-soft: oklch(0.31 0.06 28);
+    --cw-danger-ink: oklch(0.83 0.11 28);
+
+    --cw-focus: 0 0 0 3px oklch(0.74 0.09 185 / 0.4);
+    --cw-shadow-pop: 0 12px 32px -10px oklch(0.05 0.01 60 / 0.7);
+  }
+}

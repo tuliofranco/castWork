@@ -37,12 +37,15 @@ describe('PecasComponent', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
 
-    const linhas = [...el.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim()));
+    const linhas = [...el.querySelectorAll('.cw-linha')].map((linha) =>
+      [...linha.querySelectorAll('.nome, .meta, cw-selo, .peso')].map((parte) => parte.textContent?.replace(/\s+/g, ' ').trim()),
+    );
 
     expect(linhas).toEqual([
-      ['Elo oval', 'Elo', 'Ouro amarelo', '750 (18k)', '0,350 g'],
-      ['Turmalina inativa', 'Pedra', '—', '—', '—'],
+      ['Elo oval', 'Elo · Ouro amarelo · 750 (18k)', '0,350 g'],
+      ['Turmalina', 'Pedra', 'Inativa'],
     ]);
+    expect(el.querySelectorAll('.cw-linha')[1]!.classList).toContain('inativa');
     expect(el.textContent).toContain('Nova peça');
   });
 });

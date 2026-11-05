@@ -1,10 +1,13 @@
 using Castwork.Application.Projetos.Commands.AdicionarItem;
 using Castwork.Application.Projetos.Commands.AlterarItem;
+using Castwork.Application.Projetos.Commands.ArquivarVersao;
 using Castwork.Application.Projetos.Commands.CriarProjeto;
 using Castwork.Application.Projetos.Commands.CriarVersao;
+using Castwork.Application.Projetos.Commands.DesarquivarVersao;
 using Castwork.Application.Projetos.Commands.DuplicarVersao;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
 using Castwork.Application.Projetos.Commands.RemoverItem;
+using Castwork.Application.Projetos.Commands.VincularCliente;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +26,37 @@ public sealed class ProjetosController : ApiController
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Criar([FromBody] CriarProjetoCommand command, CancellationToken cancellationToken)
         => Criado(await Mediator.Send(command, cancellationToken));
+
+    [HttpPut("{projetoId:long}/cliente")]
+    [EndpointSummary("Vincula o projeto a um cliente (ou desvincula com clienteId nulo).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> VincularCliente([FromRoute] long projetoId, [FromBody] VincularClienteCommand command, CancellationToken cancellationToken)
+    {
+        command.ProjetoId = projetoId;
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{projetoId:long}/versoes/{versaoId:long}/arquivar")]
+    [EndpointSummary("Arquiva uma versão em desenvolvimento (publicada não pode ser arquivada).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ArquivarVersao([FromRoute] long projetoId, [FromRoute] long versaoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new ArquivarVersaoCommand { ProjetoId = projetoId, VersaoId = versaoId }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{projetoId:long}/versoes/{versaoId:long}/desarquivar")]
+    [EndpointSummary("Devolve uma versão arquivada para desenvolvimento.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DesarquivarVersao([FromRoute] long projetoId, [FromRoute] long versaoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new DesarquivarVersaoCommand { ProjetoId = projetoId, VersaoId = versaoId }, cancellationToken);
+        return NoContent();
+    }
 
     [HttpPost("{projetoId:long}/versoes")]
     [EndpointSummary("Cria uma versão vazia com o próximo número.")]

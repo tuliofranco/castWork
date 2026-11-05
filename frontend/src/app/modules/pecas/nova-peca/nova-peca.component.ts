@@ -3,14 +3,31 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
 import { aplicarErrosDoServidor } from '@shared/forms/aplicar-erros-do-servidor';
+import { BarraAcoesComponent } from '@shared/ui/barra-acoes.component';
+import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
+import { CampoComponent } from '@shared/ui/campo.component';
+
 import { TIPOS_PECA, type TipoPeca } from '@shared/pecas/tipo-peca';
 import { ToastService } from '@shared/services/toast.service';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'cw-nova-peca',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, CabecalhoPaginaComponent, CampoComponent, BarraAcoesComponent],
   templateUrl: './nova-peca.component.html',
+  // Tipo como botões de escolha grandes: um toque, sem abrir lista no tablet.
+  styles: `
+    .tipos { border: 0; padding: 0; margin: 0 0 1.5rem; }
+    .opcoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .opcao {
+      display: inline-flex; align-items: center; gap: 0.5rem; min-height: var(--cw-alvo); padding: 0 1rem;
+      border: 1px solid var(--cw-border-strong); border-radius: var(--cw-radius); background: var(--cw-surface);
+      font-weight: 600; cursor: pointer; transition: background-color var(--cw-rapido) var(--cw-ease), border-color var(--cw-rapido) var(--cw-ease);
+    }
+    .opcao:hover { background: var(--cw-surface-hover); }
+    .opcao:has(input:focus-visible) { box-shadow: var(--cw-focus); }
+    .opcao.marcada { border-color: var(--cw-accent); background: var(--cw-accent-soft); color: var(--cw-accent-ink); }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NovaPecaComponent {

@@ -28,6 +28,16 @@ public sealed partial class Projeto
         ClienteId = clienteId is null ? null : Guard.IdValido(clienteId.Value, nameof(ClienteId));
     }
 
+    /// <summary>
+    /// Vincula (ou desvincula, com nulo) o cliente para quem a arte é feita.
+    /// </summary>
+    public void VincularCliente(long? clienteId)
+        => ClienteId = clienteId is null ? null : Guard.IdValido(clienteId.Value, nameof(ClienteId));
+
+    public void ArquivarVersao(long versaoId) => ObterVersao(versaoId).Arquivar();
+
+    public void DesarquivarVersao(long versaoId) => ObterVersao(versaoId).Desarquivar();
+
     public VersaoProjeto CriarVersao(string nome, string? observacoes)
     {
         var versao = new VersaoProjeto(ProximoNumero(), nome, observacoes);

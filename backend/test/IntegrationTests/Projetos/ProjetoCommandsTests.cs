@@ -1,9 +1,12 @@
 using Castwork.Application.Projetos.Commands.AdicionarItem;
 using Castwork.Application.Projetos.Commands.AlterarItem;
+using Castwork.Application.Projetos.Commands.ArquivarVersao;
 using Castwork.Application.Projetos.Commands.CriarVersao;
+using Castwork.Application.Projetos.Commands.DesarquivarVersao;
 using Castwork.Application.Projetos.Commands.DuplicarVersao;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
 using Castwork.Application.Projetos.Commands.RemoverItem;
+using Castwork.Application.Projetos.Commands.VincularCliente;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.Exceptions;
 using Castwork.TestBootstrap.Ambiente;
@@ -129,6 +132,56 @@ public class ProjetoCommandsTests : TesteDeIntegracao
 
         (await LerAsync(projetoId)).Versoes.Single(v => v.Id == v2)
             .Should().BeEquivalentTo(new { Numero = 2, Nome = "Sem pedra", Observacoes = "mais leve", Status = StatusVersao.EmDesenvolvimento });
+    }
+
+    [Test]
+    public async Task DeveArquivarEDesarquivarVersaoEmDesenvolvimentoAsync()
+    {
+        var (projetoId, v1) = await ProjetoAsync();
+
+        await AmbienteDeTeste.SendAsync(new ArquivarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+        var arquivada = (await LerAsync(projetoId)).Versoes.Single().Status;
+        await AmbienteDeTeste.SendAsync(new DesarquivarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+
+        arquivada.Should().Be(StatusVersao.Arquivada);
+        (await LerAsync(projetoId)).Versoes.Single().Status.Should().Be(StatusVersao.EmDesenvolvimento);
+    }
+
+    [Test]
+    public async Task DeveRecusarArquivarVersaoPublicadaAsync()
+    {
+        var (projetoId, v1) = await ProjetoAsync();
+        await Adicionar(projetoId, v1, await Usar(new PecaBuilder()).BuildAsync(), 1);
+        await AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+
+        var arquivar = () => AmbienteDeTeste.SendAsync(new ArquivarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+
+        await arquivar.Should().ThrowAsync<RegraDeNegocioException>().WithMessage("*publicada*");
+    }
+
+    [Test]
+    public async Task DeveVincularEDesvincularClienteDoProjetoAsync()
+    {
+        var (projetoId, _) = await ProjetoAsync();
+        var clienteId = await Usar(new ClienteBuilder()).BuildAsync();
+
+        await AmbienteDeTeste.SendAsync(new VincularClienteCommand { ProjetoId = projetoId, ClienteId = clienteId });
+        var vinculado = (await LerAsync(projetoId)).ClienteId;
+        await AmbienteDeTeste.SendAsync(new VincularClienteCommand { ProjetoId = projetoId, ClienteId = null });
+
+        vinculado.Should().Be(clienteId);
+        (await LerAsync(projetoId)).ClienteId.Should().BeNull();
+    }
+
+    [Test]
+    public async Task DeveRejeitarVinculoComClienteInexistenteAsync()
+    {
+        var (projetoId, _) = await ProjetoAsync();
+
+        var vincular = () => AmbienteDeTeste.SendAsync(new VincularClienteCommand { ProjetoId = projetoId, ClienteId = 999_999 });
+
+        (await vincular.Should().ThrowAsync<ValidationException>()).Which.Errors.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new { PropertyName = "clienteId", ErrorMessage = "Cliente não encontrado." });
     }
 
     [Test]

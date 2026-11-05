@@ -114,6 +114,18 @@ export class ProjetosService {
     return this.http.post<IdCriadoDto>(`projetos/${projetoId}/versoes/${versaoId}/duplicar`, {});
   }
 
+  putCliente(projetoId: number, clienteId: number | null): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/cliente`, { clienteId }).pipe(map(() => undefined));
+  }
+
+  postArquivarVersao(projetoId: number, versaoId: number): Observable<void> {
+    return this.http.post(`projetos/${projetoId}/versoes/${versaoId}/arquivar`, {}).pipe(map(() => undefined));
+  }
+
+  postDesarquivarVersao(projetoId: number, versaoId: number): Observable<void> {
+    return this.http.post(`projetos/${projetoId}/versoes/${versaoId}/desarquivar`, {}).pipe(map(() => undefined));
+  }
+
   postPublicarVersao(projetoId: number, versaoId: number): Observable<void> {
     return this.http.post(`projetos/${projetoId}/versoes/${versaoId}/publicar`, {}).pipe(map(() => undefined));
   }

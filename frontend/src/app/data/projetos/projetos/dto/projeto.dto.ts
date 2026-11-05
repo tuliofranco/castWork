@@ -1,6 +1,6 @@
 import type { PecaDto } from '@data/pecas/pecas/dto/peca.dto';
 
-export type StatusVersao = 'EM_DESENVOLVIMENTO' | 'PUBLICADA';
+export type StatusVersao = 'EM_DESENVOLVIMENTO' | 'PUBLICADA' | 'ARQUIVADA';
 
 /** Linha da listagem de projetos. */
 export interface ProjetoResumoDto {

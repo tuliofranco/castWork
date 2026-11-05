@@ -15,4 +15,9 @@ export const PROJETOS_ROUTES: CastworkRoute[] = [
     loadComponent: () => import('./projeto-detalhe/projeto-detalhe.component').then((m) => m.ProjetoDetalheComponent),
     data: { title: 'Projeto' },
   },
+  {
+    path: ':id/versoes/:versaoId',
+    loadComponent: () => import('./versao-detalhe/versao-detalhe.component').then((m) => m.VersaoDetalheComponent),
+    data: { title: 'Versão' },
+  },
 ];

@@ -1,11 +1,19 @@
-<div class="d-flex flex-column vh-100">
-  <cw-header (alternarMenu)="alternarMenu()" />
-  <div class="d-flex flex-grow-1 overflow-hidden">
-    <aside class="cw-menu border-end bg-body-tertiary p-3" [class.aberto]="menuAberto()">
-      <cw-menu (navegou)="fecharMenu()" />
-    </aside>
-    <main class="flex-grow-1 overflow-auto p-4">
-      <router-outlet />
-    </main>
+<header class="topo-celular">
+  <a routerLink="/" class="marca" aria-label="Castwork, início">Castwork</a>
+  <cw-usuario posicao="abaixo" />
+</header>
+
+<nav class="rail" aria-label="Menu principal">
+  <a routerLink="/" class="marca" aria-label="Castwork, início">
+    <span class="monograma" aria-hidden="true">C</span>
+    <span class="palavra">Castwork</span>
+  </a>
+  <cw-menu />
+  <cw-usuario class="usuario-rail" posicao="lateral" />
+</nav>
+
+<main class="conteudo" id="conteudo-principal">
+  <div class="largura">
+    <router-outlet />
   </div>
-</div>
+</main>
