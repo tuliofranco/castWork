@@ -47,7 +47,7 @@ public class CadastroEndpointsTests : TesteDeIntegracao
         var clienteId = await CriarAsync("/api/clientes", new { nome = "Maria Silva" });
         var eloId = await CriarAsync("/api/pecas", new { nome = "Elo oval", tipo = "Elo", material = "Ouro amarelo", teor = "18k", pesoGramas = 0.35m });
         var projetoId = await CriarAsync("/api/projetos", new { nome = "Colar Raízes", clienteId });
-        var v1 = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Where(p => p.Id == projetoId).SelectMany(p => p.Versoes).Select(v => v.Id).SingleAsync());
+        var v1 = await CriarAsync($"/api/projetos/{projetoId}/versoes", new { nome = "Base" });
 
         var item = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaId = eloId, quantidade = 12 });
         var publicar = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/versoes/{v1}/publicar", UriKind.Relative), null);

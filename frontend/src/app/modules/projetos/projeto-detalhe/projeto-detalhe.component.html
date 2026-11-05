@@ -62,14 +62,28 @@
           [ngModel]="nomeNovaVersao()"
           (ngModelChange)="nomeNovaVersao.set($event)"
           [disabled]="salvando()"
-          autofocus
         />
         <button type="submit" class="btn btn-primary" [disabled]="salvando() || !nomeNovaVersao().trim()">Criar</button>
         <button type="button" class="btn btn-sutil" (click)="criandoVersao.set(false)">Cancelar</button>
       </form>
     }
 
-    @if (versoesVisiveis().length === 0) {
+    @if (p.versoes.length === 0) {
+      @if (!criandoVersao()) {
+        <cw-estado-lista
+          [vazio]="true"
+          iconeVazio="layers"
+          tituloVazio="Nenhuma versão ainda."
+          [descricaoVazio]="podeEditar ? 'Crie a primeira versão com o nome que quiser.' : 'Este projeto ainda não tem versões.'"
+        >
+          @if (podeEditar) {
+            <button acaoVazio type="button" class="btn btn-primary" (click)="abrirNovaVersao()">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Criar primeira versão
+            </button>
+          }
+        </cw-estado-lista>
+      }
+    } @else if (versoesVisiveis().length === 0) {
       <cw-estado-lista
         [vazio]="true"
         iconeVazio="archive"
