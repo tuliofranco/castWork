@@ -30,12 +30,14 @@ describe('ClientesComponent', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
 
-    const linhas = [...el.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim()));
+    const linhas = [...el.querySelectorAll('.cw-linha')].map((linha) =>
+      [...linha.querySelectorAll('cw-iniciais, .nome, .meta, cw-selo')].map((parte) => parte.textContent?.replace(/\s+/g, ' ').trim()),
+    );
 
     expect(linhas).toEqual([
-      ['Ana', '529.982.247-25', '(41) 99999-0000ana@x.com', '2'],
-      ['Bia inativo', '—', '', '0'],
+      ['A', 'Ana', '529.982.247-25 · (41) 99999-0000 · ana@x.com', '2 projetos'],
+      ['B', 'Bia', 'Sem contato cadastrado', 'Inativo', '0 projetos'],
     ]);
-    expect(el.querySelector<HTMLButtonElement>('button:last-of-type')!.disabled).toBe(false);
+    expect([...el.querySelectorAll<HTMLButtonElement>('cw-paginacao button')].map((b) => b.disabled)).toEqual([true, false]);
   });
 });

@@ -15,6 +15,10 @@ export function rotuloTipoPeca(tipo: TipoPeca): string {
   return TIPOS_PECA.find((t) => t.valor === tipo)?.rotulo ?? tipo;
 }
 
+export function iconeTipoPeca(tipo: TipoPeca): string {
+  return TIPOS_PECA.find((t) => t.valor === tipo)?.icone ?? 'circle';
+}
+
 /** 750 → "750 (18k)". Quilates com uma casa só quando não for inteiro. */
 export function formatarTeor(milesimos: number | null): string {
   if (milesimos === null) return '—';

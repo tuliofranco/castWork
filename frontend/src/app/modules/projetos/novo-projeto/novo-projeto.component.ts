@@ -5,12 +5,16 @@ import { Router, RouterLink } from '@angular/router';
 import { ClientesService } from '@data/clientes/clientes/clientes.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { aplicarErrosDoServidor } from '@shared/forms/aplicar-erros-do-servidor';
+import { BarraAcoesComponent } from '@shared/ui/barra-acoes.component';
+import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
+import { CampoComponent } from '@shared/ui/campo.component';
+
 import { ToastService } from '@shared/services/toast.service';
 import { finalize } from 'rxjs';
 
 @Component({
   selector: 'cw-novo-projeto',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, CabecalhoPaginaComponent, CampoComponent, BarraAcoesComponent],
   templateUrl: './novo-projeto.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

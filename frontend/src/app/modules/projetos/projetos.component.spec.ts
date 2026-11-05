@@ -7,7 +7,7 @@ import { of } from 'rxjs';
 import { ProjetosComponent } from './projetos.component';
 
 describe('ProjetosComponent', () => {
-  it('deve listar os projetos com cliente e a versão mais recente', async () => {
+  it('deve listar os projetos com cliente e a versão mais recente, ignorando as arquivadas', async () => {
     const getProjetos = vi.fn().mockReturnValue(
       of({
         totalCount: 2,
@@ -19,6 +19,7 @@ describe('ProjetosComponent', () => {
             nome: 'Colar Raízes',
             cliente: { id: 3, nome: 'Maria Silva' },
             versoes: [
+              { id: 9, numero: 3, status: 'ARQUIVADA' },
               { id: 4, numero: 2, status: 'EM_DESENVOLVIMENTO' },
               { id: 3, numero: 1, status: 'PUBLICADA' },
             ],
@@ -38,14 +39,15 @@ describe('ProjetosComponent', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
 
-    const itens = [...el.querySelectorAll('.list-group-item')].map((a) =>
-      [...a.querySelectorAll('.fw-semibold, .small, .badge')].map((parte) => parte.textContent?.trim()).join(' | '),
+    const itens = [...el.querySelectorAll('a.cw-linha')].map((a) =>
+      [...a.querySelectorAll('.nome, .meta, cw-selo')].map((parte) => parte.textContent?.replace(/\s+/g, ' ').trim()).join(' | '),
     );
 
     expect(itens).toEqual([
-      'Pulseira autoral | Sem cliente | v1 · 1 versão(ões) | Em desenvolvimento',
-      'Colar Raízes | Maria Silva | v2 · 2 versão(ões) | Em desenvolvimento',
+      'Pulseira autoral | Projeto autoral · 1 versão | Em desenvolvimento',
+      'Colar Raízes | Maria Silva · 2 versões | Em desenvolvimento',
     ]);
-    expect(el.querySelector('.list-group-item')!.getAttribute('href')).toBe('/2');
+    expect(el.querySelector('a.cw-linha')!.getAttribute('href')).toBe('/2');
+    expect(el.textContent).toContain('2 projetos');
   });
 });

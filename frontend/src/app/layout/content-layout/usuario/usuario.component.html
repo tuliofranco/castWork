@@ -1,0 +1,30 @@
+@if (sessao.usuario(); as usuario) {
+  <button
+    type="button"
+    class="gatilho"
+    [attr.aria-expanded]="aberto()"
+    aria-controls="painel-usuario"
+    [attr.aria-label]="'Conta de ' + usuario.nome"
+    (click)="alternar()"
+  >
+    <cw-iniciais [nome]="usuario.nome" />
+    <span class="nome-curto">{{ usuario.nome }}</span>
+  </button>
+
+  @if (aberto()) {
+    <div class="painel" id="painel-usuario" role="dialog" aria-label="Conta">
+      <div class="identidade">
+        <cw-iniciais [nome]="usuario.nome" />
+        <div>
+          <div class="nome">{{ usuario.nome }}</div>
+          @if (sessao.atelie(); as atelie) {
+            <div class="atelie">{{ atelie.nome }}</div>
+          }
+        </div>
+      </div>
+      <button type="button" class="btn btn-secundario w-100" (click)="sair()">
+        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
+      </button>
+    </div>
+  }
+}
