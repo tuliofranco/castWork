@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- EF Core (sem provider) é dependência consciente: as queries usam ToListAsync/AnyAsync direto no IQueryable.
+       DbContext, DbSet e Npgsql continuam proibidos aqui (ver ArchTests). -->
+  <ItemGroup>
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Mapster" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Domain/Castwork.Domain.csproj" />
+    <ProjectReference Include="../DomainService/Castwork.DomainService.csproj" />
+    <ProjectReference Include="../Application.Common/Castwork.Application.Common.csproj" />
+  </ItemGroup>
+
+</Project>

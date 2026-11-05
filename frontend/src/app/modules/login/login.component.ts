@@ -11,6 +11,7 @@ import { retornoSeguro } from './retorno-seguro';
   selector: 'cw-login',
   imports: [ReactiveFormsModule],
   templateUrl: './login.component.html',
+  styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {

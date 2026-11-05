@@ -1,0 +1,29 @@
+<cw-cabecalho-pagina titulo="Novo cliente" voltarPara="/clientes" voltarRotulo="Clientes" subtitulo="Só o nome é obrigatório. O resto pode ser completado depois." />
+
+<form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <div class="grade">
+    <cw-campo class="c6" rotulo="Nome" para="nome" [controle]="form.controls.nome" [mensagens]="{ required: 'Informe o nome.' }">
+      <input id="nome" class="form-control" formControlName="nome" autocomplete="off" />
+    </cw-campo>
+
+    <cw-campo class="c3" rotulo="CPF ou CNPJ" para="documento" [opcional]="true" [controle]="form.controls.documento">
+      <input id="documento" class="form-control" formControlName="documento" autocomplete="off" />
+    </cw-campo>
+    <cw-campo class="c3" rotulo="Telefone" para="telefone" [opcional]="true" [controle]="form.controls.telefone">
+      <input id="telefone" type="tel" inputmode="tel" class="form-control" formControlName="telefone" />
+    </cw-campo>
+
+    <cw-campo class="c6" rotulo="E-mail" para="email" [opcional]="true" [controle]="form.controls.email" [mensagens]="{ email: 'E-mail inválido.' }">
+      <input id="email" type="email" inputmode="email" class="form-control" formControlName="email" />
+    </cw-campo>
+  </div>
+
+  @for (mensagem of errosGerais(); track mensagem) {
+    <p class="aviso-formulario" role="alert">{{ mensagem }}</p>
+  }
+
+  <cw-barra-acoes>
+    <a class="btn btn-secundario" routerLink="/clientes">Cancelar</a>
+    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Salvando...' : 'Cadastrar cliente' }}</button>
+  </cw-barra-acoes>
+</form>

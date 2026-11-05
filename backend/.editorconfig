@@ -1,0 +1,81 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{csproj,props,targets,json,yml,yaml,xml}]
+indent_size = 2
+
+[*.cs]
+# Estilo da linguagem
+csharp_style_namespace_declarations = file_scoped:error
+csharp_style_prefer_primary_constructors = true:warning
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_prefer_braces = when_multiline:warning
+csharp_using_directive_placement = outside_namespace:error
+dotnet_sort_system_directives_first = true
+# Namespace sempre igual ao caminho da pasta (ex.: Domain/Entities/Pecas → Castwork.Domain.Entities.Pecas).
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = error
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_readonly_field = true:warning
+
+# Nomenclatura: interfaces com I, campos privados com _camelCase, async com sufixo Async
+dotnet_naming_rule.interfaces_com_i.symbols = interfaces
+dotnet_naming_rule.interfaces_com_i.style = prefixo_i
+dotnet_naming_rule.interfaces_com_i.severity = error
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.prefixo_i.required_prefix = I
+dotnet_naming_style.prefixo_i.capitalization = pascal_case
+
+dotnet_naming_rule.campos_privados.symbols = campos_privados
+dotnet_naming_rule.campos_privados.style = underscore_camel
+dotnet_naming_rule.campos_privados.severity = warning
+dotnet_naming_symbols.campos_privados.applicable_kinds = field
+dotnet_naming_symbols.campos_privados.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+
+# Analisadores .NET
+dotnet_diagnostic.CA1707.severity = none   # Nomes de teste usam o padrão Deve..._Async sem underscore, mas fixtures podem precisar
+dotnet_diagnostic.CA1711.severity = none   # Sufixos como ...EventHandler / ...Collection são do vocabulário CQRS
+dotnet_diagnostic.CA1848.severity = suggestion # LoggerMessage delegates só em hot paths
+dotnet_diagnostic.CA2007.severity = none   # ConfigureAwait desnecessário no ASP.NET Core (sem SynchronizationContext)
+
+# StyleCop: regras desligadas por decisão do projeto
+dotnet_diagnostic.SA1101.severity = none   # Prefixar membros com this.
+dotnet_diagnostic.SA1309.severity = none   # Campos com _ são o padrão escolhido
+dotnet_diagnostic.SA1600.severity = none   # Documentação XML obrigatória em todo membro
+dotnet_diagnostic.SA1602.severity = none   # Documentação de membros de enum
+dotnet_diagnostic.SA1611.severity = none   # <param> obrigatório: o summary explica o que importa
+dotnet_diagnostic.SA1615.severity = none   # <returns> obrigatório
+dotnet_diagnostic.SA1618.severity = none   # <typeparam> obrigatório
+dotnet_diagnostic.SA1619.severity = none   # <typeparam> obrigatório em partial class
+dotnet_diagnostic.SA1623.severity = none   # Summary de propriedade começando com "Gets"/"Obtém"
+dotnet_diagnostic.SA1633.severity = none   # Cabeçalho de licença em cada arquivo
+dotnet_diagnostic.SA1000.severity = none   # Conflita com new() alvo-tipado
+dotnet_diagnostic.SA1010.severity = none   # Conflita com collection expressions [..]
+dotnet_diagnostic.SA1313.severity = none   # Parâmetros de primary constructor/record em PascalCase
+dotnet_diagnostic.SA1649.severity = none   # Command + Handler no mesmo arquivo (convenção CQRS do projeto)
+dotnet_diagnostic.SA1402.severity = none   # Idem: mais de um tipo por arquivo
+
+[test/**.cs]
+dotnet_diagnostic.CA1515.severity = none   # Fixtures NUnit precisam ser públicas
+
+# Migrations são geradas pelo EF e nunca editadas à mão: fora das regras de estilo e análise.
+[src/Infra/Migrations/Migrations/**.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+
+# Resolvers do HotChocolate: classes de instância por exigência do [ExtendObjectType] (sem o gerador de código).
+[src/Presentation/GraphQl/Queries/**.cs]
+dotnet_diagnostic.CA1822.severity = none

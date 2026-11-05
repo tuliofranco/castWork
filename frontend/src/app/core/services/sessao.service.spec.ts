@@ -15,10 +15,10 @@ describe('SessaoService e PermissaoService', () => {
   });
 
   it('deve expor usuário e ateliê a partir do token', () => {
-    token.set(criarTokenMock({ sub: 'u1', nome: 'Ana', email: 'ana@x.com', atelieId: 'a1', atelieNome: 'Ateliê Sol' }));
+    token.set(criarTokenMock({ sub: 'u1', nome: 'Ana', email: 'ana@x.com', atelieNome: 'Ateliê Sol' }));
     const sessao = TestBed.inject(SessaoService);
     expect(sessao.usuario()).toEqual({ id: 'u1', nome: 'Ana', email: 'ana@x.com' });
-    expect(sessao.atelie()).toEqual({ id: 'a1', nome: 'Ateliê Sol' });
+    expect(sessao.atelie()).toEqual({ nome: 'Ateliê Sol' });
   });
 
   it('deve devolver null e nenhuma permissão sem token', () => {

@@ -35,7 +35,7 @@ describe('ContentLayoutComponent', () => {
     harness = await RouterTestingHarness.create('/pecas');
   });
 
-  const links = () => Array.from(harness.routeNativeElement!.ownerDocument.querySelectorAll<HTMLAnchorElement>('cw-menu a'));
+  const links = () => Array.from(harness.routeNativeElement!.ownerDocument.querySelectorAll<HTMLAnchorElement>('.rail cw-menu a'));
 
   it('deve gerar o menu a partir das rotas filhas, em ordem', () => {
     expect(links().map((a) => a.textContent?.trim())).toEqual(['Clientes', 'Peças']);
@@ -45,10 +45,20 @@ describe('ContentLayoutComponent', () => {
     expect(links().some((a) => a.textContent?.includes('Restrita'))).toBe(false);
   });
 
-  it('deve mostrar usuário e ateliê da sessão no header', () => {
-    const header = harness.routeNativeElement!.ownerDocument.querySelector('cw-header')!;
-    expect(header.textContent).toContain('Ana Ourives');
-    expect(header.textContent).toContain('Ateliê Sol');
+  it('deve mostrar o usuário no rail e abrir o painel com ateliê e sair', async () => {
+    const doc = harness.routeNativeElement!.ownerDocument;
+    const gatilho = doc.querySelector<HTMLButtonElement>('.rail cw-usuario button')!;
+    expect(gatilho.getAttribute('aria-label')).toBe('Conta de Ana Ourives');
+    expect(gatilho.textContent).toContain('AO');
+
+    gatilho.click();
+    await harness.fixture.whenStable();
+
+    const painel = doc.querySelector('.rail .painel')!;
+    expect(painel.textContent).toContain('Ana Ourives');
+    expect(painel.textContent).toContain('Ateliê Sol');
+    expect(painel.textContent).toContain('Sair');
+    expect(gatilho.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('deve marcar o item da rota ativa', () => {
@@ -57,20 +67,19 @@ describe('ContentLayoutComponent', () => {
     expect(ativo?.getAttribute('aria-current')).toBe('page');
   });
 
-  it('deve renderizar a feature no router-outlet', () => {
-    expect(harness.routeNativeElement!.ownerDocument.querySelector('#conteudo')).not.toBeNull();
+  it('deve renderizar a feature no conteúdo principal', () => {
+    expect(harness.routeNativeElement!.ownerDocument.querySelector('main #conteudo')).not.toBeNull();
   });
 
-  it('deve abrir o menu pelo header e fechar ao navegar', async () => {
+  it('deve fechar o painel do usuário ao tocar fora', async () => {
     const doc = harness.routeNativeElement!.ownerDocument;
-    const aside = doc.querySelector('aside')!;
-    doc.querySelector<HTMLButtonElement>('cw-header button')!.click();
+    doc.querySelector<HTMLButtonElement>('.rail cw-usuario button')!.click();
     await harness.fixture.whenStable();
-    expect(aside.classList).toContain('aberto');
 
-    links()[0]!.click();
+    doc.querySelector<HTMLElement>('#conteudo')!.click();
     await harness.fixture.whenStable();
-    expect(aside.classList).not.toContain('aberto');
+
+    expect(doc.querySelector('.rail .painel')).toBeNull();
   });
 
   afterEach(() => localStorage.clear());

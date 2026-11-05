@@ -1,0 +1,54 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Application.Common/">
+    <Project Path="src/Application.Common/Castwork.Application.Common.csproj" />
+  </Folder>
+  <Folder Name="/src/Application/">
+    <Project Path="src/Application/Castwork.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/Domain/">
+    <Project Path="src/Domain/Castwork.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/DomainService/">
+    <Project Path="src/DomainService/Castwork.DomainService.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/" />
+  <Folder Name="/src/Infra/Auth/">
+    <Project Path="src/Infra/Auth/Castwork.Infra.Auth.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/Data/">
+    <Project Path="src/Infra/Data/Castwork.Infra.Data.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/FluentValidation/">
+    <Project Path="src/Infra/FluentValidation/Castwork.Infra.FluentValidation.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/Hosting/">
+    <Project Path="src/Infra/Hosting/Castwork.Infra.Hosting.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/MediatR/">
+    <Project Path="src/Infra/MediatR/Castwork.Infra.MediatR.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/Migrations/">
+    <Project Path="src/Infra/Migrations/Castwork.Infra.Migrations.csproj" />
+  </Folder>
+  <Folder Name="/src/Presentation/" />
+  <Folder Name="/src/Presentation/GraphQl/">
+    <Project Path="src/Presentation/GraphQl/Castwork.GraphQl.csproj" />
+  </Folder>
+  <Folder Name="/src/Presentation/WebAPI/">
+    <Project Path="src/Presentation/WebAPI/Castwork.WebAPI.csproj" />
+  </Folder>
+  <Folder Name="/test/" />
+  <Folder Name="/test/ArchTests/">
+    <Project Path="test/ArchTests/Castwork.ArchTests.csproj" />
+  </Folder>
+  <Folder Name="/test/IntegrationTests/">
+    <Project Path="test/IntegrationTests/Castwork.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/test/TestBootstrap/">
+    <Project Path="test/TestBootstrap/Castwork.TestBootstrap.csproj" />
+  </Folder>
+  <Folder Name="/test/UnitTests/">
+    <Project Path="test/UnitTests/Castwork.UnitTests.csproj" />
+  </Folder>
+</Solution>

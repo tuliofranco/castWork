@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="../Domain/Castwork.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

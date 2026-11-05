@@ -24,11 +24,11 @@ export const routes: CastworkRoute[] = [
     canActivate: [authGuard],
     canActivateChild: [permissionGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'pecas' },
+      { path: '', pathMatch: 'full', redirectTo: 'projetos' },
       {
-        path: 'clientes',
-        data: { title: 'Clientes', menu: true, order: 1, icon: 'people', permissoes: ['clientes.ler'] },
-        loadChildren: () => import('@modules/clientes/clientes.routes').then((m) => m.CLIENTES_ROUTES),
+        path: 'projetos',
+        data: { title: 'Projetos', menu: true, order: 1, icon: 'collection', permissoes: ['projetos.ler'] },
+        loadChildren: () => import('@modules/projetos/projetos.routes').then((m) => m.PROJETOS_ROUTES),
       },
       {
         path: 'pecas',
@@ -36,19 +36,24 @@ export const routes: CastworkRoute[] = [
         loadChildren: () => import('@modules/pecas/pecas.routes').then((m) => m.PECAS_ROUTES),
       },
       {
+        path: 'clientes',
+        data: { title: 'Clientes', menu: true, order: 3, icon: 'people', permissoes: ['clientes.ler'] },
+        loadChildren: () => import('@modules/clientes/clientes.routes').then((m) => m.CLIENTES_ROUTES),
+      },
+      {
         path: 'precificacao',
-        data: { title: 'Precificação', menu: true, order: 3, icon: 'calculator', permissoes: ['precificacao.ler'] },
+        data: { title: 'Precificação', menu: true, order: 4, icon: 'calculator', permissoes: ['precificacao.ler'] },
         loadChildren: () =>
           import('@modules/precificacao/precificacao.routes').then((m) => m.PRECIFICACAO_ROUTES),
       },
       {
         path: 'documentos',
-        data: { title: 'Documentos', menu: true, order: 4, icon: 'file-earmark-pdf', permissoes: ['documentos.ler'] },
+        data: { title: 'Documentos', menu: true, order: 5, icon: 'file-earmark-pdf', permissoes: ['documentos.ler'] },
         loadChildren: () => import('@modules/documentos/documentos.routes').then((m) => m.DOCUMENTOS_ROUTES),
       },
       {
         path: 'portfolio',
-        data: { title: 'Portfólio', menu: true, order: 5, icon: 'images', permissoes: ['portfolio.ler'] },
+        data: { title: 'Portfólio', menu: true, order: 6, icon: 'images', permissoes: ['portfolio.ler'] },
         loadChildren: () => import('@modules/portfolio/portfolio.routes').then((m) => m.PORTFOLIO_ROUTES),
       },
     ],

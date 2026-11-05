@@ -1,0 +1,18 @@
+using Castwork.Domain.Entities.Pecas;
+
+using HotChocolate.Data.Sorting;
+
+namespace Castwork.GraphQl.Types.Pecas;
+
+public sealed class PecaSortType : SortInputType<Peca>
+{
+    protected override void Configure(ISortInputTypeDescriptor<Peca> descriptor)
+    {
+        descriptor.Name("PecaOrdenacao");
+        descriptor.BindFieldsExplicitly();
+        descriptor.Field(p => p.Id);
+        descriptor.Field(p => p.Nome);
+        descriptor.Field(p => p.Tipo);
+        descriptor.Field(p => p.CriadoEm);
+    }
+}

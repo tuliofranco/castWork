@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import type { PostLoginDto } from '@data/auth/login/dto/post-login.dto';
 import { LoginService } from '@data/auth/login/login.service';
+import { LogoutService } from '@data/auth/logout/logout.service';
 import { RefreshTokenService } from '@data/auth/refresh-token/refresh-token.service';
 import { LocalStorageService } from '@shared/services/local-storage.service';
 import { type Observable, finalize, map, shareReplay, tap, throwError } from 'rxjs';
@@ -22,6 +23,7 @@ const MARGEM_EXPIRACAO_SEGUNDOS = 10;
 export class AuthService {
   private readonly loginService = inject(LoginService);
   private readonly refreshTokenService = inject(RefreshTokenService);
+  private readonly logoutService = inject(LogoutService);
   private readonly storage = inject(LocalStorageService);
   private readonly jwt = inject(JwtService);
   private readonly router = inject(Router);
@@ -68,7 +70,13 @@ export class AuthService {
     return !this.jwt.expirado(this._token(), MARGEM_EXPIRACAO_SEGUNDOS);
   }
 
+  /**
+   * Encerra a sessão no servidor (revoga o refresh token) e localmente. Não espera a resposta:
+   * mesmo offline o usuário sai, e o refresh token ainda expira sozinho no servidor.
+   */
   logout(returnTo?: string): void {
+    const refreshToken = this.storage.obter(CHAVE_REFRESH_TOKEN);
+    if (refreshToken) this.logoutService.postLogout({ refreshToken }).subscribe({ error: () => undefined });
     this.limparSessao();
     void this.router.navigate(['/login'], { queryParams: returnTo ? { returnTo } : {} });
   }

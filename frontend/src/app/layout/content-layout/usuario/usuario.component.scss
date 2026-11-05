@@ -1,0 +1,97 @@
+:host {
+  position: relative;
+  display: block;
+}
+
+.gatilho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.375rem;
+  border: 0;
+  border-radius: var(--cw-radius);
+  background: transparent;
+  color: var(--cw-ink);
+  transition: background-color var(--cw-rapido) var(--cw-ease);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--cw-surface-hover);
+  }
+}
+
+.nome-curto {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.painel {
+  position: absolute;
+  z-index: 1050;
+  width: 16rem;
+  padding: 1rem;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+  background: var(--cw-surface);
+  box-shadow: var(--cw-shadow-pop);
+  animation: surgir var(--cw-rapido) var(--cw-ease);
+}
+
+.identidade {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.nome {
+  font-weight: 600;
+}
+
+.atelie {
+  color: var(--cw-ink-muted);
+  font-size: 0.875rem;
+}
+
+:host(.posicao-lateral) .painel {
+  left: calc(100% + 0.75rem);
+  bottom: 0;
+}
+
+:host(.posicao-abaixo) {
+  .gatilho {
+    width: auto;
+    min-height: 2.75rem;
+  }
+
+  .painel {
+    right: 0;
+    top: calc(100% + 0.5rem);
+  }
+}
+
+@media (min-width: 1200px) {
+  :host(.posicao-lateral) {
+    .gatilho {
+      justify-content: flex-start;
+    }
+
+    .nome-curto {
+      display: block;
+    }
+  }
+}
+
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

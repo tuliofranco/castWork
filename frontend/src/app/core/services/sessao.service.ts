@@ -11,7 +11,6 @@ export interface UsuarioSessao {
 }
 
 export interface AtelieSessao {
-  readonly id: string;
   readonly nome: string;
 }
 
@@ -33,7 +32,7 @@ export class SessaoService {
 
   readonly atelie = computed<AtelieSessao | null>(() => {
     const p = this.payload();
-    return p ? { id: p.atelieId, nome: p.atelieNome } : null;
+    return p ? { nome: p.atelieNome } : null;
   });
 
   /** Set para busca O(1); normaliza o caso em que o emissor manda string única. */

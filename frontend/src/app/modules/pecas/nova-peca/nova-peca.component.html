@@ -1,0 +1,45 @@
+<cw-cabecalho-pagina titulo="Nova peça" voltarPara="/pecas" voltarRotulo="Peças" />
+
+<form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <fieldset class="tipos">
+    <legend class="form-label">Tipo</legend>
+    <div class="opcoes">
+      @for (opcao of tipos; track opcao.valor) {
+        <label class="opcao" [class.marcada]="form.controls.tipo.value === opcao.valor">
+          <input type="radio" class="visually-hidden" formControlName="tipo" [value]="opcao.valor" />
+          <i class="bi" [class]="'bi-' + opcao.icone" aria-hidden="true"></i>
+          {{ opcao.rotulo }}
+        </label>
+      }
+    </div>
+  </fieldset>
+
+  <div class="grade">
+    <cw-campo class="c6" rotulo="Nome" para="nome" [controle]="form.controls.nome" [mensagens]="{ required: 'Informe o nome da peça.' }">
+      <input id="nome" class="form-control" formControlName="nome" placeholder="Ex.: Elo oval" autocomplete="off" />
+    </cw-campo>
+
+    <cw-campo class="c2" rotulo="Material" para="material" [opcional]="true" [controle]="form.controls.material">
+      <input id="material" class="form-control" formControlName="material" placeholder="Ouro amarelo" />
+    </cw-campo>
+    <cw-campo class="c2" rotulo="Teor" para="teor" [opcional]="true" [controle]="form.controls.teor" dica="18k ou 750">
+      <input id="teor" class="form-control" formControlName="teor" inputmode="numeric" />
+    </cw-campo>
+    <cw-campo class="c2" rotulo="Peso (g)" para="pesoGramas" [opcional]="true" [controle]="form.controls.pesoGramas" [mensagens]="{ min: 'O peso deve ser maior que zero.' }">
+      <input id="pesoGramas" type="number" step="0.001" min="0" inputmode="decimal" class="form-control" formControlName="pesoGramas" />
+    </cw-campo>
+
+    <cw-campo class="c6" rotulo="Descrição" para="descricao" [opcional]="true" [controle]="form.controls.descricao">
+      <textarea id="descricao" class="form-control" rows="3" formControlName="descricao"></textarea>
+    </cw-campo>
+  </div>
+
+  @for (mensagem of errosGerais(); track mensagem) {
+    <p class="aviso-formulario" role="alert">{{ mensagem }}</p>
+  }
+
+  <cw-barra-acoes>
+    <a class="btn btn-secundario" routerLink="/pecas">Cancelar</a>
+    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Salvando...' : 'Cadastrar peça' }}</button>
+  </cw-barra-acoes>
+</form>

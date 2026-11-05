@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Data/Castwork.Infra.Data.csproj" />
+    <ProjectReference Include="../Migrations/Castwork.Infra.Migrations.csproj" />
+    <ProjectReference Include="../Auth/Castwork.Infra.Auth.csproj" />
+    <ProjectReference Include="../MediatR/Castwork.Infra.MediatR.csproj" />
+    <ProjectReference Include="../FluentValidation/Castwork.Infra.FluentValidation.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,17 +1,138 @@
-// 991.98px = abaixo do breakpoint `lg` do Bootstrap (mesmo corte do `d-lg-none` no header).
-.cw-menu {
-  width: 240px;
-  flex-shrink: 0;
+:host {
+  display: grid;
+  grid-template-columns: var(--cw-rail) minmax(0, 1fr);
+  height: 100dvh;
+}
 
-  @media (max-width: 991.98px) {
-    position: fixed;
-    inset: 57px auto 0 0;
-    z-index: 1040;
-    transform: translateX(-100%);
-    transition: transform 0.2s ease-out;
+.marca {
+  color: var(--cw-ink);
+  font-family: var(--cw-font-titulo);
+  font-weight: 600;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
 
-    &.aberto {
-      transform: none;
+// ---------- Rail (tablet, padrão)
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 1rem 0.5rem;
+  background: var(--cw-surface-2);
+  border-right: 1px solid var(--cw-border);
+  overflow-y: auto;
+
+  > .marca {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 3rem;
+  }
+
+  .palavra {
+    display: none;
+  }
+
+  .monograma {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--cw-radius);
+    background: var(--cw-ink);
+    color: var(--cw-bg);
+    font-size: 1.375rem;
+  }
+
+  cw-menu {
+    flex: 1 1 auto;
+  }
+}
+
+.topo-celular {
+  display: none;
+}
+
+.conteudo {
+  overflow-y: auto;
+  scroll-padding-bottom: 6rem;
+}
+
+.largura {
+  max-width: 70rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 0;
+  min-height: 100%;
+}
+
+// ---------- Desktop: rail expandido
+@media (min-width: 1200px) {
+  :host {
+    grid-template-columns: var(--cw-rail-expandido) minmax(0, 1fr);
+  }
+
+  .rail {
+    padding: 1.25rem 0.875rem;
+
+    > .marca {
+      justify-content: flex-start;
+      padding: 0 0.375rem;
     }
+
+    .palavra {
+      display: inline;
+    }
+
+    .monograma {
+      width: 2.25rem;
+      height: 2.25rem;
+      font-size: 1.125rem;
+    }
+  }
+
+  .largura {
+    padding: 2.25rem 2.5rem 0;
+  }
+}
+
+// ---------- Celular: topo compacto + barra inferior
+@media (max-width: 767.98px) {
+  :host {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .topo-celular {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--cw-border);
+    background: var(--cw-surface-2);
+  }
+
+  .conteudo {
+    grid-row: 2;
+  }
+
+  .rail {
+    grid-row: 3;
+    flex-direction: row;
+    padding: 0.25rem 0.5rem calc(0.25rem + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--cw-border);
+    overflow: visible;
+
+    > .marca,
+    .usuario-rail {
+      display: none;
+    }
+  }
+
+  .largura {
+    padding: 1.25rem 1rem 0;
   }
 }
