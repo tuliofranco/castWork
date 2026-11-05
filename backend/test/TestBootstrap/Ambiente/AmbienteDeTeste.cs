@@ -142,8 +142,9 @@ public static class AmbienteDeTeste
     private static async Task RecriarConfiguracaoAtelieAsync(NpgsqlConnection conexao)
     {
         await using var comando = new NpgsqlCommand(
-            "INSERT INTO configuracao_atelie (id, nome, valor_hora_padrao, criado_em) VALUES (1, 'Meu ateliê', 0, '2026-01-01T00:00:00Z')",
+            "INSERT INTO configuracao_atelie (id, nome, valor_hora_padrao, criado_em, aviso_briefing) VALUES (1, 'Meu ateliê', 0, '2026-01-01T00:00:00Z', @aviso)",
             conexao);
+        comando.Parameters.AddWithValue("aviso", Domain.Entities.Atelie.ConfiguracaoAtelie.AvisoPadrao);
         await comando.ExecuteNonQueryAsync();
     }
 }

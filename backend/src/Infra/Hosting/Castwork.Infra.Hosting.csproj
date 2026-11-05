@@ -14,6 +14,8 @@
     <ProjectReference Include="../Auth/Castwork.Infra.Auth.csproj" />
     <ProjectReference Include="../MediatR/Castwork.Infra.MediatR.csproj" />
     <ProjectReference Include="../FluentValidation/Castwork.Infra.FluentValidation.csproj" />
+    <ProjectReference Include="../IA/Castwork.Infra.IA.csproj" />
+    <ProjectReference Include="../Documentos/Castwork.Infra.Documentos.csproj" />
   </ItemGroup>
 
 </Project>

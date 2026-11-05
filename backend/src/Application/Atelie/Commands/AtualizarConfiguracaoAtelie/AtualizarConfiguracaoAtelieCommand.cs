@@ -22,6 +22,19 @@ public sealed class AtualizarConfiguracaoAtelieCommand : IRequest
     public EnderecoDto? Endereco { get; set; }
 
     public decimal ValorHoraPadrao { get; set; }
+
+    public string? Assinatura { get; set; }
+
+    /// <summary>
+    /// #RRGGBB. Vazio volta à cor padrão.
+    /// </summary>
+    public string? CorMarca { get; set; }
+
+    public string? Instagram { get; set; }
+
+    public string? Site { get; set; }
+
+    public string? AvisoBriefing { get; set; }
 }
 
 public sealed class AtualizarConfiguracaoAtelieCommandHandler(IUnitOfWork unitOfWork)
@@ -39,6 +52,7 @@ public sealed class AtualizarConfiguracaoAtelieCommandHandler(IUnitOfWork unitOf
             request.Telefone,
             request.Endereco?.ParaValueObject(),
             Dinheiro.Criar(request.ValorHoraPadrao));
+        configuracao.AtualizarMarca(request.Assinatura, request.CorMarca, request.Instagram, request.Site, request.AvisoBriefing);
 
         await unitOfWork.SalvarAsync(cancellationToken);
     }

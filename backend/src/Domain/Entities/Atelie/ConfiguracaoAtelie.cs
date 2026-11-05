@@ -13,7 +13,13 @@ public sealed partial class ConfiguracaoAtelie : BaseEntity<long>, IAggregateRoo
     public const int NomeMaxLength = 150;
     public const int EmailMaxLength = 150;
     public const int TelefoneMaxLength = 20;
-    public const int LogoMaxLength = 300;
+    public const int AssinaturaMaxLength = 150;
+    public const int InstagramMaxLength = 60;
+    public const int SiteMaxLength = 150;
+    public const int AvisoMaxLength = 500;
+    public const int LogoTamanhoMaximo = 1024 * 1024;
+    public const string CorPadrao = "#2E6E68";
+    public const string AvisoPadrao = "Peça feita à mão: textura, tonalidade e proporções podem variar levemente em relação às referências.";
 
     private ConfiguracaoAtelie()
     {
@@ -38,9 +44,30 @@ public sealed partial class ConfiguracaoAtelie : BaseEntity<long>, IAggregateRoo
     public Dinheiro ValorHoraPadrao { get; private set; } = Dinheiro.Zero;
 
     /// <summary>
-    /// Chave do arquivo do logo no storage (Etapa 10). Nulo usa só o nome nos PDFs.
+    /// Frase curta que acompanha o nome nos documentos ("Joias autorais feitas à mão").
     /// </summary>
-    public string? LogoArquivo { get; private set; }
+    public string? Assinatura { get; private set; }
+
+    /// <summary>
+    /// Cor da marca em hexadecimal (#RRGGBB): linhas e títulos de seção dos documentos.
+    /// </summary>
+    public string CorMarca { get; private set; } = CorPadrao;
+
+    public string? Instagram { get; private set; }
+
+    public string? Site { get; private set; }
+
+    /// <summary>
+    /// Aviso padrão no fim do briefing (ex.: variações de peça feita à mão). Nulo omite a seção.
+    /// </summary>
+    public string? AvisoBriefing { get; private set; }
+
+    /// <summary>
+    /// Logo (PNG ou JPEG) guardado no banco: é pequeno e só um por instalação. Nulo usa só o nome nos PDFs.
+    /// </summary>
+    public byte[]? Logo { get; private set; }
+
+    public string? LogoTipo { get; private set; }
 
     public DateTimeOffset CriadoEm { get; private set; }
 

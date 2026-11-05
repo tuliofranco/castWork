@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Options e Logging vêm do framework compartilhado, como na Infra.Auth. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Fontes da marca Castwork (OFL-1.1, licenças ao lado): carregadas só na execução do WordCraft, sem instalar no servidor. -->
+  <ItemGroup>
+    <EmbeddedResource Include="WordCraft/Fontes/*.woff2" LogicalName="Fontes.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Application/Castwork.Application.csproj" />
+  </ItemGroup>
+
+</Project>

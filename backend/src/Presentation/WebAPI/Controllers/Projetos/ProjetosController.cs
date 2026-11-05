@@ -21,7 +21,7 @@ namespace Castwork.WebAPI.Controllers.Projetos;
 public sealed class ProjetosController : ApiController
 {
     [HttpPost]
-    [EndpointSummary("Cria um projeto (já com a Versão 1 em desenvolvimento).")]
+    [EndpointSummary("Cria um projeto, sem versões: a primeira é criada depois, com o nome escolhido.")]
     [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Criar([FromBody] CriarProjetoCommand command, CancellationToken cancellationToken)

@@ -19,11 +19,17 @@
   <Folder Name="/src/Infra/Data/">
     <Project Path="src/Infra/Data/Castwork.Infra.Data.csproj" />
   </Folder>
+  <Folder Name="/src/Infra/Documentos/">
+    <Project Path="src/Infra/Documentos/Castwork.Infra.Documentos.csproj" />
+  </Folder>
   <Folder Name="/src/Infra/FluentValidation/">
     <Project Path="src/Infra/FluentValidation/Castwork.Infra.FluentValidation.csproj" />
   </Folder>
   <Folder Name="/src/Infra/Hosting/">
     <Project Path="src/Infra/Hosting/Castwork.Infra.Hosting.csproj" />
+  </Folder>
+  <Folder Name="/src/Infra/IA/">
+    <Project Path="src/Infra/IA/Castwork.Infra.IA.csproj" />
   </Folder>
   <Folder Name="/src/Infra/MediatR/">
     <Project Path="src/Infra/MediatR/Castwork.Infra.MediatR.csproj" />

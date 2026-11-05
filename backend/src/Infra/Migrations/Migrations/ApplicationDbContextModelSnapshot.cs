@@ -303,6 +303,25 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("alterado_por");
 
+                    b.Property<string>("Assinatura")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("assinatura");
+
+                    b.Property<string>("AvisoBriefing")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("aviso_briefing");
+
+                    b.Property<string>("CorMarca")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("character(7)")
+                        .HasDefaultValue("#2E6E68")
+                        .HasColumnName("cor_marca")
+                        .IsFixedLength();
+
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em");
@@ -321,16 +340,30 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("email");
 
-                    b.Property<string>("LogoArquivo")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("logo_arquivo");
+                    b.Property<string>("Instagram")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("instagram");
+
+                    b.Property<byte[]>("Logo")
+                        .HasColumnType("bytea")
+                        .HasColumnName("logo");
+
+                    b.Property<string>("LogoTipo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("logo_tipo");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)")
                         .HasColumnName("nome");
+
+                    b.Property<string>("Site")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("site");
 
                     b.Property<string>("Telefone")
                         .HasMaxLength(20)
@@ -403,10 +436,201 @@ namespace Castwork.Infra.Migrations
                         new
                         {
                             Id = 1L,
+                            AvisoBriefing = "Peça feita à mão: textura, tonalidade e proporções podem variar levemente em relação às referências.",
+                            CorMarca = "#2E6E68",
                             CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             Nome = "Meu ateliê",
                             ValorHoraPadrao = 0m
                         });
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.Briefing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Acabamento")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("acabamento");
+
+                    b.Property<DateTimeOffset?>("AlteradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("alterado_em");
+
+                    b.Property<long?>("AlteradoPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("alterado_por");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<long?>("CriadoPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("criado_por");
+
+                    b.Property<string>("Fecho")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("fecho");
+
+                    b.Property<string>("Materiais")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("materiais");
+
+                    b.Property<string>("Medidas")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("medidas");
+
+                    b.Property<string>("OQueOClienteQuer")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("o_que_o_cliente_quer");
+
+                    b.Property<string>("OQueSeraFeito")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("o_que_sera_feito");
+
+                    b.Property<string>("Observacoes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("observacoes");
+
+                    b.Property<string>("Ocasiao")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("ocasiao");
+
+                    b.Property<string>("Orcamento")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("orcamento");
+
+                    b.Property<string>("Pedras")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("pedras");
+
+                    b.Property<DateOnly?>("Prazo")
+                        .HasColumnType("date")
+                        .HasColumnName("prazo");
+
+                    b.Property<long>("ProjetoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("projeto_id");
+
+                    b.Property<string>("TipoJoia")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo_joia");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_briefings");
+
+                    b.HasIndex("ProjetoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_briefings_projeto_id");
+
+                    b.ToTable("briefings", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.DocumentoBriefing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BriefingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("briefing_id");
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTimeOffset>("GeradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("gerado_em");
+
+                    b.Property<string>("NomeArquivo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nome_arquivo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_briefing_documentos");
+
+                    b.HasIndex("BriefingId", "GeradoEm")
+                        .HasDatabaseName("ix_briefing_documentos_briefing_id_gerado_em");
+
+                    b.ToTable("briefing_documentos", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.MensagemBriefing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("BriefingId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("briefing_id");
+
+                    b.Property<string>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTimeOffset>("CriadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criada_em");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer")
+                        .HasColumnName("ordem");
+
+                    b.Property<string>("Papel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("papel");
+
+                    b.Property<string>("Texto")
+                        .HasColumnType("text")
+                        .HasColumnName("texto");
+
+                    b.HasKey("Id")
+                        .HasName("pk_briefing_mensagens");
+
+                    b.HasIndex("BriefingId", "Ordem")
+                        .IsUnique()
+                        .HasDatabaseName("ix_briefing_mensagens_briefing_id_ordem");
+
+                    b.ToTable("briefing_mensagens", (string)null);
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Clientes.Cliente", b =>
@@ -789,6 +1013,36 @@ namespace Castwork.Infra.Migrations
                         .HasConstraintName("fk_usuarios_perfis_perfil_id");
                 });
 
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.Briefing", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Projetos.Projeto", null)
+                        .WithOne()
+                        .HasForeignKey("Castwork.Domain.Entities.Briefings.Briefing", "ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_briefings_projetos_projeto_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.DocumentoBriefing", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Briefings.Briefing", null)
+                        .WithMany()
+                        .HasForeignKey("BriefingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_briefing_documentos_briefings_briefing_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.MensagemBriefing", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Briefings.Briefing", null)
+                        .WithMany("Mensagens")
+                        .HasForeignKey("BriefingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_briefing_mensagens_briefings_briefing_id");
+                });
+
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>
                 {
                     b.HasOne("Castwork.Domain.Entities.Pecas.Peca", null)
@@ -828,6 +1082,11 @@ namespace Castwork.Infra.Migrations
             modelBuilder.Entity("Castwork.Domain.Entities.Acesso.Perfil", b =>
                 {
                     b.Navigation("Regras");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Briefings.Briefing", b =>
+                {
+                    b.Navigation("Mensagens");
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.Projeto", b =>

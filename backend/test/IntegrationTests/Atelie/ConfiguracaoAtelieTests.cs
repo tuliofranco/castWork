@@ -2,6 +2,7 @@ using Castwork.Application.Atelie.Commands.AtualizarConfiguracaoAtelie;
 using Castwork.Application.Atelie.Queries.GetConfiguracaoAtelie;
 using Castwork.Application.Common.Enderecos;
 using Castwork.Application.Common.Exceptions;
+using Castwork.Domain.Entities.Atelie;
 using Castwork.TestBootstrap.Ambiente;
 using Castwork.TestBootstrap.Builders;
 
@@ -14,7 +15,14 @@ public class ConfiguracaoAtelieTests : TesteDeIntegracao
     {
         var configuracao = await AmbienteDeTeste.SendAsync(new GetConfiguracaoAtelieQuery());
 
-        configuracao.Should().BeEquivalentTo(new ConfiguracaoAtelieDto { Nome = "Meu ateliê", ValorHoraPadrao = 0m, PossuiLogo = false });
+        configuracao.Should().BeEquivalentTo(new ConfiguracaoAtelieDto
+        {
+            Nome = "Meu ateliê",
+            ValorHoraPadrao = 0m,
+            PossuiLogo = false,
+            CorMarca = ConfiguracaoAtelie.CorPadrao,
+            AvisoBriefing = ConfiguracaoAtelie.AvisoPadrao,
+        });
     }
 
     [Test]

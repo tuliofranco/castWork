@@ -21,6 +21,16 @@ public sealed class ConfiguracaoAtelieDto : IMapFrom<ConfiguracaoAtelie>
 
     public decimal ValorHoraPadrao { get; init; }
 
+    public string? Assinatura { get; init; }
+
+    public string CorMarca { get; init; } = string.Empty;
+
+    public string? Instagram { get; init; }
+
+    public string? Site { get; init; }
+
+    public string? AvisoBriefing { get; init; }
+
     public bool PossuiLogo { get; init; }
 
     /// <summary>
@@ -30,5 +40,5 @@ public sealed class ConfiguracaoAtelieDto : IMapFrom<ConfiguracaoAtelie>
         => config.NewConfig<ConfiguracaoAtelie, ConfiguracaoAtelieDto>()
             .Map(d => d.Documento, s => s.Documento == null ? null : s.Documento.Formatado)
             .Map(d => d.ValorHoraPadrao, s => s.ValorHoraPadrao.Valor)
-            .Map(d => d.PossuiLogo, s => s.LogoArquivo != null);
+            .Map(d => d.PossuiLogo, s => s.LogoTipo != null);
 }

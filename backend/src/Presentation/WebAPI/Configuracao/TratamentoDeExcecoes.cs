@@ -24,6 +24,11 @@ public sealed class TratamentoDeExcecoes(IProblemDetailsService problemDetails) 
             ForbiddenAccessException ex => (StatusCodes.Status403Forbidden, "Acesso negado.", ex.Message),
             EntidadeNaoEncontradaException ex => (StatusCodes.Status404NotFound, "Não encontrado.", ex.Message),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflito de edição.", "O registro foi alterado por outra pessoa. Recarregue e tente de novo."),
+
+            // Duas gravações simultâneas disputando a mesma chave única (ex.: dois envios na mesma conversa).
+            DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } } =>
+                (StatusCodes.Status409Conflict, "Conflito de edição.", "Outra alteração foi salva ao mesmo tempo. Recarregue e tente de novo."),
+            ServicoIndisponivelException ex => (StatusCodes.Status503ServiceUnavailable, "Serviço indisponível.", ex.Message),
             DomainException ex => (StatusCodes.Status422UnprocessableEntity, "Regra de negócio violada.", ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "Erro inesperado.", "Ocorreu um erro inesperado. Informe o código de rastreio ao suporte."),
         };
