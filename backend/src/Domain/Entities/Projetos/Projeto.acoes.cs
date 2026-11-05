@@ -8,16 +8,13 @@ namespace Castwork.Domain.Entities.Projetos;
 /// </summary>
 public sealed partial class Projeto
 {
-    public const string NomeDaPrimeiraVersao = "Versão 1";
-
     /// <summary>
-    /// Todo projeto nasce com a v1 em desenvolvimento, pronta para receber peças.
+    /// O projeto nasce sem versões: a primeira é criada depois, com o nome que o joalheiro escolher.
     /// </summary>
     public static Projeto Criar(string nome, string? descricao, long? clienteId)
     {
         var projeto = new Projeto();
         projeto.Atualizar(nome, descricao, clienteId);
-        projeto._versoes.Add(new VersaoProjeto(1, NomeDaPrimeiraVersao, null));
         return projeto;
     }
 

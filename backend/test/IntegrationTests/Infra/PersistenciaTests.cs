@@ -1,4 +1,5 @@
 using Castwork.Application.Abstractions;
+using Castwork.Application.Projetos.Commands.CriarVersao;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Infra.Data;
 using Castwork.TestBootstrap.Ambiente;
@@ -28,6 +29,7 @@ public class PersistenciaTests : TesteDeIntegracao
     {
         var projetos = Usar(new ProjetoBuilder());
         var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
+        await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = id, Nome = "Base" });
         var peca = await Usar(new PecaBuilder()).BuildAsync();
         AmbienteDeTeste.Relogio.Avancar(TimeSpan.FromHours(2));
         AmbienteDeTeste.Sessao.UsuarioId = 7;
@@ -78,6 +80,7 @@ public class PersistenciaTests : TesteDeIntegracao
     {
         var projetos = Usar(new ProjetoBuilder());
         var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
+        await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = id, Nome = "Base" });
         var peca = await Usar(new PecaBuilder()).CustomizeCommand(c => c.Tipo = Domain.Entities.Pecas.TipoPeca.Fecho).BuildAsync();
 
         var valores = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Database

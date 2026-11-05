@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Castwork.Application.Acesso.Commands.Login;
 using Castwork.Application.Common.Security;
 using Castwork.Application.Projetos.Commands.AdicionarItem;
+using Castwork.Application.Projetos.Commands.CriarVersao;
 using Castwork.Application.Projetos.Commands.DuplicarVersao;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
 using Castwork.GraphQl;
@@ -56,14 +57,14 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
         var nodes = resposta["data"]!["projetos"]!["nodes"]!.AsArray();
         nodes.Select(n => n!["nome"]!.GetValue<string>()).Should().Equal("Pulseira autoral", "Colar Raízes");
         nodes[0]!["cliente"].Should().BeNull();
-        nodes[0]!["versoes"]!.AsArray().Select(v => v!["status"]!.GetValue<string>()).Should().Equal("EM_DESENVOLVIMENTO");
+        nodes[0]!["versoes"]!.AsArray().Should().BeEmpty("o projeto nasce sem versões");
         var versoesDoColar = ClienteGraphQl.Ler<List<VersaoLida>>(nodes[1]!["versoes"]);
         nodes[1]!["cliente"]!["nome"]!.GetValue<string>().Should().Be("Maria Silva");
         versoesDoColar.Should().BeEquivalentTo(
             new[]
             {
                 new VersaoLida(2, "Com pedra", "EM_DESENVOLVIMENTO", [new ItemLido(12, new PecaLida("Elo oval", "ELO", 750))]),
-                new VersaoLida(1, "Versão 1", "PUBLICADA", [new ItemLido(12, new PecaLida("Elo oval", "ELO", 750))]),
+                new VersaoLida(1, "Base", "PUBLICADA", [new ItemLido(12, new PecaLida("Elo oval", "ELO", 750))]),
             },
             o => o.WithStrictOrdering());
         autoral.Should().BePositive();
@@ -191,8 +192,9 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
         resposta["data"]!["configuracaoAtelie"]!["nome"]!.GetValue<string>().Should().Be("Meu ateliê");
     }
 
+    /// <summary>O projeto nasce sem versões; cria a primeira.</summary>
     private static Task<long> V1Async(long projetoId)
-        => AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Where(p => p.Id == projetoId).SelectMany(p => p.Versoes).Select(v => v.Id).SingleAsync());
+        => AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = projetoId, Nome = "Base" });
 
     private Task<ClienteGraphQl> ComoAdminAsync() => EntrarAsync(Usar(new UsuarioBuilder()).Admin());
 

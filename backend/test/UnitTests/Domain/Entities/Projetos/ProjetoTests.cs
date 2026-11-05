@@ -11,13 +11,22 @@ public class ProjetoTests
     private static readonly DateTimeOffset Agora = new(2026, 11, 5, 13, 0, 0, TimeSpan.Zero);
 
     [Test]
-    public void DeveCriarProjetoComVersao1EmDesenvolvimentoESemItens()
+    public void DeveCriarProjetoSemVersoes()
     {
         var projeto = Projeto.Criar(" Colar Raízes ", "Inspirado em raízes", clienteId: 3);
 
         projeto.Should().BeEquivalentTo(new { Nome = "Colar Raízes", Descricao = "Inspirado em raízes", ClienteId = 3L });
-        projeto.Versoes.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new { Numero = 1, Nome = "Versão 1", Status = StatusVersao.EmDesenvolvimento, Itens = Array.Empty<ItemComposicao>() });
+        projeto.Versoes.Should().BeEmpty();
+    }
+
+    [Test]
+    public void DeveNumerarAPrimeiraVersaoComo1EmDesenvolvimento()
+    {
+        var projeto = Projeto.Criar("Colar", null, null);
+
+        var versao = projeto.CriarVersao("Com safira", null);
+
+        versao.Should().BeEquivalentTo(new { Numero = 1, Nome = "Com safira", Status = StatusVersao.EmDesenvolvimento, Itens = Array.Empty<ItemComposicao>() });
     }
 
     [Test]
@@ -33,10 +42,11 @@ public class ProjetoTests
     {
         var projeto = Projeto.Criar("Colar", null, null);
 
+        projeto.CriarVersao("Base", null);
         var v2 = projeto.CriarVersao("Com pedra", null);
         var v3 = projeto.CriarVersao("Sem pedra", "mais leve");
 
-        projeto.Versoes.Select(v => (v.Numero, v.Nome)).Should().Equal((1, "Versão 1"), (2, "Com pedra"), (3, "Sem pedra"));
+        projeto.Versoes.Select(v => (v.Numero, v.Nome)).Should().Equal((1, "Base"), (2, "Com pedra"), (3, "Sem pedra"));
         (v2.Numero, v3.Observacoes).Should().Be((2, "mais leve"));
     }
 
@@ -199,7 +209,7 @@ public class ProjetoTests
     private static (Projeto Projeto, long V1) ProjetoComIds()
     {
         var projeto = Projeto.Criar("Colar", null, null);
-        return (projeto, DefinirId(projeto.Versoes.Single(), 100));
+        return (projeto, DefinirId(projeto.CriarVersao("Base", null), 100));
     }
 
     private static long DefinirId<T>(T entidade, long id)
