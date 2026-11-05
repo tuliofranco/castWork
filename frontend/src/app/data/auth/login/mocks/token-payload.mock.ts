@@ -9,7 +9,6 @@ export function criarTokenPayloadMock(sobrescrever: Partial<TokenPayload> = {}):
     sub: faker.string.uuid(),
     nome: faker.person.fullName(),
     email: faker.internet.email(),
-    atelieId: faker.string.uuid(),
     atelieNome: `Ateliê ${faker.company.name()}`,
     permissoes: ['pecas.ler'],
     exp: Math.floor(Date.now() / 1000) + 3600,

@@ -15,7 +15,6 @@ export const USUARIOS_DEMO: Readonly<Record<string, UsuarioDemo>> = {
     sub: 'usr-1',
     nome: 'Joana Ourives',
     email: 'joalheira@castwork.dev',
-    atelieId: 'atl-1',
     atelieNome: 'Ateliê Pedra Bruta',
     permissoes: [
       'clientes.ler',
@@ -32,7 +31,6 @@ export const USUARIOS_DEMO: Readonly<Record<string, UsuarioDemo>> = {
     sub: 'usr-2',
     nome: 'Caio Aprendiz',
     email: 'aprendiz@castwork.dev',
-    atelieId: 'atl-1',
     atelieNome: 'Ateliê Pedra Bruta',
     permissoes: ['pecas.ler', 'portfolio.ler'],
   },
