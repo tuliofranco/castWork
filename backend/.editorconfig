@@ -75,3 +75,7 @@ dotnet_diagnostic.CA1515.severity = none   # Fixtures NUnit precisam ser públic
 [src/Infra/Migrations/Migrations/**.cs]
 generated_code = true
 dotnet_analyzer_diagnostic.severity = none
+
+# Resolvers do HotChocolate: classes de instância por exigência do [ExtendObjectType] (sem o gerador de código).
+[src/Presentation/GraphQl/Queries/**.cs]
+dotnet_diagnostic.CA1822.severity = none

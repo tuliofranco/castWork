@@ -1,3 +1,4 @@
+using Castwork.GraphQl;
 using Castwork.Infra.Hosting;
 using Castwork.Infra.Hosting.Inicializacao;
 using Castwork.WebAPI.Configuracao;
@@ -15,6 +16,7 @@ builder.WebHost.ConfigureKestrel(kestrel =>
 
 builder.Services.AddCastworkInfra(builder.Configuration);
 builder.Services.AddApiHttp(builder.Configuration, builder.Environment);
+builder.Services.AddGraphQlCastwork(builder.Environment.IsDevelopment());
 
 var app = builder.Build();
 
@@ -34,6 +36,7 @@ app.UseHeadersDeSeguranca();
 app.UseCors(ApiExtensions.PoliticaCors);
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRejeitarTokenInvalido();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
@@ -44,6 +47,10 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/health", () => Results.Ok("Castwork API")).AllowAnonymous();
 app.MapControllers();
+
+// A autorização do GraphQL é por campo ([Authorize] em todo resolver, garantido por teste),
+// por isso o endpoint em si não exige token: o Nitro (dev) e a introspecção (dev) abrem sem login.
+app.MapGraphQL().AllowAnonymous();
 
 await app.RunAsync();
 

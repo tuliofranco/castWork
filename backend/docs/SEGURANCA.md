@@ -78,7 +78,7 @@ recebe 403 tanto no REST quanto no GraphQL para o mesmo caso de uso.
 | Validação centralizada | `ValidationBehaviour` (FluentValidation) no pipeline do MediatR; REST e GraphQL passam pelo mesmo pipeline. | 4, 5 |
 | Limite de corpo | Kestrel `MaxRequestBodySize = 1 MB` global; `[RequestSizeLimit]` maior só no upload de foto (10 MB) e `FormOptions.MultipartBodyLengthLimit` igual. | 7 |
 | Upload seguro | Validar tipo pelo **conteúdo (magic bytes)**, não pela extensão nem pelo `Content-Type`; aceitar só JPEG/PNG/WebP/HEIC; **regravar a imagem** (re-encode) ao gerar as miniaturas, o que remove EXIF (inclusive GPS) e payloads embutidos; nome no blob gerado pelo servidor (GUID), nunca o nome original; blob privado, entregue por URL assinada de curta duração ou pela própria API. | 10 |
-| GraphQL | Profundidade máxima (ex.: 8), análise de custo/complexidade do HotChocolate com orçamento por requisição, `MaxPageSize` = 100 no paging, introspecção e Nitro desligados em produção, e **sem batching** de operações. | 8 |
+| GraphQL | Profundidade máxima (ex.: 8), análise de custo/complexidade do HotChocolate com orçamento por requisição, `MaxPageSize` = 100 no paging, introspecção e Nitro desligados em produção, e **sem batching** de operações. `[Authorize]` em todo campo (garantido por teste) e descrições XML internas fora do schema público. | 8 ✅ |
 | Paginação | `TamanhoPagina` máximo de 50 (fora da faixa vira o padrão) e `OrdenarPor` só aceita campos do DTO (senão 400). | 4 ✅ |
 
 ---

@@ -1,5 +1,6 @@
 using Castwork.Application.Abstractions;
 using Castwork.Application.Acesso.Common;
+using Castwork.Application.Common.Security;
 using Castwork.Infra.Auth.Jwt;
 using Castwork.Infra.Auth.Permissoes;
 using Castwork.Infra.Auth.Senhas;
@@ -31,8 +32,16 @@ public static class AutenticacaoExtensions
             });
 
         // Negar por padrão: todo endpoint exige usuário autenticado, salvo [AllowAnonymous] explícito.
-        services.AddAuthorizationBuilder()
+        var autorizacao = services.AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+
+        // Uma policy por regra do catálogo, com o código como nome: [Authorize(Policy = "pecas.ler")].
+        foreach (var regra in CatalogoDeRegras.Todas)
+        {
+            autorizacao.AddPolicy(regra.Codigo, policy => policy.RequireAuthenticatedUser().AddRequirements(new RegraRequirement(regra.Id)));
+        }
+
+        services.AddScoped<IAuthorizationHandler, RegraAuthorizationHandler>();
 
         services.AddHttpContextAccessor();
         services.AddMemoryCache();

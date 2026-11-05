@@ -41,6 +41,13 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.19.0" />
   </ItemGroup>
 
+  <!-- GraphQL -->
+  <ItemGroup>
+    <PackageVersion Include="HotChocolate.AspNetCore" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.AspNetCore.Authorization" Version="16.7.3" />
+    <PackageVersion Include="HotChocolate.Data.EntityFramework" Version="16.7.3" />
+  </ItemGroup>
+
   <!-- Testes -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

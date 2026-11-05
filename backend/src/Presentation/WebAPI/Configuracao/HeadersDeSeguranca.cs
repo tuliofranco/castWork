@@ -4,7 +4,7 @@ public static class HeadersDeSeguranca
 {
     /// <summary>
     /// Headers de defesa em toda resposta. A API só devolve JSON, então a CSP é a mais restrita possível;
-    /// a página do Scalar (só em desenvolvimento) fica de fora porque precisa carregar script e estilo.
+    /// as páginas do Scalar e do Nitro ficam de fora.
     /// </summary>
     public static IApplicationBuilder UseHeadersDeSeguranca(this IApplicationBuilder app)
         => app.Use(async (contexto, proximo) =>
@@ -14,7 +14,10 @@ public static class HeadersDeSeguranca
             headers.XFrameOptions = "DENY";
             headers["Referrer-Policy"] = "no-referrer";
 
-            if (!contexto.Request.Path.StartsWithSegments("/scalar", StringComparison.OrdinalIgnoreCase))
+            // Páginas de ferramenta (Scalar e Nitro, só em desenvolvimento) precisam carregar script e estilo.
+            var ehFerramenta = contexto.Request.Path.StartsWithSegments("/scalar", StringComparison.OrdinalIgnoreCase)
+                || contexto.Request.Path.StartsWithSegments("/graphql", StringComparison.OrdinalIgnoreCase);
+            if (!ehFerramenta)
             {
                 headers.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'";
             }

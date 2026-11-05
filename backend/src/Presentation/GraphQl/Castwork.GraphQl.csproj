@@ -1,6 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HotChocolate.AspNetCore" />
+    <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
+    <PackageReference Include="HotChocolate.Data.EntityFramework" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../Infra/Hosting/Castwork.Infra.Hosting.csproj" />
   </ItemGroup>
 
