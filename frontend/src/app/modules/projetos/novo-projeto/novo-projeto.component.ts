@@ -49,7 +49,7 @@ export class NovoProjetoComponent {
       .pipe(finalize(() => this.enviando.set(false)))
       .subscribe({
         next: ({ id }) => {
-          this.toast.sucesso('Projeto criado com a Versão 1.');
+          this.toast.sucesso('Projeto criado.');
           void this.router.navigate(['/projetos', id]);
         },
         error: (erro: unknown) => this.errosGerais.set(aplicarErrosDoServidor(this.form, erro)),

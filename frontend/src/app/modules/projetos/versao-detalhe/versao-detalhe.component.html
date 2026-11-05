@@ -3,7 +3,7 @@
 } @else if (projeto.value() === null || (projeto.hasValue() && !versao())) {
   <cw-cabecalho-pagina titulo="Versão não encontrada" [voltarPara]="voltarPara()" voltarRotulo="Projeto" subtitulo="Ela pode ter sido removida, ou o endereço está incompleto." />
 } @else if (versao(); as v) {
-  <cw-cabecalho-pagina [titulo]="'v' + v.numero + ' · ' + v.nome" [voltarPara]="voltarPara()" [voltarRotulo]="projeto.value()?.nome ?? 'Projeto'" />
+  <cw-cabecalho-pagina [titulo]="v.numero + '. ' + v.nome" [voltarPara]="voltarPara()" [voltarRotulo]="projeto.value()?.nome ?? 'Projeto'" />
 
   <div class="barra-versao">
     <cw-selo [tom]="status[v.status].tom" [icone]="status[v.status].icone">{{ status[v.status].rotulo }}</cw-selo>
@@ -23,7 +23,7 @@
           <button type="button" class="btn btn-secundario" [disabled]="salvando()" (click)="arquivar()">
             <i class="bi bi-archive" aria-hidden="true"></i> Arquivar
           </button>
-          <button type="button" class="btn btn-primary" [disabled]="salvando() || v.itens.length === 0" (click)="publicar()">
+          <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="publicar()">
             <i class="bi bi-check2-circle" aria-hidden="true"></i> Publicar versão
           </button>
         }

@@ -55,23 +55,36 @@ export class ProjetoDetalheComponent {
   protected readonly clienteMudou = computed(() => this.clienteEscolhido() !== (this.projeto.value()?.cliente?.id ?? null));
 
   protected readonly arquivadas = computed(() => (this.projeto.value()?.versoes ?? []).filter((v) => v.status === 'ARQUIVADA'));
+  /** Lista ordenada pelo número da versão, da primeira para a mais recente. */
   protected readonly versoesVisiveis = computed(() =>
-    (this.projeto.value()?.versoes ?? []).filter((v) => this.mostrarArquivadas() || v.status !== 'ARQUIVADA'),
+    (this.projeto.value()?.versoes ?? [])
+      .filter((v) => this.mostrarArquivadas() || v.status !== 'ARQUIVADA')
+      .sort((a, b) => a.numero - b.numero),
   );
+
+  /** Formulário inline de nova versão: o nome é livre e obrigatório; o número vem do servidor. */
+  protected readonly criandoVersao = signal(false);
+  protected readonly nomeNovaVersao = signal('');
 
   protected salvarCliente(): void {
     const clienteId = this.clienteEscolhido();
     this.executar(this.projetosService.putCliente(this.projetoId(), clienteId), clienteId === null ? 'Projeto desvinculado do cliente.' : 'Cliente vinculado.');
   }
 
-  protected novaVersao(): void {
-    const proximo = Math.max(0, ...(this.projeto.value()?.versoes ?? []).map((v) => v.numero)) + 1;
+  protected abrirNovaVersao(): void {
+    this.nomeNovaVersao.set('');
+    this.criandoVersao.set(true);
+  }
+
+  protected criarVersao(): void {
+    const nome = this.nomeNovaVersao().trim();
+    if (!nome) return;
     this.salvando.set(true);
     this.projetosService
-      .postVersao(this.projetoId(), { nome: `Versão ${proximo}` })
+      .postVersao(this.projetoId(), { nome })
       .pipe(finalize(() => this.salvando.set(false)))
       .subscribe(({ id }) => {
-        this.toast.sucesso(`Versão ${proximo} criada.`);
+        this.toast.sucesso(`Versão "${nome}" criada.`);
         void this.router.navigate(['/projetos', this.projetoId(), 'versoes', id]);
       });
   }

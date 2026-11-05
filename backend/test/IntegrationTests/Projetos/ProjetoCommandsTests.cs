@@ -24,7 +24,7 @@ namespace Castwork.IntegrationTests.Projetos;
 public class ProjetoCommandsTests : TesteDeIntegracao
 {
     [Test]
-    public async Task DeveCriarProjetoDoClienteComVersao1EmDesenvolvimentoAsync()
+    public async Task DeveCriarProjetoDoClienteSemVersoesAsync()
     {
         var clienteId = await Usar(new ClienteBuilder()).BuildAsync();
         var projetos = Usar(new ProjetoBuilder());
@@ -34,7 +34,7 @@ public class ProjetoCommandsTests : TesteDeIntegracao
 
         var projeto = await LerAsync(id);
         projeto.Should().BeEquivalentTo(new { Nome = "Colar Raízes", ClienteId = clienteId, CriadoEm = RelogioDeTeste.Inicio }, o => o.ExcludingMissingMembers());
-        projeto.Versoes.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Numero = 1, Nome = "Versão 1", Status = StatusVersao.EmDesenvolvimento });
+        projeto.Versoes.Should().BeEmpty();
     }
 
     [Test]
@@ -107,20 +107,20 @@ public class ProjetoCommandsTests : TesteDeIntegracao
         await alterarPublicada.Should().ThrowAsync<RegraDeNegocioException>().WithMessage("*publicada*");
         var versoes = (await LerAsync(projetoId)).Versoes.OrderBy(v => v.Numero).ToList();
         versoes.Select(v => new { v.Numero, v.Nome, v.Status, v.PublicadaEm }).Should().Equal(
-            new { Numero = 1, Nome = "Versão 1", Status = StatusVersao.Publicada, PublicadaEm = (DateTimeOffset?)RelogioDeTeste.Inicio.AddHours(1) },
+            new { Numero = 1, Nome = "Base", Status = StatusVersao.Publicada, PublicadaEm = (DateTimeOffset?)RelogioDeTeste.Inicio.AddHours(1) },
             new { Numero = 2, Nome = "Versão 2", Status = StatusVersao.EmDesenvolvimento, PublicadaEm = (DateTimeOffset?)null });
         versoes[1].Id.Should().Be(v2);
         versoes[1].Itens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { PecaId = elo, Quantidade = 12 });
     }
 
     [Test]
-    public async Task DeveRecusarPublicarVersaoVaziaAsync()
+    public async Task DevePublicarVersaoVaziaAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
 
-        var publicar = () => AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+        await AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
 
-        await publicar.Should().ThrowAsync<RegraDeNegocioException>().WithMessage("*ao menos uma peça*");
+        (await LerAsync(projetoId)).Versoes.Single(v => v.Id == v1).Status.Should().Be(StatusVersao.Publicada);
     }
 
     [Test]
@@ -206,6 +206,6 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     {
         var projetos = Usar(new ProjetoBuilder());
         var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
-        return (id, (await LerAsync(id)).Versoes.Single().Id);
+        return (id, await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = id, Nome = "Base" }));
     }
 }
