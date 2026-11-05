@@ -1,14 +1,13 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { AMBIENTE } from '@shared/injection-tokens/ambiente.token';
+import { semAuth, semErro } from '@shared/injection-tokens/http-context.tokens';
 import { type Observable, delay, of, throwError } from 'rxjs';
 
 import type { PostLoginRespostaDto } from './dto/post-login-resposta.dto';
 import type { PostLoginDto } from './dto/post-login.dto';
-import { codificarTokenMock } from './mocks/codificar-token.mock';
-import { SENHA_DEMO, USUARIOS_DEMO } from './mocks/usuarios-demo.mock';
-
-const OITO_HORAS_EM_SEGUNDOS = 8 * 60 * 60;
+import { emitirTokensMock } from './mocks/emitir-tokens.mock';
+import { SENHA_DEMO } from './mocks/usuarios-demo.mock';
 
 /** Data service: só faz a requisição e devolve o DTO. Quem grava o token é o AuthService. */
 @Injectable({ providedIn: 'root' })
@@ -18,16 +17,14 @@ export class LoginService {
 
   postLogin(dto: PostLoginDto): Observable<PostLoginRespostaDto> {
     if (this.ambiente.usarMocks) return this.postLoginMock(dto);
-    return this.http.post<PostLoginRespostaDto>('auth/login', dto);
+    // Sem token (ainda não existe) e sem toast: a tela de login mostra o próprio erro.
+    return this.http.post<PostLoginRespostaDto>('auth/login', dto, { context: semErro(semAuth()) });
   }
 
   private postLoginMock(dto: PostLoginDto): Observable<PostLoginRespostaDto> {
-    const usuario = USUARIOS_DEMO[dto.email.toLowerCase()];
-    if (!usuario || dto.senha !== SENHA_DEMO) {
-      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' }));
-    }
-    const exp = Math.floor(Date.now() / 1000) + OITO_HORAS_EM_SEGUNDOS;
+    const tokens = dto.senha === SENHA_DEMO ? emitirTokensMock(dto.email) : null;
+    if (!tokens) return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' }));
     // delay simula latência para dar para ver o estado "entrando..." no botão.
-    return of({ accessToken: codificarTokenMock({ ...usuario, exp }), refreshToken: 'refresh-mock' }).pipe(delay(400));
+    return of(tokens).pipe(delay(400));
   }
 }

@@ -1,4 +1,4 @@
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { registerLocaleData } from '@angular/common';
 import localePt from '@angular/common/locales/pt';
 import {
@@ -9,7 +9,11 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
+import { apolloFactory } from '@core/factories/apollo.factory';
+import { INTERCEPTORS } from '@core/interceptors';
 import { CastworkTitleStrategy } from '@core/strategies/castwork-title.strategy';
+
+import { provideApollo } from 'apollo-angular';
 
 import { routes } from './app.routes';
 
@@ -21,7 +25,8 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors(INTERCEPTORS)),
+    provideApollo(apolloFactory),
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },
     { provide: TitleStrategy, useClass: CastworkTitleStrategy },
