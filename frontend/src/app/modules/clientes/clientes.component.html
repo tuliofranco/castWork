@@ -1,73 +1,56 @@
-<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-  <h1 class="h3 mb-0 me-auto">Clientes</h1>
-  <input
-    type="search"
-    class="form-control"
-    style="max-width: 280px"
-    placeholder="Buscar por nome"
-    aria-label="Buscar clientes"
-    [formControl]="busca"
-  />
+<cw-cabecalho-pagina titulo="Clientes">
   @if (podeCriar) {
-    <a class="btn btn-primary" routerLink="novo"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo cliente</a>
+    <a acoes class="btn btn-primary btn-lg" routerLink="novo"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo cliente</a>
   }
+</cw-cabecalho-pagina>
+
+<div class="cw-ferramentas">
+  <cw-campo-busca [controle]="busca" placeholder="Buscar por nome" rotulo="Buscar clientes" />
 </div>
 
-@if (clientes.error()) {
-  <div class="alert alert-danger" role="alert">Não foi possível carregar os clientes.</div>
-} @else if (clientes.value(); as pagina) {
-  @if (pagina.nodes.length === 0) {
-    <div class="text-center text-body-secondary py-5">
-      <i class="bi bi-people fs-1 d-block mb-2" aria-hidden="true"></i>
-      {{ busca.value ? 'Nenhum cliente encontrado para a busca.' : 'Nenhum cliente cadastrado ainda.' }}
-    </div>
-  } @else {
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th scope="col">Nome</th>
-            <th scope="col">CPF/CNPJ</th>
-            <th scope="col">Contato</th>
-            <th scope="col" class="text-end">Peças</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (cliente of pagina.nodes; track cliente.id) {
-            <tr [class.text-body-secondary]="!cliente.ativo">
-              <td class="fw-semibold">
-                {{ cliente.nome }}
-                @if (!cliente.ativo) {
-                  <span class="badge text-bg-light border ms-1">inativo</span>
-                }
-              </td>
-              <td>{{ cliente.documento ?? '—' }}</td>
-              <td>
-                <div>{{ cliente.telefone ?? '' }}</div>
-                <div class="small text-body-secondary">{{ cliente.email ?? '' }}</div>
-              </td>
-              <td class="text-end">{{ cliente.pecas.length }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="d-flex align-items-center gap-2">
-      <span class="text-body-secondary small me-auto">{{ pagina.totalCount }} cliente(s) · página {{ paginacao.numero() }}</span>
-      <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="!paginacao.temAnterior()" (click)="paginacao.anterior()">
-        Anterior
-      </button>
-      <button
-        type="button"
-        class="btn btn-outline-secondary btn-sm"
-        [disabled]="!pagina.pageInfo.hasNextPage"
-        (click)="paginacao.proxima(pagina.pageInfo.endCursor)"
-      >
-        Próxima
-      </button>
-    </div>
+@let pagina = clientes.value();
+<cw-estado-lista
+  [carregando]="!clientes.hasValue() && clientes.isLoading()"
+  [erro]="!!clientes.error()"
+  mensagemErro="Não foi possível carregar os clientes."
+  [vazio]="pagina?.nodes?.length === 0"
+  iconeVazio="people"
+  [tituloVazio]="busca.value ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.'"
+  [descricaoVazio]="busca.value ? 'Confira a grafia do nome.' : 'Cadastre quem encomenda suas peças para vincular aos projetos.'"
+  (tentarDeNovo)="clientes.reload()"
+>
+  @if (podeCriar && !busca.value) {
+    <a acaoVazio class="btn btn-primary btn-lg" routerLink="novo"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo cliente</a>
   }
-} @else {
-  <div class="text-center py-5"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Carregando...</span></div></div>
-}
+  @if (pagina) {
+    <ul class="cw-lista">
+      @for (cliente of pagina.nodes; track cliente.id) {
+        <li>
+          <div class="cw-linha" [class.inativa]="!cliente.ativo">
+            <cw-iniciais [nome]="cliente.nome" />
+            <span class="principal">
+              <span class="nome">{{ cliente.nome }}</span>
+              <span class="meta">{{ contato(cliente) }}</span>
+            </span>
+            @if (!cliente.ativo) {
+              <cw-selo icone="pause-circle">Inativo</cw-selo>
+            }
+            <cw-selo [tom]="cliente.projetos.length ? 'destaque' : 'neutro'" icone="collection">
+              {{ cliente.projetos.length }} {{ cliente.projetos.length === 1 ? 'projeto' : 'projetos' }}
+            </cw-selo>
+          </div>
+        </li>
+      }
+    </ul>
+    <cw-paginacao
+      [total]="pagina.totalCount"
+      [pagina]="paginacao.numero()"
+      singular="cliente"
+      plural="clientes"
+      [temAnterior]="paginacao.temAnterior()"
+      [temProxima]="pagina.pageInfo.hasNextPage"
+      (anterior)="paginacao.anterior()"
+      (proxima)="paginacao.proxima(pagina.pageInfo.endCursor)"
+    />
+  }
+</cw-estado-lista>

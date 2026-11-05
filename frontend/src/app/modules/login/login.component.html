@@ -1,18 +1,17 @@
-<main class="d-flex vh-100 align-items-center justify-content-center bg-body-tertiary px-3">
-  <form class="card shadow-sm p-4 w-100" style="max-width: 380px" [formGroup]="form" (ngSubmit)="entrar()" novalidate>
-    <h1 class="h4 mb-4 text-center">Castwork</h1>
+<main class="login">
+  <section class="marca" aria-hidden="true">
+    <span class="monograma">C</span>
+    <p class="nome">Castwork</p>
+    <p class="frase">O caderno do seu ateliê: cada arte, cada versão, cada peça.</p>
+  </section>
+
+  <form class="formulario" [formGroup]="form" (ngSubmit)="entrar()" novalidate>
+    <h1>Entrar</h1>
 
     @let email = form.controls.email;
-    <div class="mb-3">
+    <div class="campo">
       <label for="email" class="form-label">E-mail</label>
-      <input
-        id="email"
-        type="email"
-        class="form-control"
-        formControlName="email"
-        autocomplete="username"
-        [class.is-invalid]="email.touched && email.invalid"
-      />
+      <input id="email" type="email" inputmode="email" class="form-control" formControlName="email" autocomplete="username" [class.is-invalid]="email.touched && email.invalid" />
       @if (email.touched && email.hasError('required')) {
         <div class="invalid-feedback">Informe o e-mail.</div>
       } @else if (email.touched && email.hasError('email')) {
@@ -21,26 +20,19 @@
     </div>
 
     @let senha = form.controls.senha;
-    <div class="mb-3">
+    <div class="campo">
       <label for="senha" class="form-label">Senha</label>
-      <input
-        id="senha"
-        type="password"
-        class="form-control"
-        formControlName="senha"
-        autocomplete="current-password"
-        [class.is-invalid]="senha.touched && senha.invalid"
-      />
+      <input id="senha" type="password" class="form-control" formControlName="senha" autocomplete="current-password" [class.is-invalid]="senha.touched && senha.invalid" />
       @if (senha.touched && senha.invalid) {
         <div class="invalid-feedback">Informe a senha.</div>
       }
     </div>
 
     @if (erro(); as mensagem) {
-      <div class="alert alert-danger py-2" role="alert">{{ mensagem }}</div>
+      <p class="erro" role="alert"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ mensagem }}</p>
     }
 
-    <button type="submit" class="btn btn-primary w-100" [disabled]="enviando()">
+    <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="enviando()">
       {{ enviando() ? 'Entrando...' : 'Entrar' }}
     </button>
   </form>

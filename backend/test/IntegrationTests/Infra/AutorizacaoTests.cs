@@ -1,14 +1,12 @@
 using Castwork.Application.Common.Exceptions;
-using Castwork.Application.Pecas.Commands.CriarPeca;
-using Castwork.Application.Pecas.Queries.GetPecas;
+using Castwork.Application.Projetos.Commands.CriarProjeto;
 using Castwork.TestBootstrap.Ambiente;
 using Castwork.TestBootstrap.Builders;
 
 namespace Castwork.IntegrationTests.Infra;
 
 /// <summary>
-/// Autorização pelo pipeline real do MediatR. Até a Etapa 6, perfis não têm regras (negar por padrão),
-/// então só admin passa pelos requests com [Permissao].
+/// Autorização pelo pipeline real do MediatR, com um request de exemplo que exige [Permissao].
 /// </summary>
 public class AutorizacaoTests : TesteDeIntegracao
 {
@@ -17,7 +15,7 @@ public class AutorizacaoTests : TesteDeIntegracao
     {
         AmbienteDeTeste.Sessao.UsuarioId = null;
 
-        var enviar = () => AmbienteDeTeste.SendAsync(new GetPecasQuery());
+        var enviar = () => AmbienteDeTeste.SendAsync(new CriarProjetoCommand { Nome = "Colar" });
 
         await enviar.Should().ThrowAsync<UnauthorizedAccessException>();
     }
@@ -28,7 +26,7 @@ public class AutorizacaoTests : TesteDeIntegracao
         AmbienteDeTeste.Sessao.IsAdmin = false;
         AmbienteDeTeste.Sessao.PerfilId = 2;
 
-        var enviar = () => AmbienteDeTeste.SendAsync(new GetPecasQuery());
+        var enviar = () => AmbienteDeTeste.SendAsync(new CriarProjetoCommand { Nome = "Colar" });
 
         await enviar.Should().ThrowAsync<ForbiddenAccessException>();
     }
@@ -36,11 +34,11 @@ public class AutorizacaoTests : TesteDeIntegracao
     [Test]
     public async Task DeveAutorizarAntesDeValidarParaNaoRevelarSeOIdExisteAsync()
     {
-        var command = await Usar(new PecaBuilder()).DoCliente(999_999).BuildCommandAsync();
+        var command = await Usar(new ProjetoBuilder()).DoCliente(999_999).BuildCommandAsync();
         AmbienteDeTeste.Sessao.IsAdmin = false;
         AmbienteDeTeste.Sessao.PerfilId = 2;
 
-        var enviar = () => AmbienteDeTeste.SendAsync<long>(command);
+        var enviar = () => AmbienteDeTeste.SendAsync(command);
 
         await enviar.Should().ThrowAsync<ForbiddenAccessException>("sem permissão, o usuário não pode descobrir pela validação se o cliente 999999 existe");
     }
@@ -48,10 +46,10 @@ public class AutorizacaoTests : TesteDeIntegracao
     [Test]
     public async Task DevePermitirAdminExecutarQualquerRequestAsync()
     {
-        await Usar(new PecaBuilder()).BuildAsync();
+        var projetos = Usar(new ProjetoBuilder());
 
-        var resultado = await AmbienteDeTeste.SendAsync(new GetPecasQuery());
+        var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
 
-        resultado.Lista.Should().ContainSingle();
+        id.Should().BePositive();
     }
 }

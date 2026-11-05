@@ -6,12 +6,12 @@ import { dadosGql } from '@shared/operators/dados-gql.operator';
 import { Apollo, gql } from 'apollo-angular';
 import { type Observable, map } from 'rxjs';
 
-import type { PecaResumoDto } from './dto/peca-resumo.dto';
+import type { PecaDto } from './dto/peca.dto';
 import type { PostPecaDto } from './dto/post-peca.dto';
 
 export const GET_PECAS = gql`
-  query GetPecas($termo: String, $primeiros: Int, $apos: String) {
-    pecas(termo: $termo, first: $primeiros, after: $apos) {
+  query GetPecas($termo: String, $primeiros: Int, $apos: String, $filtro: PecaFiltro) {
+    pecas(termo: $termo, first: $primeiros, after: $apos, where: $filtro) {
       totalCount
       pageInfo {
         hasNextPage
@@ -19,32 +19,44 @@ export const GET_PECAS = gql`
       }
       nodes {
         id
-        titulo
-        status
-        prazoEntrega
-        criadoEm
-        cliente {
-          id
-          nome
-        }
+        nome
+        tipo
+        material
+        teor
+        pesoGramas
+        ativo
       }
     }
   }
 `;
 
 interface GetPecasResposta {
-  readonly pecas: PaginaDto<PecaResumoDto>;
+  readonly pecas: PaginaDto<PecaDto>;
 }
 
-/** Leitura pelo GraphQL (telas), escrita pelo REST (commands). */
+export interface ConsultaPecasDto extends ConsultaPaginadaDto {
+  /** true para o seletor da composição (peça inativa não entra em versão nova). */
+  readonly somenteAtivas?: boolean | null;
+}
+
+/** Biblioteca de peças: leitura pelo GraphQL, cadastro pelo REST. */
 @Injectable({ providedIn: 'root' })
 export class PecasService {
   private readonly apollo = inject(Apollo);
   private readonly http = inject(HttpClient);
 
-  getPecas(consulta: ConsultaPaginadaDto): Observable<PaginaDto<PecaResumoDto>> {
+  getPecas(consulta: ConsultaPecasDto): Observable<PaginaDto<PecaDto>> {
     return this.apollo
-      .query<GetPecasResposta>({ query: GET_PECAS, variables: { ...consulta } })
+      .query<GetPecasResposta>({
+        query: GET_PECAS,
+        // Filtro nulo = sem filtro. (`ativo: { eq: null }` compararia com nulo e não traria nada.)
+        variables: {
+          termo: consulta.termo ?? null,
+          primeiros: consulta.primeiros,
+          apos: consulta.apos ?? null,
+          filtro: consulta.somenteAtivas ? { ativo: { eq: true } } : null,
+        },
+      })
       .pipe(
         dadosGql(),
         map((dados) => dados.pecas),

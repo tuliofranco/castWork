@@ -6,7 +6,7 @@ export interface ClienteResumoDto {
   readonly email: string | null;
   readonly telefone: string | null;
   readonly ativo: boolean;
-  readonly pecas: readonly { readonly id: number }[];
+  readonly projetos: readonly { readonly id: number }[];
 }
 
 /** Opção do seletor de cliente (formulário de peça). */

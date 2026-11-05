@@ -11,9 +11,8 @@ public sealed class PecaSortType : SortInputType<Peca>
         descriptor.Name("PecaOrdenacao");
         descriptor.BindFieldsExplicitly();
         descriptor.Field(p => p.Id);
-        descriptor.Field(p => p.Titulo);
-        descriptor.Field(p => p.Status);
-        descriptor.Field(p => p.PrazoEntrega);
+        descriptor.Field(p => p.Nome);
+        descriptor.Field(p => p.Tipo);
         descriptor.Field(p => p.CriadoEm);
     }
 }

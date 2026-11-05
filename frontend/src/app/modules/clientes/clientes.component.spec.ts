@@ -7,14 +7,14 @@ import { of } from 'rxjs';
 import { ClientesComponent } from './clientes.component';
 
 describe('ClientesComponent', () => {
-  it('deve listar clientes com documento, contato e quantidade de peças', async () => {
+  it('deve listar clientes com documento, contato e quantidade de projetos', async () => {
     const getClientes = vi.fn().mockReturnValue(
       of({
         totalCount: 2,
         pageInfo: { hasNextPage: true, endCursor: 'c1' },
         nodes: [
-          { id: 1, nome: 'Ana', documento: '529.982.247-25', email: 'ana@x.com', telefone: '(41) 99999-0000', ativo: true, pecas: [{ id: 1 }, { id: 2 }] },
-          { id: 2, nome: 'Bia', documento: null, email: null, telefone: null, ativo: false, pecas: [] },
+          { id: 1, nome: 'Ana', documento: '529.982.247-25', email: 'ana@x.com', telefone: '(41) 99999-0000', ativo: true, projetos: [{ id: 1 }, { id: 2 }] },
+          { id: 2, nome: 'Bia', documento: null, email: null, telefone: null, ativo: false, projetos: [] },
         ],
       }),
     );
@@ -30,12 +30,14 @@ describe('ClientesComponent', () => {
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
 
-    const linhas = [...el.querySelectorAll('tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim()));
+    const linhas = [...el.querySelectorAll('.cw-linha')].map((linha) =>
+      [...linha.querySelectorAll('cw-iniciais, .nome, .meta, cw-selo')].map((parte) => parte.textContent?.replace(/\s+/g, ' ').trim()),
+    );
 
     expect(linhas).toEqual([
-      ['Ana', '529.982.247-25', '(41) 99999-0000ana@x.com', '2'],
-      ['Bia inativo', '—', '', '0'],
+      ['A', 'Ana', '529.982.247-25 · (41) 99999-0000 · ana@x.com', '2 projetos'],
+      ['B', 'Bia', 'Sem contato cadastrado', 'Inativo', '0 projetos'],
     ]);
-    expect(el.querySelector<HTMLButtonElement>('button:last-of-type')!.disabled).toBe(false);
+    expect([...el.querySelectorAll<HTMLButtonElement>('cw-paginacao button')].map((b) => b.disabled)).toEqual([true, false]);
   });
 });

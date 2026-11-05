@@ -13,7 +13,7 @@ describe('Rotas da aplicação', () => {
     localStorage.setItem(
       CHAVE_ACCESS_TOKEN,
       criarTokenMock({
-        permissoes: ['clientes.ler', 'pecas.ler', 'precificacao.ler', 'documentos.ler', 'portfolio.ler'],
+        permissoes: ['projetos.ler', 'clientes.ler', 'pecas.ler', 'precificacao.ler', 'documentos.ler', 'portfolio.ler'],
       }),
     );
     TestBed.configureTestingModule({ providers: appConfig.providers });
@@ -21,14 +21,15 @@ describe('Rotas da aplicação', () => {
 
   afterEach(() => localStorage.clear());
 
-  it('deve redirecionar a raiz para /pecas', async () => {
+  it('deve redirecionar a raiz para /projetos, a primeira aba', async () => {
     await RouterTestingHarness.create('/');
-    expect(TestBed.inject(Router).url).toBe('/pecas');
+    expect(TestBed.inject(Router).url).toBe('/projetos');
   });
 
   it.each([
-    ['/clientes', 'Clientes'],
+    ['/projetos', 'Projetos'],
     ['/pecas', 'Peças'],
+    ['/clientes', 'Clientes'],
     ['/precificacao', 'Precificação'],
     ['/documentos', 'Documentos'],
     ['/portfolio', 'Portfólio'],

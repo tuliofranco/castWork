@@ -1,0 +1,31 @@
+<cw-cabecalho-pagina titulo="Novo projeto" voltarPara="/projetos" voltarRotulo="Projetos" subtitulo="O projeto começa com a Versão 1, pronta para receber peças." />
+
+<form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+  <div class="grade">
+    <cw-campo class="c6" rotulo="Nome da arte" para="nome" [controle]="form.controls.nome" [mensagens]="{ required: 'Informe o nome da arte.' }">
+      <input id="nome" class="form-control" formControlName="nome" placeholder="Ex.: Colar Raízes" autocomplete="off" />
+    </cw-campo>
+
+    <cw-campo class="c6" rotulo="Cliente" para="clienteId" [opcional]="true" [controle]="form.controls.clienteId" dica="Deixe sem cliente para um projeto autoral.">
+      <select id="clienteId" class="form-select" formControlName="clienteId">
+        <option [ngValue]="null">Sem cliente</option>
+        @for (opcao of clientes.value() ?? []; track opcao.id) {
+          <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
+        }
+      </select>
+    </cw-campo>
+
+    <cw-campo class="c6" rotulo="Descrição" para="descricao" [opcional]="true" [controle]="form.controls.descricao" dica="Inspiração, pedido do cliente, ideias de material.">
+      <textarea id="descricao" class="form-control" rows="4" formControlName="descricao"></textarea>
+    </cw-campo>
+  </div>
+
+  @for (mensagem of errosGerais(); track mensagem) {
+    <p class="aviso-formulario" role="alert">{{ mensagem }}</p>
+  }
+
+  <cw-barra-acoes>
+    <a class="btn btn-secundario" routerLink="/projetos">Cancelar</a>
+    <button type="submit" class="btn btn-primary" [disabled]="enviando()">{{ enviando() ? 'Criando...' : 'Criar projeto' }}</button>
+  </cw-barra-acoes>
+</form>

@@ -8,42 +8,36 @@ import { GET_PECAS, PecasService } from './pecas.service';
 
 describe('PecasService', () => {
   function configurar() {
-    TestBed.configureTestingModule({
-      imports: [ApolloTestingModule],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
-    });
-    return {
-      service: TestBed.inject(PecasService),
-      apollo: TestBed.inject(ApolloTestingController),
-      http: TestBed.inject(HttpTestingController),
-    };
+    TestBed.configureTestingModule({ imports: [ApolloTestingModule], providers: [provideHttpClient(), provideHttpClientTesting()] });
+    return { service: TestBed.inject(PecasService), apollo: TestBed.inject(ApolloTestingController), http: TestBed.inject(HttpTestingController) };
   }
 
-  it('deve consultar as peças com termo e cursor e devolver a página', async () => {
+  const vazia = { totalCount: 0, pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
+
+  it('deve mandar filtro nulo (sem filtro) por padrão e filtrar ativas só quando pedido', async () => {
     const { service, apollo } = configurar();
-    const promessa = firstValueFrom(service.getPecas({ termo: 'anel', primeiros: 20, apos: 'abc' }));
 
-    const op = apollo.expectOne(GET_PECAS);
-    expect(op.operation.variables).toEqual({ termo: 'anel', primeiros: 20, apos: 'abc' });
-    const pagina = {
-      totalCount: 1,
-      pageInfo: { hasNextPage: false, endCursor: 'xyz' },
-      nodes: [{ id: 1, titulo: 'Anel', status: 'BRIEFING', prazoEntrega: null, criadoEm: '2026-11-05T13:00:00Z', cliente: { id: 7, nome: 'Maria' } }],
-    };
-    op.flush({ data: { pecas: pagina } });
+    const todas = firstValueFrom(service.getPecas({ termo: 'elo', primeiros: 20 }));
+    const todasOp = apollo.expectOne(GET_PECAS);
+    todasOp.flush({ data: { pecas: vazia } });
+    await todas;
+    const ativas = firstValueFrom(service.getPecas({ primeiros: 10, somenteAtivas: true }));
+    const ativasOp = apollo.expectOne(GET_PECAS);
+    ativasOp.flush({ data: { pecas: vazia } });
+    await ativas;
 
-    expect(await promessa).toEqual(pagina);
+    expect(todasOp.operation.variables).toEqual({ termo: 'elo', primeiros: 20, apos: null, filtro: null });
+    expect(ativasOp.operation.variables).toEqual({ termo: null, primeiros: 10, apos: null, filtro: { ativo: { eq: true } } });
   });
 
-  it('deve criar a peça pelo REST e devolver o Id', async () => {
+  it('deve cadastrar a peça pelo REST', async () => {
     const { service, http } = configurar();
-    const promessa = firstValueFrom(service.postPeca({ clienteId: 7, titulo: 'Anel' }));
+    const promessa = firstValueFrom(service.postPeca({ nome: 'Elo', tipo: 'ELO', teor: '18k' }));
 
     const req = http.expectOne('pecas');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ clienteId: 7, titulo: 'Anel' });
-    req.flush({ id: 42 }, { status: 201, statusText: 'Created' });
+    expect(req.request.body).toEqual({ nome: 'Elo', tipo: 'ELO', teor: '18k' });
+    req.flush({ id: 5 }, { status: 201, statusText: 'Created' });
 
-    expect(await promessa).toEqual({ id: 42 });
+    expect(await promessa).toEqual({ id: 5 });
   });
 });

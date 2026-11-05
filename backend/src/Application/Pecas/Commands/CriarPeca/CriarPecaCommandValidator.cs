@@ -1,40 +1,48 @@
 using Castwork.Application.Abstractions;
-using Castwork.Application.Common.Tempo;
 using Castwork.Application.Common.Validators;
-using Castwork.Domain.Entities.Clientes;
 using Castwork.Domain.Entities.Pecas;
+using Castwork.Domain.Exceptions;
+using Castwork.Domain.ValueObjects;
 
 using FluentValidation;
 
 namespace Castwork.Application.Pecas.Commands.CriarPeca;
 
-/// <summary>
-/// Espelha as invariantes do domínio com mensagens por campo para o front.
-/// Com o cascade global em Stop, cada campo para no primeiro erro (não consulta o banco se o Id for 0).
-/// </summary>
 public sealed class CriarPecaCommandValidator : ValidatorBase<CriarPecaCommand>
 {
-    public CriarPecaCommandValidator(IUnitOfWork unitOfWork, TimeProvider timeProvider)
+    public const decimal PesoMaximoEmGramas = 100_000m;
+
+    public CriarPecaCommandValidator(IUnitOfWork unitOfWork)
         : base(unitOfWork)
     {
-        RuleFor(c => c.ClienteId)
-            .GreaterThan(0).WithMessage("Informe o cliente.")
-            .MustExists<CriarPecaCommand, Cliente>(UnitOfWork)
-            .WithName("Cliente");
+        RuleFor(c => c.Nome).NotEmpty().MaximumLength(Peca.NomeMaxLength).WithName("Nome");
+        RuleFor(c => c.Tipo).IsInEnum().WithName("Tipo");
+        RuleFor(c => c.Material).MaximumLength(Peca.MaterialMaxLength).WithName("Material");
+        RuleFor(c => c.Descricao).MaximumLength(Peca.DescricaoMaxLength).WithName("Descrição");
 
-        RuleFor(c => c.Titulo)
-            .NotEmpty()
-            .MaximumLength(Peca.TituloMaxLength)
-            .WithName("Título");
+        RuleFor(c => c.Teor!)
+            .Must(SerTeorValido).WithMessage("Teor inválido. Use quilates (18k) ou milésimos (750).")
+            .When(c => !string.IsNullOrWhiteSpace(c.Teor))
+            .WithName("Teor");
 
-        RuleFor(c => c.Descricao)
-            .MaximumLength(Peca.DescricaoMaxLength)
-            .WithName("Descrição");
+        RuleFor(c => c.PesoGramas)
+            .GreaterThan(0)
+            .LessThanOrEqualTo(PesoMaximoEmGramas)
+            .PrecisionScale(10, 3, ignoreTrailingZeros: true)
+            .When(c => c.PesoGramas is not null)
+            .WithName("Peso");
+    }
 
-        RuleFor(c => c.PrazoEntrega)
-            .Must(prazo => prazo >= timeProvider.HojeNoBrasil())
-            .When(c => c.PrazoEntrega is not null)
-            .WithMessage("O prazo de entrega não pode estar no passado.")
-            .WithName("Prazo de entrega");
+    private static bool SerTeorValido(string teor)
+    {
+        try
+        {
+            TeorMetal.Parse(teor);
+            return true;
+        }
+        catch (ValorInvalidoException)
+        {
+            return false;
+        }
     }
 }

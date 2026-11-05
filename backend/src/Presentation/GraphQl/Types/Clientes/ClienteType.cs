@@ -1,6 +1,6 @@
 using Castwork.Domain.Entities.Clientes;
 using Castwork.GraphQl.DataLoaders;
-using Castwork.GraphQl.Types.Pecas;
+using Castwork.GraphQl.Types.Projetos;
 
 namespace Castwork.GraphQl.Types.Clientes;
 
@@ -23,10 +23,10 @@ public sealed class ClienteType : ObjectType<Cliente>
             .Type<StringType>()
             .Resolve(ctx => ctx.Parent<Cliente>().Documento?.Formatado);
 
-        descriptor.Field("pecas")
-            .Description("Histórico de peças do cliente, da mais recente para a mais antiga.")
-            .Type<NonNullType<ListType<NonNullType<PecaType>>>>()
+        descriptor.Field("projetos")
+            .Description("Projetos do cliente, do mais recente para o mais antigo.")
+            .Type<NonNullType<ListType<NonNullType<ProjetoType>>>>()
             .Resolve(async ctx =>
-                (await ctx.DataLoader<PecasPorClienteDataLoader>().LoadAsync(ctx.Parent<Cliente>().Id, ctx.RequestAborted)) ?? []);
+                (await ctx.DataLoader<ProjetosPorClienteDataLoader>().LoadAsync(ctx.Parent<Cliente>().Id, ctx.RequestAborted)) ?? []);
     }
 }

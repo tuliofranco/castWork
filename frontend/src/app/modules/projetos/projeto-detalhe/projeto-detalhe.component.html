@@ -1,0 +1,108 @@
+@if (projeto.error()) {
+  <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar o projeto." (tentarDeNovo)="projeto.reload()" />
+} @else if (projeto.value() === null) {
+  <cw-cabecalho-pagina titulo="Projeto não encontrado" voltarPara="/projetos" voltarRotulo="Projetos" subtitulo="Ele pode ter sido removido, ou o endereço está incompleto." />
+} @else if (projeto.value(); as p) {
+  <cw-cabecalho-pagina [titulo]="p.nome" voltarPara="/projetos" voltarRotulo="Projetos" [subtitulo]="p.descricao ?? undefined" />
+
+  <section class="secao" aria-labelledby="titulo-cliente">
+    <h2 id="titulo-cliente">Cliente</h2>
+    @if (podeEditar) {
+      <div class="vinculo">
+        <label class="visually-hidden" for="cliente">Cliente do projeto</label>
+        <select id="cliente" class="form-select" [ngModel]="clienteEscolhido()" (ngModelChange)="clienteEscolhido.set($event)" [disabled]="salvando()">
+          <option [ngValue]="null">Sem cliente (projeto autoral)</option>
+          @if (p.cliente; as atual) {
+            <option [ngValue]="atual.id">{{ atual.nome }}</option>
+          }
+          @for (opcao of clientes.value() ?? []; track opcao.id) {
+            @if (opcao.id !== p.cliente?.id) {
+              <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
+            }
+          }
+        </select>
+        @if (clienteMudou()) {
+          <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="salvarCliente()">
+            {{ clienteEscolhido() === null ? 'Desvincular' : 'Vincular' }}
+          </button>
+          <button type="button" class="btn btn-sutil" (click)="clienteEscolhido.set(p.cliente?.id ?? null)">Cancelar</button>
+        }
+      </div>
+    } @else {
+      <p class="cliente-fixo"><i class="bi bi-person" aria-hidden="true"></i> {{ p.cliente?.nome ?? 'Projeto autoral' }}</p>
+    }
+  </section>
+
+  <section class="secao" aria-labelledby="titulo-versoes">
+    <div class="cabecalho-secao">
+      <h2 id="titulo-versoes">Versões</h2>
+      @if (arquivadas().length > 0) {
+        <button type="button" class="btn btn-sutil" [attr.aria-pressed]="mostrarArquivadas()" (click)="mostrarArquivadas.set(!mostrarArquivadas())">
+          <i class="bi" [class.bi-eye]="!mostrarArquivadas()" [class.bi-eye-slash]="mostrarArquivadas()" aria-hidden="true"></i>
+          {{ mostrarArquivadas() ? 'Ocultar' : 'Mostrar' }} arquivadas ({{ arquivadas().length }})
+        </button>
+      }
+      @if (podeEditar) {
+        <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="novaVersao()">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i> Nova versão
+        </button>
+      }
+    </div>
+
+    @if (versoesVisiveis().length === 0) {
+      <cw-estado-lista
+        [vazio]="true"
+        iconeVazio="archive"
+        tituloVazio="Todas as versões estão arquivadas."
+        descricaoVazio="Mostre as arquivadas para desarquivar uma, ou crie uma versão nova."
+      />
+    } @else {
+      <ul class="cw-lista">
+        @for (v of versoesVisiveis(); track v.id) {
+          <li class="cw-linha versao" [class.arquivada]="v.status === 'ARQUIVADA'">
+            <a class="abrir" [routerLink]="['versoes', v.id]" [attr.aria-label]="'Abrir versão ' + v.numero + ', ' + v.nome">
+              <span class="numero">v{{ v.numero }}</span>
+              <span class="principal">
+                <span class="nome">{{ v.nome }}</span>
+                <span class="meta">
+                  {{ v.itens.length }} {{ v.itens.length === 1 ? 'peça' : 'peças' }}
+                  @if (v.publicadaEm) {
+                    · publicada em {{ v.publicadaEm | date: 'dd/MM/yyyy' }}
+                  }
+                </span>
+              </span>
+              <cw-selo [tom]="status[v.status].tom" [icone]="status[v.status].icone">{{ status[v.status].rotulo }}</cw-selo>
+            </a>
+            @if (podeEditar) {
+              <span class="acoes">
+                @switch (v.status) {
+                  @case ('EM_DESENVOLVIMENTO') {
+                    <button
+                      type="button"
+                      class="btn btn-secundario"
+                      [disabled]="salvando() || v.itens.length === 0"
+                      [attr.title]="v.itens.length === 0 ? 'Adicione ao menos uma peça antes de publicar' : null"
+                      (click)="publicar(v)"
+                    >
+                      <i class="bi bi-check2-circle" aria-hidden="true"></i> Publicar
+                    </button>
+                    <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Arquivar versão ' + v.numero" [disabled]="salvando()" (click)="arquivar(v)">
+                      <i class="bi bi-archive" aria-hidden="true"></i>
+                    </button>
+                  }
+                  @case ('ARQUIVADA') {
+                    <button type="button" class="btn btn-secundario" [disabled]="salvando()" (click)="desarquivar(v)">
+                      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Desarquivar
+                    </button>
+                  }
+                }
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+} @else {
+  <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="4" />
+}

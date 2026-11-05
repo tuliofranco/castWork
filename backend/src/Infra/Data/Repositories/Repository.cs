@@ -40,13 +40,21 @@ public sealed class Repository<T>(ApplicationDbContext context) : IRepository<T>
 
     public void Remover(T entidade) => _set.Remove(entidade);
 
+    private static IEnumerable<string> CaminhosDosFilhos(Microsoft.EntityFrameworkCore.Metadata.IEntityType tipo, string? prefixo)
+        => tipo.GetNavigations()
+            .Where(n => n.IsCollection && !typeof(IAggregateRoot).IsAssignableFrom(n.TargetEntityType.ClrType))
+            .SelectMany(n =>
+            {
+                var caminho = prefixo is null ? n.Name : $"{prefixo}.{n.Name}";
+                var netos = CaminhosDosFilhos(n.TargetEntityType, caminho).ToList();
+                return netos.Count == 0 ? [caminho] : netos;
+            });
+
     /// <summary>
-    /// Inclui as coleções que pertencem ao agregado (navegações cujo alvo não é outra raiz).
-    /// Navegações para outros agregados (ex.: Peca → Cliente) ficam de fora de propósito.
+    /// Inclui as coleções que pertencem ao agregado, em qualquer nível (ex.: Projeto → Versoes → Itens).
+    /// Navegações para outros agregados (ex.: Item → Peça) ficam de fora de propósito.
     /// </summary>
     private IQueryable<T> IncluirFilhosDoAgregado(IQueryable<T> query)
-        => context.Model.FindEntityType(typeof(T))!
-            .GetNavigations()
-            .Where(n => n.IsCollection && !typeof(IAggregateRoot).IsAssignableFrom(n.TargetEntityType.ClrType))
-            .Aggregate(query, (atual, navegacao) => atual.Include(navegacao.Name));
+        => CaminhosDosFilhos(context.Model.FindEntityType(typeof(T))!, prefixo: null)
+            .Aggregate(query, (atual, caminho) => atual.Include(caminho));
 }

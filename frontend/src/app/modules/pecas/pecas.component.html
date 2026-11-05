@@ -1,69 +1,64 @@
-<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-  <h1 class="h3 mb-0 me-auto">Peças</h1>
-  <input
-    type="search"
-    class="form-control"
-    style="max-width: 280px"
-    placeholder="Buscar por peça ou cliente"
-    aria-label="Buscar peças"
-    [formControl]="busca"
-  />
+<cw-cabecalho-pagina titulo="Peças" subtitulo="Biblioteca de componentes: a mesma peça entra nas versões de qualquer projeto.">
   @if (podeCriar) {
-    <a class="btn btn-primary" routerLink="nova"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova peça</a>
+    <a acoes class="btn btn-primary btn-lg" routerLink="nova"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova peça</a>
   }
+</cw-cabecalho-pagina>
+
+<div class="cw-ferramentas">
+  <cw-campo-busca [controle]="busca" placeholder="Buscar por nome ou material" rotulo="Buscar peças" />
 </div>
 
-@if (pecas.error()) {
-  <div class="alert alert-danger" role="alert">Não foi possível carregar as peças.</div>
-} @else if (pecas.value(); as pagina) {
-  @if (pagina.nodes.length === 0) {
-    <div class="text-center text-body-secondary py-5">
-      <i class="bi bi-gem fs-1 d-block mb-2" aria-hidden="true"></i>
-      {{ busca.value ? 'Nenhuma peça encontrada para a busca.' : 'Nenhuma peça cadastrada ainda.' }}
-    </div>
-  } @else {
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th scope="col">Peça</th>
-            <th scope="col">Cliente</th>
-            <th scope="col">Etapa</th>
-            <th scope="col">Prazo</th>
-            <th scope="col">Criada em</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (peca of pagina.nodes; track peca.id) {
-            <tr>
-              <td class="fw-semibold">{{ peca.titulo }}</td>
-              <td>{{ peca.cliente.nome }}</td>
-              <td>
-                <span class="badge {{ status[peca.status].classe }}">{{ status[peca.status].rotulo }}</span>
-              </td>
-              <td>{{ peca.prazoEntrega ? (peca.prazoEntrega | date: 'dd/MM/yyyy') : '—' }}</td>
-              <td>{{ peca.criadoEm | date: 'dd/MM/yyyy HH:mm' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <div class="d-flex align-items-center gap-2">
-      <span class="text-body-secondary small me-auto">{{ pagina.totalCount }} peça(s) · página {{ paginacao.numero() }}</span>
-      <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="!paginacao.temAnterior()" (click)="paginacao.anterior()">
-        Anterior
-      </button>
-      <button
-        type="button"
-        class="btn btn-outline-secondary btn-sm"
-        [disabled]="!pagina.pageInfo.hasNextPage"
-        (click)="paginacao.proxima(pagina.pageInfo.endCursor)"
-      >
-        Próxima
-      </button>
-    </div>
+@let pagina = pecas.value();
+<cw-estado-lista
+  [carregando]="!pecas.hasValue() && pecas.isLoading()"
+  [erro]="!!pecas.error()"
+  mensagemErro="Não foi possível carregar as peças."
+  [vazio]="pagina?.nodes?.length === 0"
+  iconeVazio="gem"
+  [tituloVazio]="busca.value ? 'Nenhuma peça encontrada.' : 'A biblioteca está vazia.'"
+  [descricaoVazio]="busca.value ? 'Tente outro nome ou material.' : 'Cadastre elos, fechos e pedras uma vez e use-os em todos os projetos.'"
+  (tentarDeNovo)="pecas.reload()"
+>
+  @if (podeCriar && !busca.value) {
+    <a acaoVazio class="btn btn-primary btn-lg" routerLink="nova"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova peça</a>
   }
-} @else {
-  <div class="text-center py-5"><div class="spinner-border text-secondary" role="status"><span class="visually-hidden">Carregando...</span></div></div>
-}
+  @if (pagina) {
+    <ul class="cw-lista">
+      @for (peca of pagina.nodes; track peca.id) {
+        <li>
+          <div class="cw-linha" [class.inativa]="!peca.ativo">
+            <span class="cw-icone-linha"><i class="bi" [class]="'bi-' + iconeTipo(peca.tipo)" aria-hidden="true"></i></span>
+            <span class="principal">
+              <span class="nome">{{ peca.nome }}</span>
+              <span class="meta">
+                {{ rotuloTipo(peca.tipo) }}
+                @if (peca.material) {
+                  · {{ peca.material }}
+                }
+                @if (peca.teor) {
+                  · {{ formatarTeor(peca.teor) }}
+                }
+              </span>
+            </span>
+            @if (!peca.ativo) {
+              <cw-selo icone="pause-circle">Inativa</cw-selo>
+            }
+            @if (peca.pesoGramas !== null) {
+              <span class="peso">{{ peca.pesoGramas | number: '1.3-3' }} g</span>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    <cw-paginacao
+      [total]="pagina.totalCount"
+      [pagina]="paginacao.numero()"
+      singular="peça"
+      plural="peças"
+      [temAnterior]="paginacao.temAnterior()"
+      [temProxima]="pagina.pageInfo.hasNextPage"
+      (anterior)="paginacao.anterior()"
+      (proxima)="paginacao.proxima(pagina.pageInfo.endCursor)"
+    />
+  }
+</cw-estado-lista>
