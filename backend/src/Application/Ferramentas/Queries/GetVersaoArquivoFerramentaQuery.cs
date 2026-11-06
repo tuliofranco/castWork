@@ -27,7 +27,7 @@ public sealed class GetVersaoArquivoFerramentaQueryHandler(IUnitOfWork unitOfWor
     public async Task<ArquivoDaFerramentaDto?> Handle(GetVersaoArquivoFerramentaQuery request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
+        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken)
             ?? throw new EntidadeNaoEncontradaException("Arquivo", request.ArquivoId);
         var arquivo = await unitOfWork.GetRepository<ArquivoFerramenta>()
             .FindBy(a => a.Id == request.ArquivoId && a.ConversaId == conversa.Id)

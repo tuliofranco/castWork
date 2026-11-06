@@ -22,11 +22,6 @@ export class BriefingService {
   }
 
   /** Sem texto, numa conversa vazia, a IA abre a conversa a partir do formulário. */
-  /** `imagens` em base64, já reduzidas no tablet (ver `prepararImagem`). */
-  postConversa(projetoId: number, texto: string | null, imagens: readonly string[] = []): Observable<BriefingDto> {
-    return this.http.post<BriefingDto>(`projetos/${projetoId}/briefing/conversa`, { texto, imagens });
-  }
-
   postPdf(projetoId: number): Observable<IdCriadoDto> {
     return this.http.post<IdCriadoDto>(`projetos/${projetoId}/briefing/pdf`, {});
   }

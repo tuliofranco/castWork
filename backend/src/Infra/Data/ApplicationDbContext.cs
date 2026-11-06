@@ -3,6 +3,7 @@ using Castwork.Domain.Entities.Atelie;
 using Castwork.Domain.Entities.Briefings;
 using Castwork.Domain.Entities.Clientes;
 using Castwork.Domain.Entities.Ferramentas;
+using Castwork.Domain.Entities.Ia;
 using Castwork.Domain.Entities.Pecas;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.ValueObjects;
@@ -28,13 +29,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<DocumentoBriefing> DocumentosBriefing => Set<DocumentoBriefing>();
 
-    public DbSet<ImagemBriefing> ImagensBriefing => Set<ImagemBriefing>();
-
     public DbSet<ConversaFerramenta> ConversasFerramenta => Set<ConversaFerramenta>();
 
     public DbSet<ArquivoFerramenta> ArquivosFerramenta => Set<ArquivoFerramenta>();
 
     public DbSet<ImagemConversa> ImagensConversa => Set<ImagemConversa>();
+
+    public DbSet<ConsumoDaIa> ConsumosDaIa => Set<ConsumoDaIa>();
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
 

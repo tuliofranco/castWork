@@ -25,10 +25,10 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, Ti
     public async Task<ConversaFerramentaDto> Handle(GetConversaFerramentaQuery request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken);
+        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken);
         if (conversa is null)
         {
-            return new ConversaFerramentaDto([], null, false);
+            return new ConversaFerramentaDto([], null, false, 1, 0);
         }
 
         var arquivoId = await unitOfWork.GetRepository<ArquivoFerramenta>()
@@ -39,8 +39,12 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, Ti
         return Mapear(conversa, arquivoId, conversa.AguardandoIa(relogio.GetUtcNow()));
     }
 
-    internal static ConversaFerramentaDto Mapear(ConversaFerramenta conversa, long? arquivoId, bool processando) => new(
+    /// <summary>
+    /// As mensagens visíveis de um chat (por padrão, o em andamento) e quantos outros chats a conversa tem.
+    /// </summary>
+    internal static ConversaFerramentaDto Mapear(ConversaFerramenta conversa, long? arquivoId, bool processando, int? chat = null) => new(
         conversa.Mensagens
+            .Where(m => m.Chat == (chat ?? conversa.ChatAtual))
             .Where(m => m.Papel != PapelMensagem.Ferramenta && (m.Texto is not null || m.Imagens.Count > 0))
             .OrderBy(m => m.Ordem)
             .Select(m => new MensagemFerramentaDto(
@@ -49,8 +53,13 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, Ti
                 m.Texto,
                 m.Imagens,
                 m.Acao is null ? null : new AcaoDaIaDto(m.Acao.Descricao, m.AcaoDesfeita),
-                m.CriadaEm))
+                m.CriadaEm,
+                m.Pensamento,
+                m.Passos.Count > 0 ? m.Passos : null,
+                m.Tokens))
             .ToList(),
         arquivoId,
-        processando);
+        processando,
+        chat ?? conversa.ChatAtual,
+        conversa.Mensagens.Select(m => m.Chat).Distinct().Count(c => c != conversa.ChatAtual));
 }

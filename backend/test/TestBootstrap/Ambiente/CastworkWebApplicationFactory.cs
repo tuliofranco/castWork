@@ -47,8 +47,6 @@ public sealed class CastworkWebApplicationFactory(
             services.AddSingleton<TimeProvider>(relogio);
 
             // Serviços externos (IA paga, binários do WordCraft e do CADCraft) ficam de fora dos testes.
-            services.RemoveAll<IAssistenteBriefing>();
-            services.AddScoped<IAssistenteBriefing, AssistenteBriefingDeTeste>();
             services.RemoveAll<IGeradorDocumentoBriefing>();
             services.AddScoped<IGeradorDocumentoBriefing, GeradorDocumentoBriefingDeTeste>();
             services.RemoveAll<IAssistenteFerramenta>();

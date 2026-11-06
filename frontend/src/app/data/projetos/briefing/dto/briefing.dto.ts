@@ -2,16 +2,6 @@ export type TipoJoia = 'Anel' | 'Pulseira' | 'Colar' | 'Brinco' | 'Pingente' | '
 
 export type PapelMensagem = 'Joalheiro' | 'Assistente';
 
-export interface MensagemBriefingDto {
-  readonly ordem: number;
-  readonly papel: PapelMensagem;
-  /** Nulo quando o joalheiro mandou só imagens. */
-  readonly texto: string | null;
-  /** Chaves das imagens anexadas (GET briefing/imagens/{chave}). */
-  readonly imagens: readonly string[];
-  readonly criadaEm: string;
-}
-
 export interface DocumentoBriefingDto {
   readonly id: number;
   readonly nomeArquivo: string;
@@ -34,7 +24,6 @@ export interface BriefingDto {
   readonly pedras: string | null;
   readonly fecho: string | null;
   readonly observacoes: string | null;
-  readonly mensagens: readonly MensagemBriefingDto[];
   readonly documentos: readonly DocumentoBriefingDto[];
 }
 

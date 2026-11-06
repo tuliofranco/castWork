@@ -1,12 +1,12 @@
-<cw-ferramenta-ia
+<cw-conversa-ia
+  ferramenta="desenho-2d"
   titulo="Desenho 2D"
+  [projetoId]="projeto()"
+  [versaoId]="versao()"
   [voltarPara]="voltarPara()"
   voltarRotulo="Versão"
-  [mensagens]="mensagens()"
-  [pensando]="pensando()"
-  (enviar)="enviar($event)"
-  (desfazer)="desfazer($event)"
-  (apagarConversa)="apagarConversa()"
+  [antesDeEnviar]="antesDeEnviar"
+  (arquivoMudou)="arquivoMudou()"
 >
   <ng-container acoes>
     <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
@@ -21,10 +21,35 @@
     @if (sincronizando(); as aviso) {
       <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
     }
-    <!-- CADCraft web completo (WebAssembly), servido pelo próprio front em /cadcraft. -->
-    <iframe #cadcraft src="/cadcraft/" title="CADCraft" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen (load)="iniciar()"></iframe>
+    @if (pensando() && !sincronizando()) {
+      <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o desenho. O que você mudar agora será substituído.</p>
+    } @else if (trocando()) {
+      <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o desenho…</p>
+    }
+    <!-- Dois CADCrafts (WebAssembly, servido pelo próprio front em /cadcraft): um à vista, o outro abre o próximo desenho por trás. -->
+    <iframe
+      #cadcraftA
+      src="/cadcraft/"
+      title="CADCraft"
+      [class.ativo]="ativo() === 0"
+      [attr.aria-hidden]="ativo() !== 0"
+      [attr.tabindex]="ativo() === 0 ? null : -1"
+      allow="fullscreen; clipboard-read; clipboard-write"
+      allowfullscreen
+      (load)="iniciar()"
+    ></iframe>
+    <iframe
+      #cadcraftB
+      src="about:blank"
+      title="CADCraft"
+      [class.ativo]="ativo() === 1"
+      [attr.aria-hidden]="ativo() !== 1"
+      [attr.tabindex]="ativo() === 1 ? null : -1"
+      allow="fullscreen; clipboard-read; clipboard-write"
+      allowfullscreen
+    ></iframe>
   </div>
-</cw-ferramenta-ia>
+</cw-conversa-ia>
 
 <cw-historico-desenho
   [versoes]="historico()"

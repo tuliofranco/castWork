@@ -2,9 +2,13 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ArquivoDaVersaoDto, ListaDeArquivosDto, OrigemArquivo } from '@data/projetos/ferramentas/dto/ferramenta.dto';
+import { BriefingService } from '@data/projetos/briefing/briefing.service';
+import type { DocumentoBriefingDto } from '@data/projetos/briefing/dto/briefing.dto';
 import { FerramentasService } from '@data/projetos/ferramentas/ferramentas.service';
 import { DownloadService } from '@shared/services/download.service';
+import { nomeDeArquivo } from '@shared/arquivos/nome-de-arquivo';
 import { PaginacaoComponent } from '@shared/ui/paginacao.component';
+import { VisualizadorPdfComponent } from '@shared/ui/visualizador-pdf.component';
 import { type Observable, firstValueFrom } from 'rxjs';
 
 const POR_PAGINA = 10;
@@ -24,11 +28,12 @@ const ORIGENS: Record<OrigemArquivo, string> = {
 /**
  * A pasta de arquivos da versão, dentro da Composição: o que as ferramentas (2D, 3D...) gravaram. Abre um
  * modal com os arquivos, 10 por página: ver a prévia, renomear, baixar, abrir na ferramenta e arquivar.
- * Na aba Arquivados, desarquivar ou apagar de vez (com confirmação).
+ * Na aba Arquivados, desarquivar ou apagar de vez (com confirmação). O PDF do briefing, que é do projeto,
+ * aparece fixo no topo da pasta de todas as versões.
  */
 @Component({
   selector: 'cw-arquivos-versao',
-  imports: [DatePipe, RouterLink, PaginacaoComponent],
+  imports: [DatePipe, RouterLink, PaginacaoComponent, VisualizadorPdfComponent],
   template: `
     <button type="button" class="pasta" (click)="abrir()">
       <i class="bi bi-folder2-open" aria-hidden="true"></i>
@@ -38,7 +43,7 @@ const ORIGENS: Record<OrigemArquivo, string> = {
 
     <dialog #dialogo class="modal-arquivos" aria-labelledby="titulo-arquivos">
       <header>
-        @if (vendo()) {
+        @if (vendo() || lendoBriefing()) {
           <button type="button" class="btn btn-sutil" (click)="fecharVisualizacao()"><i class="bi bi-chevron-left" aria-hidden="true"></i> Arquivos</button>
         } @else {
           <h2 id="titulo-arquivos">Arquivos da versão</h2>
@@ -46,7 +51,16 @@ const ORIGENS: Record<OrigemArquivo, string> = {
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="dialogo.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
       <div class="corpo">
-        @if (vendo(); as v) {
+        @if (lendoBriefing(); as l) {
+          <div class="visualizacao">
+            <p class="titulo-visualizacao"><span class="selo">Briefing</span> {{ semExtensao(l.documento.nomeArquivo) }}</p>
+            @if (l.pdf; as pdf) {
+              <div class="folha-pdf"><cw-visualizador-pdf [arquivo]="pdf" [rotulo]="semExtensao(l.documento.nomeArquivo)" /></div>
+            } @else {
+              <p class="carregando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Abrindo o PDF...</p>
+            }
+          </div>
+        } @else if (vendo(); as v) {
           <div class="visualizacao">
             <p class="titulo-visualizacao"><span class="selo">{{ ferramenta(v.arquivo).selo }}</span> {{ nome(v.arquivo) }}</p>
             @if (v.url; as u) {
@@ -63,6 +77,29 @@ const ORIGENS: Record<OrigemArquivo, string> = {
             <button type="button" role="tab" [attr.aria-selected]="arquivados()" [class.ativa]="arquivados()" (click)="trocarAba(true)">Arquivados</button>
           </div>
           <ul>
+            <!-- O briefing é do projeto: aparece fixo na pasta de todas as versões, sem arquivar nem renomear aqui. -->
+            @if (!arquivados() && briefing(); as b) {
+              <li class="fixo">
+                <button type="button" class="item" (click)="lerBriefing(b)">
+                  <span class="selo">Briefing</span>
+                  <span class="descricao">
+                    <strong>{{ semExtensao(b.nomeArquivo) }}</strong>
+                    <small>Briefing do projeto · {{ b.geradoEm | date: 'dd/MM/yyyy HH:mm' }}</small>
+                  </span>
+                </button>
+                <span class="acoes">
+                  <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Visualizar ' + semExtensao(b.nomeArquivo)" (click)="lerBriefing(b)">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                  </button>
+                  <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Baixar ' + semExtensao(b.nomeArquivo)" (click)="baixarBriefing(b)">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                  </button>
+                  <a class="btn btn-sutil btn-icone" [routerLink]="['/projetos', projetoId(), 'briefing']" aria-label="Abrir o briefing" (click)="dialogo.close()">
+                    <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                  </a>
+                </span>
+              </li>
+            }
             @for (arquivo of p.lista; track arquivo.id) {
               <li>
                 @if (renomeando() === arquivo.id) {
@@ -83,7 +120,7 @@ const ORIGENS: Record<OrigemArquivo, string> = {
                 <span class="selo">{{ ferramenta(arquivo).selo }}</span>
                 <span class="descricao">
                   <strong>{{ nome(arquivo) }}</strong>
-                  <small>{{ origem(arquivo) }} · {{ arquivo.criadoEm | date: 'dd/MM/yyyy HH:mm' }}</small>
+                  <small>{{ nomeDoArquivo(arquivo) }} · {{ origem(arquivo) }} · {{ arquivo.criadoEm | date: 'dd/MM/yyyy HH:mm' }}</small>
                 </span>
                 </button>
                 <span class="acoes">
@@ -331,6 +368,15 @@ const ORIGENS: Record<OrigemArquivo, string> = {
       }
     }
 
+    .folha-pdf {
+      max-height: min(36rem, 70dvh);
+      overflow: auto;
+    }
+
+    .fixo .selo {
+      background: var(--cw-accent-soft, var(--cw-surface-2));
+    }
+
     .titulo-visualizacao {
       display: flex;
       align-items: center;
@@ -349,6 +395,7 @@ const ORIGENS: Record<OrigemArquivo, string> = {
 export class ArquivosVersaoComponent {
   private readonly ferramentas = inject(FerramentasService);
   private readonly download = inject(DownloadService);
+  private readonly briefings = inject(BriefingService);
 
   readonly projetoId = input.required<number>();
   readonly versaoId = input.required<number>();
@@ -360,6 +407,10 @@ export class ArquivosVersaoComponent {
   /** Arquivo pedindo a confirmação de apagar. */
   protected readonly apagando = signal<number | null>(null);
   protected readonly ocupado = signal(false);
+  /** O PDF mais recente do briefing do projeto; nulo se ainda não foi gerado. */
+  protected readonly briefing = signal<DocumentoBriefingDto | null>(null);
+  /** PDF do briefing aberto no modal; `pdf` nulo enquanto baixa. */
+  protected readonly lendoBriefing = signal<{ readonly documento: DocumentoBriefingDto; readonly pdf: Blob | null } | null>(null);
   /** Arquivo aberto no modal; `url` nula enquanto a prévia é gerada e falsa se ela não veio. */
   protected readonly vendo = signal<{ readonly arquivo: ArquivoDaVersaoDto; readonly url: string | null | false } | null>(null);
   private readonly dialogo = viewChild.required<ElementRef<HTMLDialogElement>>('dialogo');
@@ -374,6 +425,36 @@ export class ArquivosVersaoComponent {
     this.pagina.set(null);
     this.dialogo().nativeElement.showModal();
     void this.carregar(1);
+    void this.carregarBriefing();
+  }
+
+  private async carregarBriefing(): Promise<void> {
+    try {
+      const briefing = await firstValueFrom(this.briefings.getBriefing(this.projetoId()));
+      this.briefing.set(briefing?.documentos[0] ?? null);
+    } catch {
+      // Sem briefing a pasta mostra só os arquivos da versão.
+      this.briefing.set(null);
+    }
+  }
+
+  protected async lerBriefing(documento: DocumentoBriefingDto): Promise<void> {
+    this.fecharVisualizacao();
+    this.lendoBriefing.set({ documento, pdf: null });
+    try {
+      const pdf = await firstValueFrom(this.briefings.getDocumento(this.projetoId(), documento.id));
+      if (this.lendoBriefing()?.documento === documento) this.lendoBriefing.set({ documento, pdf });
+    } catch {
+      this.lendoBriefing.set(null);
+    }
+  }
+
+  protected async baixarBriefing(documento: DocumentoBriefingDto): Promise<void> {
+    this.download.salvar(await firstValueFrom(this.briefings.getDocumento(this.projetoId(), documento.id)), documento.nomeArquivo);
+  }
+
+  protected semExtensao(nomeArquivo: string): string {
+    return nomeArquivo.replace(/\.[^.]+$/, '');
   }
 
   protected async carregar(pagina: number): Promise<void> {
@@ -430,6 +511,11 @@ export class ArquivosVersaoComponent {
     return arquivo.nome ?? this.nomePadrao(arquivo);
   }
 
+  /** O nome de verdade do arquivo, com extensão: o mesmo que o editor usa ("Visão 2d" → "visao-2d.dxf"). */
+  protected nomeDoArquivo(arquivo: ArquivoDaVersaoDto): string {
+    return nomeDeArquivo(this.nome(arquivo), this.ferramenta(arquivo).extensao);
+  }
+
   protected nomePadrao(arquivo: ArquivoDaVersaoDto): string {
     return `${this.ferramenta(arquivo).nome} #${arquivo.id}`;
   }
@@ -455,6 +541,7 @@ export class ArquivosVersaoComponent {
   }
 
   protected fecharVisualizacao(): void {
+    this.lendoBriefing.set(null);
     const url = this.vendo()?.url;
     if (url) URL.revokeObjectURL(url);
     this.vendo.set(null);
@@ -462,6 +549,6 @@ export class ArquivosVersaoComponent {
 
   protected async baixar(arquivo: ArquivoDaVersaoDto): Promise<void> {
     const conteudo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId(), this.versaoId(), arquivo.ferramenta, arquivo.id));
-    if (conteudo) this.download.salvar(conteudo, `${this.nome(arquivo).replace(/[\\/:*?"<>|#]/g, '').trim()}.${this.ferramenta(arquivo).extensao}`);
+    if (conteudo) this.download.salvar(conteudo, this.nomeDoArquivo(arquivo));
   }
 }

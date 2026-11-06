@@ -13,6 +13,24 @@ export interface MensagemFerramentaDto {
   readonly imagens: readonly string[];
   readonly acao: AcaoDaIaDto | null;
   readonly criadaEm: string;
+  /** Resposta final da IA: resumo do que ela pensou no turno. */
+  readonly pensamento?: string | null;
+  /** Resposta final da IA: o que ela fez, em passos legíveis. */
+  readonly passos?: readonly string[] | null;
+  /** Resposta final da IA: tokens que o turno consumiu. */
+  readonly tokens?: number | null;
+}
+
+/**
+ * Um acontecimento do turno da IA, ao vivo. `pensamento` e `texto` são trechos que se somam; `passo` começa
+ * (andamento) e termina (feito/erro) uma ferramenta, às vezes com o render (`imagemPng`, base64); `fim` encerra.
+ */
+export interface EventoDoTurnoDto {
+  readonly tipo: 'pensamento' | 'texto' | 'passo' | 'fim';
+  readonly texto?: string | null;
+  readonly passo?: number | null;
+  readonly estado?: 'andamento' | 'feito' | 'erro' | null;
+  readonly imagemPng?: string | null;
 }
 
 export interface ConversaFerramentaDto {
@@ -21,6 +39,20 @@ export interface ConversaFerramentaDto {
   readonly arquivoId: number | null;
   /** A IA ainda trabalha na última fala (o joalheiro saiu e voltou no meio do turno). */
   readonly processando: boolean;
+  /** Número do chat mostrado. */
+  readonly chat: number;
+  /** Quantos outros chats estão no histórico. */
+  readonly chatsAnteriores: number;
+}
+
+/** Um chat da conversa, para a lista de conversas anteriores (título: começo da primeira fala). */
+export interface ChatDaConversaDto {
+  readonly numero: number;
+  readonly iniciadoEm: string;
+  readonly ultimaMensagemEm: string;
+  readonly titulo: string | null;
+  readonly mensagens: number;
+  readonly atual: boolean;
 }
 
 /** Quem gravou a versão do arquivo. */

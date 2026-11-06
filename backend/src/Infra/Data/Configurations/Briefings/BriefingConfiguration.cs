@@ -29,8 +29,5 @@ internal sealed class BriefingConfiguration : IEntityTypeConfiguration<Briefing>
         builder.Property(b => b.Pedras).HasMaxLength(Briefing.TextoCurtoMaxLength);
         builder.Property(b => b.Fecho).HasMaxLength(Briefing.TextoCurtoMaxLength);
         builder.Property(b => b.Observacoes).HasMaxLength(Briefing.TextoLongoMaxLength);
-
-        builder.HasMany(b => b.Mensagens).WithOne().HasForeignKey("BriefingId").IsRequired().OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(b => b.Mensagens).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

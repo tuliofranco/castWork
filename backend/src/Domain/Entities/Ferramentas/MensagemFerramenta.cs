@@ -10,9 +10,10 @@ namespace Castwork.Domain.Entities.Ferramentas;
 /// </summary>
 public sealed class MensagemFerramenta : BaseEntity<long>
 {
-    internal MensagemFerramenta(int ordem, PapelMensagem papel, string? texto, string conteudo, IReadOnlyList<Guid> imagens, AcaoDaIa? acao, DateTimeOffset criadaEm)
+    internal MensagemFerramenta(int ordem, int chat, PapelMensagem papel, string? texto, string conteudo, IReadOnlyList<Guid> imagens, AcaoDaIa? acao, DateTimeOffset criadaEm)
     {
         Ordem = ordem;
+        Chat = chat;
         Papel = papel;
         Texto = string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
         Conteudo = string.IsNullOrWhiteSpace(conteudo) ? throw new ValorInvalidoException(nameof(Conteudo), "é obrigatório") : conteudo;
@@ -26,6 +27,11 @@ public sealed class MensagemFerramenta : BaseEntity<long>
     }
 
     public int Ordem { get; private set; }
+
+    /// <summary>
+    /// O chat da conversa a que a mensagem pertence (ver <see cref="ConversaFerramenta.ChatAtual"/>).
+    /// </summary>
+    public int Chat { get; private set; } = 1;
 
     public PapelMensagem Papel { get; private set; }
 
@@ -46,6 +52,28 @@ public sealed class MensagemFerramenta : BaseEntity<long>
     public bool AcaoDesfeita { get; private set; }
 
     public DateTimeOffset CriadaEm { get; private set; }
+
+    /// <summary>
+    /// Resumo do que a IA pensou no turno (mostrado recolhido sob a resposta).
+    /// </summary>
+    public string? Pensamento { get; private set; }
+
+    /// <summary>
+    /// O que a IA fez no turno, em passos legíveis ("Desenhando círculos", "Conferindo o desenho").
+    /// </summary>
+    public IReadOnlyList<string> Passos { get; private set; } = [];
+
+    /// <summary>
+    /// Tokens que o turno consumiu (entrada, saída e cache), para o joalheiro acompanhar o custo.
+    /// </summary>
+    public int? Tokens { get; private set; }
+
+    internal void DefinirDetalhes(DetalhesDoTurno detalhes)
+    {
+        Pensamento = string.IsNullOrWhiteSpace(detalhes.Pensamento) ? null : detalhes.Pensamento.Trim();
+        Passos = detalhes.Passos.ToList();
+        Tokens = detalhes.Tokens;
+    }
 
     internal void MarcarDesfeita() => AcaoDesfeita = true;
 

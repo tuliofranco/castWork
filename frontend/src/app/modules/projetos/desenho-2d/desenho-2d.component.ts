@@ -1,27 +1,31 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
-import type { ConversaFerramentaDto, VersaoDoArquivoDto } from '@data/projetos/ferramentas/dto/ferramenta.dto';
-import { FerramentasService } from '@data/projetos/ferramentas/ferramentas.service';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
+import type { VersaoDoArquivoDto } from '@data/projetos/ferramentas/dto/ferramenta.dto';
+import { type ArquivoFerramenta, FerramentasService } from '@data/projetos/ferramentas/ferramentas.service';
+import { nomeDeArquivo } from '@shared/arquivos/nome-de-arquivo';
 import { DownloadService } from '@shared/services/download.service';
 import { ToastService } from '@shared/services/toast.service';
-import { type FalaFerramenta, FerramentaIaComponent, type MensagemFerramenta } from '@shared/ui/ferramenta-ia/ferramenta-ia.component';
 import { firstValueFrom } from 'rxjs';
+
+import { ConversaIaComponent } from '../ferramentas/conversa-ia.component';
 
 import { HistoricoDesenhoComponent } from './historico-desenho.component';
 import { PonteCadCraft } from './ponte-cadcraft';
 
 const FERRAMENTA = 'desenho-2d';
-/** Intervalo para consultar a conversa enquanto a IA trabalha num turno que esta tela não enviou. */
-const INTERVALO_DE_CONSULTA_MS = 4000;
 
 /**
  * Desenho 2D: o CADCraft completo na área de trabalho e a IA desta ferramenta no chat. Os dois trabalham
  * no mesmo arquivo, o DXF da versão guardado no Castwork: a IA desenha nele pelo MCP (no servidor) e a
- * tela recarrega o desenho; o que o joalheiro desenha à mão é salvo antes de cada mensagem à IA.
+ * tela troca o desenho; o que o joalheiro desenha à mão é salvo antes de cada mensagem à IA.
+ *
+ * A conversa é a padrão das ferramentas (`cw-conversa-ia`); aqui fica só o que é do desenho. Enquanto a
+ * IA trabalha, o CADCraft continua livre. O desenho novo é aberto num segundo CADCraft, por trás, e só aparece pronto: a tela não
+ * pisca nem mostra o carregamento.
  */
 @Component({
   selector: 'cw-desenho-2d',
-  imports: [FerramentaIaComponent, HistoricoDesenhoComponent],
+  imports: [ConversaIaComponent, HistoricoDesenhoComponent],
   templateUrl: './desenho-2d.component.html',
   styleUrl: './desenho-2d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,116 +39,46 @@ export class Desenho2dComponent {
   readonly versaoId = input.required<string>();
 
   protected readonly voltarPara = computed(() => `/projetos/${this.id()}/versoes/${this.versaoId()}`);
-  protected readonly pensando = signal(false);
+  protected readonly projeto = computed(() => Number(this.id()));
+  protected readonly versao = computed(() => Number(this.versaoId()));
   /** Recarregando o desenho no CADCraft (abrir, salvar, trazer o que a IA fez). */
   protected readonly sincronizando = signal<string | null>('Abrindo o CADCraft...');
-  protected readonly conversa = signal<ConversaFerramentaDto>({ mensagens: [], arquivoId: null, processando: false });
   /** Versões do arquivo no painel de histórico; nulo com o painel fechado. */
   protected readonly historico = signal<readonly VersaoDoArquivoDto[] | null>(null);
-  /** Fala enviada, mostrada enquanto a IA trabalha. */
-  private readonly pendente = signal<MensagemFerramenta | null>(null);
+  /** Qual dos dois CADCrafts está à vista (o outro prepara o próximo desenho por trás). */
+  protected readonly ativo = signal<0 | 1>(0);
+  /** Trocando o desenho por trás (aviso discreto, sem bloquear). */
+  protected readonly trocando = signal(false);
 
-  protected readonly mensagens = computed<readonly MensagemFerramenta[]>(() => {
-    const projetoId = Number(this.id());
-    const versaoId = Number(this.versaoId());
-    const lista: MensagemFerramenta[] = this.conversa().mensagens.map((m) => ({
-      id: m.ordem,
-      papel: m.papel === 'Joalheiro' ? 'joalheiro' : 'assistente',
-      texto: m.texto ?? '',
-      imagens: m.imagens.map((chave) => this.ferramentas.caminhoDaImagem(projetoId, versaoId, chave)),
-      acao: m.acao ?? undefined,
-    }));
-    const pendente = this.pendente();
-    return pendente ? [...lista, pendente] : lista;
-  });
-
-  private readonly iframe = viewChild.required<ElementRef<HTMLIFrameElement>>('cadcraft');
+  private readonly cadcraftA = viewChild.required<ElementRef<HTMLIFrameElement>>('cadcraftA');
+  private readonly cadcraftB = viewChild.required<ElementRef<HTMLIFrameElement>>('cadcraftB');
+  private readonly conversa = viewChild.required(ConversaIaComponent);
   private ponte: PonteCadCraft | null = null;
-  private destruido = false;
 
-  constructor() {
-    // O turno da IA continua no servidor se o joalheiro sair: a resposta é lida quando ele voltar.
-    inject(DestroyRef).onDestroy(() => (this.destruido = true));
-  }
+  /** A IA está trabalhando: o CADCraft avisa e o que conflita (salvar, restaurar) espera. */
+  protected readonly pensando = computed(() => this.conversa().pensando());
+
+  /** Antes de cada mensagem à IA: o que foi desenhado à mão vai para o Castwork (a IA trabalha no arquivo guardado). */
+  protected readonly antesDeEnviar = async (): Promise<void> => {
+    if (!this.ponte?.temAlteracoes()) return;
+    this.sincronizando.set('Guardando o seu desenho...');
+    try {
+      await this.guardar(await this.ponte.salvar());
+    } finally {
+      this.sincronizando.set(null);
+    }
+  };
 
   protected async iniciar(): Promise<void> {
     if (this.ponte) return;
-    this.ponte = new PonteCadCraft(this.iframe().nativeElement, (arquivo) => void this.guardar(arquivo, 'Desenho salvo no Castwork.'));
-    const [conversa, arquivo] = await Promise.all([
-      firstValueFrom(this.ferramentas.getConversa(this.projetoId, this.numeroDaVersao, FERRAMENTA)),
-      firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA)),
-    ]);
-    this.conversa.set(conversa);
-    await this.abrir(arquivo?.conteudo ?? null, 'Abrindo o desenho da versão...');
-    if (conversa.processando) await this.aguardarIa();
+    this.ponte = this.criarPonte(0);
+    const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA));
+    await this.abrir(arquivo, 'Abrindo o desenho da versão...');
   }
 
-  /**
-   * A fala já está no servidor e a IA trabalha nela (enviada antes de sair da tela): consulta até a resposta
-   * chegar e traz o desenho se ela mudou.
-   */
-  private async aguardarIa(): Promise<void> {
-    this.pensando.set(true);
-    const anterior = this.conversa().arquivoId;
-    try {
-      while (!this.destruido) {
-        await new Promise((ok) => setTimeout(ok, INTERVALO_DE_CONSULTA_MS));
-        if (this.destruido) return;
-        const conversa = await firstValueFrom(this.ferramentas.getConversa(this.projetoId, this.numeroDaVersao, FERRAMENTA));
-        this.conversa.set(conversa);
-        if (!conversa.processando) {
-          if (conversa.arquivoId !== anterior) await this.trazerArquivo('Trazendo o desenho da IA...');
-          return;
-        }
-      }
-    } finally {
-      this.pensando.set(false);
-    }
-  }
-
-  protected async enviar({ texto, imagens }: FalaFerramenta): Promise<void> {
-    this.pensando.set(true);
-    this.pendente.set({ id: -1, papel: 'joalheiro', texto, imagens: imagens.map((i) => i.url) });
-    try {
-      // A IA trabalha no arquivo guardado: o que foi desenhado à mão vai antes.
-      if (this.ponte?.temAlteracoes()) {
-        this.sincronizando.set('Guardando o seu desenho...');
-        await this.guardar(await this.ponte.salvar());
-      }
-
-      this.sincronizando.set(null);
-      const anterior = this.conversa().arquivoId;
-      const conversa = await firstValueFrom(
-        this.ferramentas.postConversa(this.projetoId, this.numeroDaVersao, FERRAMENTA, texto || null, imagens.map((i) => i.base64)),
-      );
-      if (this.destruido) return;
-      this.pendente.set(null);
-      this.conversa.set(conversa);
-      if (conversa.arquivoId !== anterior) {
-        await this.trazerArquivo('Trazendo o desenho da IA...');
-      }
-    } catch (erro) {
-      // Erros da API já viram toast no interceptor; os do CADCraft (salvar o desenho) aparecem aqui.
-      if (!(erro instanceof HttpErrorResponse)) {
-        this.toast.erro(erro instanceof Error ? erro.message : 'Não foi possível enviar a mensagem.');
-      }
-
-      this.pendente.set(null);
-      this.sincronizando.set(null);
-    } finally {
-      this.pensando.set(false);
-    }
-  }
-
-  protected async desfazer(ordem: number): Promise<void> {
-    const conversa = await firstValueFrom(this.ferramentas.postDesfazer(this.projetoId, this.numeroDaVersao, FERRAMENTA, ordem));
-    this.conversa.set(conversa);
-    await this.trazerArquivo('Voltando o desenho...');
-  }
-
-  protected async apagarConversa(): Promise<void> {
-    await firstValueFrom(this.ferramentas.deleteConversa(this.projetoId, this.numeroDaVersao, FERRAMENTA));
-    this.conversa.update((c) => ({ ...c, mensagens: [] }));
+  /** A IA mudou (ou desfez) o desenho: traz a versão nova sem recarregar à vista. */
+  protected arquivoMudou(): void {
+    void this.trazerArquivo();
   }
 
   protected async salvar(): Promise<void> {
@@ -172,9 +106,9 @@ export class Desenho2dComponent {
       }
 
       const arquivoId = await firstValueFrom(this.ferramentas.postRestaurar(this.projetoId, this.numeroDaVersao, FERRAMENTA, versao.id));
-      this.conversa.update((c) => ({ ...c, arquivoId }));
+      this.conversa().registrarArquivo(arquivoId);
       this.historico.set(null);
-      await this.trazerArquivo('Restaurando o desenho...');
+      await this.trazerArquivo();
       this.toast.sucesso('Desenho restaurado.');
     } catch (erro) {
       if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível restaurar o desenho.');
@@ -197,25 +131,53 @@ export class Desenho2dComponent {
 
   private async guardar(arquivo: Blob, aviso?: string): Promise<void> {
     const arquivoId = await firstValueFrom(this.ferramentas.putArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA, await emBase64(arquivo)));
-    this.conversa.update((c) => ({ ...c, arquivoId }));
+    this.conversa().registrarArquivo(arquivoId);
     if (aviso) this.toast.sucesso(aviso);
   }
 
-  private async trazerArquivo(mensagem: string): Promise<void> {
+  /**
+   * Traz o arquivo atual sem recarregar à vista: o outro CADCraft abre o desenho por trás e, pronto, troca
+   * de lugar com o que estava na tela, que é liberado.
+   */
+  private async trazerArquivo(): Promise<void> {
     const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA));
-    await this.abrir(arquivo?.conteudo ?? null, mensagem);
+    const atras = this.ativo() === 0 ? 1 : 0;
+    const nova = this.criarPonte(atras);
+    this.trocando.set(true);
+    try {
+      await nova.carregar(await this.conteudoOuVazio(arquivo), nomeDeArquivo(arquivo?.nome, 'dxf', 'desenho'));
+      const antiga = this.ponte;
+      this.ponte = nova;
+      this.ativo.set(atras);
+      antiga?.descarregar();
+    } catch {
+      nova.descarregar();
+      this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
+    } finally {
+      this.trocando.set(false);
+    }
+  }
+
+  private criarPonte(indice: 0 | 1): PonteCadCraft {
+    const iframe = indice === 0 ? this.cadcraftA() : this.cadcraftB();
+    return new PonteCadCraft(iframe.nativeElement, (arquivo) => void this.guardar(arquivo, 'Desenho salvo no Castwork.'));
+  }
+
+  /** Arquivo estático do próprio front (fora da API): fetch direto, sem os interceptors. */
+  private async conteudoOuVazio(arquivo: ArquivoFerramenta | null): Promise<Blob> {
+    return arquivo?.conteudo ?? (await (await fetch('/desenho-vazio.dxf')).blob());
   }
 
   /**
    * Sem arquivo na versão, abre um DXF vazio em milímetros com nome: um desenho "Drawing1" sem nome
    * faria o ⌘S abrir o Salvar como, e o Castwork não receberia o arquivo.
    */
-  private async abrir(arquivo: Blob | null, mensagem: string): Promise<void> {
+  private async abrir(arquivo: ArquivoFerramenta | null, mensagem: string): Promise<void> {
     this.sincronizando.set(mensagem);
     try {
-      // Arquivo estático do próprio front (fora da API): fetch direto, sem os interceptors.
-      const desenho = arquivo ?? (await (await fetch('/desenho-vazio.dxf')).blob());
-      await this.ponte?.carregar(desenho);
+      const desenho = await this.conteudoOuVazio(arquivo);
+      // A aba do CADCraft leva o nome que o joalheiro deu ao arquivo (sem acento e sem espaço).
+      await this.ponte?.carregar(desenho, nomeDeArquivo(arquivo?.nome, 'dxf', 'desenho'));
     } catch {
       this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
     } finally {

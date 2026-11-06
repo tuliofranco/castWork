@@ -24,7 +24,7 @@ public sealed class RestaurarArquivoFerramentaCommandHandler(IUnitOfWork unitOfW
     public async Task<long?> Handle(RestaurarArquivoFerramentaCommand request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
+        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken)
             ?? throw new EntidadeNaoEncontradaException("Arquivo", request.ArquivoId);
         var arquivos = unitOfWork.GetRepository<ArquivoFerramenta>();
         var origem = await arquivos.FindBy(a => a.Id == request.ArquivoId && a.ConversaId == conversa.Id)

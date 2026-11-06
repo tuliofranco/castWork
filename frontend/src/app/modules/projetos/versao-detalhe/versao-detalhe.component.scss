@@ -204,3 +204,44 @@
     }
   }
 }
+
+.so-leitura {
+  margin-left: 0.375rem;
+  color: var(--cw-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.do-projeto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border: 1px dashed var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+
+  > .bi {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--cw-radius);
+    background: var(--cw-surface-2);
+    color: var(--cw-ink-muted);
+    font-size: 1.125rem;
+  }
+
+  .descricao {
+    display: flex;
+    flex-direction: column;
+    margin-right: 0.5rem;
+  }
+
+  small {
+    color: var(--cw-ink-muted);
+    font-size: 0.8125rem;
+  }
+}

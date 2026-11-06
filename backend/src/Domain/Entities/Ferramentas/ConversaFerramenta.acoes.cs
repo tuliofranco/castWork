@@ -9,9 +9,13 @@ namespace Castwork.Domain.Entities.Ferramentas;
 /// </summary>
 public sealed partial class ConversaFerramenta
 {
-    public static ConversaFerramenta Criar(long versaoId, string ferramenta, DateTimeOffset em) => new()
+    /// <summary>
+    /// <paramref name="versaoId"/> nulo cria a conversa de uma ferramenta do projeto (como o briefing).
+    /// </summary>
+    public static ConversaFerramenta Criar(long projetoId, long? versaoId, string ferramenta, DateTimeOffset em) => new()
     {
-        VersaoId = Guard.IdValido(versaoId, nameof(VersaoId)),
+        ProjetoId = Guard.IdValido(projetoId, nameof(ProjetoId)),
+        VersaoId = versaoId is { } v ? Guard.IdValido(v, nameof(VersaoId)) : null,
         Ferramenta = Guard.Obrigatorio(ferramenta, nameof(Ferramenta), FerramentaMaxLength),
         CriadaEm = em,
     };
@@ -22,9 +26,17 @@ public sealed partial class ConversaFerramenta
         string conteudo,
         DateTimeOffset em,
         IReadOnlyList<Guid>? imagens = null,
-        AcaoDaIa? acao = null)
+        AcaoDaIa? acao = null,
+        DetalhesDoTurno? detalhes = null)
     {
-        var mensagem = new MensagemFerramenta(_mensagens.Count + 1, papel, texto, conteudo, imagens ?? [], acao, em);
+        // A ordem é única na conversa toda (todos os chats): apagar um chat não reaproveita números.
+        var ordem = _mensagens.Count == 0 ? 1 : _mensagens.Max(m => m.Ordem) + 1;
+        var mensagem = new MensagemFerramenta(ordem, ChatAtual, papel, texto, conteudo, imagens ?? [], acao, em);
+        if (detalhes is not null)
+        {
+            mensagem.DefinirDetalhes(detalhes);
+        }
+
         _mensagens.Add(mensagem);
         return mensagem;
     }
@@ -81,6 +93,13 @@ public sealed partial class ConversaFerramenta
             throw new RegraDeNegocioException("Essa mensagem não tem uma ação para desfazer.");
         }
 
+        if (mensagem.Chat != ChatAtual)
+        {
+            throw new RegraDeNegocioException("Só dá para desfazer ações do chat em andamento.");
+        }
+
+        // A última ação vale entre todos os chats: o desenho é um só, e desfazer por cima de uma mudança mais
+        // recente (feita em outro chat) a perderia.
         var ultima = _mensagens.Where(m => m.Acao is not null && !m.AcaoDesfeita).MaxBy(m => m.Ordem);
         if (ultima != mensagem)
         {
@@ -92,9 +111,46 @@ public sealed partial class ConversaFerramenta
     }
 
     /// <summary>
-    /// Começa a conversa do zero. O desenho não muda: só o histórico com a IA some.
+    /// Apaga o chat em andamento (os anteriores ficam). O desenho não muda: só a conversa com a IA some.
     /// </summary>
-    public void Apagar() => _mensagens.Clear();
+    public void Apagar() => _mensagens.RemoveAll(m => m.Chat == ChatAtual);
+
+    /// <summary>
+    /// Encerra o chat em andamento (fica no histórico) e começa outro, em branco: a IA não lembra do anterior,
+    /// mas continua no mesmo desenho. Com o chat atual ainda vazio, não há o que encerrar.
+    /// </summary>
+    public void NovoChat(DateTimeOffset agora)
+    {
+        GarantirSemIaTrabalhando(agora);
+        if (!MensagensDoChat.Any())
+        {
+            return;
+        }
+
+        ChatAtual = _mensagens.Max(m => m.Chat) + 1;
+    }
+
+    /// <summary>
+    /// Retoma um chat anterior: ele volta a ser o que vai para a IA, e o atual fica no histórico.
+    /// </summary>
+    public void ContinuarChat(int chat, DateTimeOffset agora)
+    {
+        GarantirSemIaTrabalhando(agora);
+        if (!_mensagens.Any(m => m.Chat == chat))
+        {
+            throw new EntidadeNaoEncontradaException("Chat", chat);
+        }
+
+        ChatAtual = chat;
+    }
+
+    private void GarantirSemIaTrabalhando(DateTimeOffset agora)
+    {
+        if (AguardandoIa(agora))
+        {
+            throw new RegraDeNegocioException("Espere a IA terminar a mensagem atual.");
+        }
+    }
 
     /// <summary>
     /// Fala órfã (sem resposta e com o turno já expirado) sai antes da próxima: a IA precisa da conversa

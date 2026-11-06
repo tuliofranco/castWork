@@ -16,6 +16,30 @@
     </a>
   }
 
+  <!-- Ferramentas do projeto: valem para todas as versões e só se editam aqui. -->
+  <section class="secao" aria-labelledby="titulo-ferramentas-projeto">
+    <h2 id="titulo-ferramentas-projeto">Ferramentas do projeto</h2>
+    <div class="lista-ferramentas">
+      <a class="ferramenta" routerLink="briefing">
+        <i class="bi bi-journal-text" aria-hidden="true"></i>
+        <span>
+          <strong>Briefing</strong>
+          <small>
+            @if (briefing.value(); as b) {
+              @if (b.documentos[0]; as ultimo) {
+                PDF de {{ ultimo.geradoEm | date: 'dd/MM/yyyy' }}
+              } @else {
+                Em andamento
+              }
+            } @else {
+              O documento do projeto, escrito com o assistente
+            }
+          </small>
+        </span>
+      </a>
+    </div>
+  </section>
+
   <section class="secao" aria-labelledby="titulo-versoes">
     <div class="cabecalho-secao">
       <h2 id="titulo-versoes">Versões</h2>

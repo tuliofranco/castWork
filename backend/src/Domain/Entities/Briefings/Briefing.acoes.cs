@@ -4,7 +4,7 @@ using Castwork.Domain.Exceptions;
 namespace Castwork.Domain.Entities.Briefings;
 
 /// <summary>
-/// Ações do <see cref="Briefing"/>: formulário inicial, campos refinados pela IA e registro da conversa.
+/// Ações do <see cref="Briefing"/>: formulário inicial e campos refinados pela IA.
 /// </summary>
 public sealed partial class Briefing
 {
@@ -42,16 +42,5 @@ public sealed partial class Briefing
         Pedras = refinamento.Pedras is null ? Pedras : Guard.Opcional(refinamento.Pedras, nameof(Pedras), TextoCurtoMaxLength);
         Fecho = refinamento.Fecho is null ? Fecho : Guard.Opcional(refinamento.Fecho, nameof(Fecho), TextoCurtoMaxLength);
         Observacoes = refinamento.Observacoes is null ? Observacoes : Guard.Opcional(refinamento.Observacoes, nameof(Observacoes), TextoLongoMaxLength);
-    }
-
-    /// <summary>
-    /// Acrescenta uma mensagem ao fim da conversa. A conversa só cresce: reescrever o histórico invalidaria
-    /// o que a IA já respondeu.
-    /// </summary>
-    public MensagemBriefing RegistrarMensagem(PapelMensagem papel, string? texto, string conteudo, DateTimeOffset em, IReadOnlyList<Guid>? imagens = null)
-    {
-        var mensagem = new MensagemBriefing(_mensagens.Count + 1, papel, texto, conteudo, imagens ?? [], em);
-        _mensagens.Add(mensagem);
-        return mensagem;
     }
 }

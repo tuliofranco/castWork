@@ -6,13 +6,16 @@ import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { PecaDto } from '@data/pecas/pecas/dto/peca.dto';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
+import { BriefingService } from '@data/projetos/briefing/briefing.service';
 import type { ItemComposicaoDto, VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { formatarTeor, iconeTipoPeca, rotuloTipoPeca } from '@shared/pecas/tipo-peca';
+import { DownloadService } from '@shared/services/download.service';
 import { ToastService } from '@shared/services/toast.service';
 import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
 import { CampoBuscaComponent } from '@shared/ui/campo-busca.component';
 import { EstadoListaComponent } from '@shared/ui/estado-lista.component';
+import { PainelPdfComponent } from '@shared/ui/painel-pdf.component';
 import { QuantidadeComponent } from '@shared/ui/quantidade.component';
 import { SeloComponent } from '@shared/ui/selo.component';
 import { type Observable, debounceTime, distinctUntilChanged, finalize, of } from 'rxjs';
@@ -27,7 +30,7 @@ import { EtapasVersaoComponent } from './etapas-versao.component';
  */
 @Component({
   selector: 'cw-versao-detalhe',
-  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent],
+  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PainelPdfComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent],
   templateUrl: './versao-detalhe.component.html',
   styleUrl: './versao-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +40,8 @@ export class VersaoDetalheComponent {
   private readonly pecasService = inject(PecasService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly briefingService = inject(BriefingService);
+  private readonly download = inject(DownloadService);
 
   /** `:id` e `:versaoId` da rota (withComponentInputBinding). */
   readonly id = input.required<string>();
@@ -48,6 +53,14 @@ export class VersaoDetalheComponent {
   protected readonly iconeTipo = iconeTipoPeca;
   protected readonly formatarTeor = formatarTeor;
   protected readonly salvando = signal(false);
+
+  /** O briefing do projeto, só para ver aqui (a edição é na página do projeto). */
+  protected readonly briefing = rxResource({
+    params: () => Number(this.id()),
+    stream: ({ params }) => this.briefingService.getBriefing(params),
+  });
+
+  protected readonly pdfDoBriefing = signal<{ readonly arquivo: Blob; readonly titulo: string; readonly nome: string } | null>(null);
 
   protected readonly projeto = rxResource({
     params: () => Number(this.id()),
@@ -158,5 +171,15 @@ export class VersaoDetalheComponent {
       },
       error: () => this.projeto.reload(),
     });
+  }
+
+  protected verBriefing(documentoId: number, nome: string, geradoEm: string): void {
+    this.briefingService.getDocumento(Number(this.id()), documentoId).subscribe((arquivo) =>
+      this.pdfDoBriefing.set({ arquivo, nome, titulo: `Briefing de ${new Date(geradoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}` }),
+    );
+  }
+
+  protected baixarBriefing(arquivo: Blob, nome: string): void {
+    this.download.salvar(arquivo, nome);
   }
 }

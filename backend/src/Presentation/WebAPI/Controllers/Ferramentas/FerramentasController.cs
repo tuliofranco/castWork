@@ -1,3 +1,6 @@
+using System.Text.Json;
+
+using Castwork.Application.Abstractions;
 using Castwork.Application.Common.Pagination;
 using Castwork.Application.Ferramentas.Commands;
 using Castwork.Application.Ferramentas.Queries;
@@ -8,9 +11,11 @@ namespace Castwork.WebAPI.Controllers.Ferramentas;
 
 /// <summary>
 /// Ferramentas com IA de uma versão (ex.: <c>desenho-2d</c>): a conversa com a IA daquela ferramenta e o
-/// arquivo de trabalho. Cada ferramenta tem a sua conversa e o seu arquivo.
+/// arquivo de trabalho. Cada ferramenta tem a sua conversa e o seu arquivo. As ferramentas do projeto (o
+/// briefing, que vale para todas as versões) respondem também sem a versão na rota.
 /// </summary>
 [Route("api/projetos/{projetoId:long}/versoes/{versaoId:long}/ferramentas/{ferramenta}")]
+[Route("api/projetos/{projetoId:long}/ferramentas/{ferramenta}")]
 [Tags("Ferramentas")]
 public sealed class FerramentasController : ApiController
 {
@@ -19,6 +24,79 @@ public sealed class FerramentasController : ApiController
     [ProducesResponseType<ConversaFerramentaDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Conversa([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, CancellationToken cancellationToken)
         => Ok(await Mediator.Send(new GetConversaFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta }, cancellationToken));
+
+    /// <summary>
+    /// Server-Sent Events: cada evento é um <see cref="EventoDoTurno"/> em JSON; o último é o <c>fim</c>.
+    /// </summary>
+    [HttpGet("conversa/eventos")]
+    [EndpointSummary("Acompanha ao vivo o turno da IA (pensamento, passos e texto). Com aguardar, espera alguns segundos o turno começar (logo após enviar a mensagem).")]
+    [Produces("text/event-stream")]
+    public async Task Eventos(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromRoute] string ferramenta,
+        [FromQuery] bool aguardar,
+        [FromServices] IPainelDoTurno painel,
+        CancellationToken cancellationToken)
+    {
+        var conversaId = await Mediator.Send(new GetConversaFerramentaIdQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta }, cancellationToken);
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+
+        // Sem buffer de proxy (nginx): o evento precisa chegar à tela na hora.
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        // A conversa nasce com a primeira mensagem: aberto junto com o envio, o acompanhamento espera por ela.
+        if (aguardar)
+        {
+            conversaId ??= await EsperarConversaAsync(projetoId, versaoId, ferramenta, cancellationToken);
+        }
+
+        var terminou = false;
+        if (conversaId is { } id)
+        {
+            await foreach (var evento in painel.AcompanharAsync(id, aguardar ? TimeSpan.FromSeconds(15) : TimeSpan.Zero, cancellationToken))
+            {
+                await Response.WriteAsync($"data: {JsonSerializer.Serialize(evento, JsonSerializerOptions.Web)}\n\n", cancellationToken);
+                await Response.Body.FlushAsync(cancellationToken);
+                terminou = evento.Tipo == "fim";
+            }
+        }
+
+        // Sem turno para acompanhar: a tela recebe o fim e lê a conversa gravada.
+        if (!terminou)
+        {
+            await Response.WriteAsync("data: {\"tipo\":\"fim\"}\n\n", cancellationToken);
+        }
+    }
+
+    [HttpGet("conversa/chats")]
+    [EndpointSummary("Os chats da conversa (o em andamento e os anteriores), do mais recente para o mais antigo.")]
+    [ProducesResponseType<IReadOnlyList<ChatDaConversaDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Chats([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new GetChatsFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta }, cancellationToken));
+
+    [HttpGet("conversa/chats/{numero:int}")]
+    [EndpointSummary("As mensagens de um chat, para leitura.")]
+    [ProducesResponseType<ConversaFerramentaDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Chat([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, [FromRoute] int numero, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new GetChatFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, Numero = numero }, cancellationToken));
+
+    [HttpPost("conversa/chats")]
+    [EndpointSummary("Novo chat: o atual vai para o histórico e começa outro em branco, no mesmo desenho.")]
+    [ProducesResponseType<ConversaFerramentaDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> NovoChat([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new NovoChatFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta }, cancellationToken));
+
+    [HttpPost("conversa/chats/{numero:int}/continuar")]
+    [EndpointSummary("Retoma um chat anterior: ele volta a ser o que vai para a IA.")]
+    [ProducesResponseType<ConversaFerramentaDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ContinuarChat([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, [FromRoute] int numero, CancellationToken cancellationToken)
+        => Ok(await Mediator.Send(new ContinuarChatFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, Numero = numero }, cancellationToken));
 
     [HttpPost("conversa")]
     [EndpointSummary("Envia a mensagem (e imagens em base64) à IA da ferramenta; ela trabalha no arquivo pelo MCP.")]
@@ -38,7 +116,7 @@ public sealed class FerramentasController : ApiController
     }
 
     [HttpDelete("conversa")]
-    [EndpointSummary("Apaga a conversa da ferramenta (o arquivo continua).")]
+    [EndpointSummary("Apaga o chat em andamento (os anteriores e o arquivo continuam).")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Apagar([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, CancellationToken cancellationToken)
     {
@@ -66,6 +144,13 @@ public sealed class FerramentasController : ApiController
         }
 
         Response.Headers["X-Arquivo-Id"] = arquivo.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        // Nome dado pelo joalheiro (codificado: cabeçalho HTTP não leva acento); o editor abre o arquivo com ele.
+        if (arquivo.Nome is not null)
+        {
+            Response.Headers["X-Arquivo-Nome"] = Uri.EscapeDataString(arquivo.Nome);
+        }
+
         return File(arquivo.Conteudo, "application/octet-stream");
     }
 
@@ -188,6 +273,7 @@ public sealed class FerramentasController : ApiController
             cancellationToken));
 
     [HttpGet("~/api/projetos/{projetoId:long}/versoes/{versaoId:long}/ferramentas/imagens/{chave:guid}")]
+    [HttpGet("~/api/projetos/{projetoId:long}/ferramentas/imagens/{chave:guid}")]
     [EndpointSummary("Uma imagem das conversas das ferramentas da versão (anexada ou gerada pela IA).")]
     [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK, "image/png", "image/jpeg", "image/webp")]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
@@ -195,5 +281,19 @@ public sealed class FerramentasController : ApiController
     {
         var imagem = await Mediator.Send(new GetImagemConversaQuery { ProjetoId = projetoId, VersaoId = versaoId, Chave = chave }, cancellationToken);
         return File(imagem.Conteudo, imagem.Tipo);
+    }
+
+    private async Task<long?> EsperarConversaAsync(long projetoId, long versaoId, string ferramenta, CancellationToken cancellationToken)
+    {
+        for (var tentativa = 0; tentativa < 20; tentativa++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken);
+            if (await Mediator.Send(new GetConversaFerramentaIdQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta }, cancellationToken) is { } id)
+            {
+                return id;
+            }
+        }
+
+        return null;
     }
 }

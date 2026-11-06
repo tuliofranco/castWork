@@ -1,6 +1,7 @@
 using Castwork.Application.Abstractions;
 using Castwork.Infra.IA.Briefing;
 using Castwork.Infra.IA.CadCraft;
+using Castwork.Infra.IA.Conversa;
 using Castwork.Infra.IA.Ferramentas;
 
 using Microsoft.Extensions.Configuration;
@@ -17,11 +18,11 @@ public static class DependencyInjection
     public static IServiceCollection AddIa(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<AnthropicOptions>().Bind(configuration.GetSection(AnthropicOptions.Secao));
-        services.AddScoped<IAssistenteBriefing, AssistenteBriefingClaude>();
 
         services.AddOptions<CadCraftOptions>().Bind(configuration.GetSection(CadCraftOptions.Secao));
         services.AddHostedService<VerificacaoCadCraft>();
         services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaClaude>();
+        services.AddSingleton<IPainelDoTurno, PainelDoTurnoEmMemoria>();
         services.AddMemoryCache();
         services.AddSingleton<IPreviaFerramenta, PreviaFerramentaMcp>();
         return services;

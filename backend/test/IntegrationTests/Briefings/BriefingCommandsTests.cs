@@ -1,8 +1,9 @@
-using Castwork.Application.Briefings.Commands.ConversarBriefing;
 using Castwork.Application.Briefings.Commands.GerarPdfBriefing;
 using Castwork.Application.Briefings.Commands.SalvarFormularioBriefing;
 using Castwork.Application.Briefings.Queries.GetBriefing;
 using Castwork.Application.Common.Exceptions;
+using Castwork.Application.Ferramentas.Commands;
+using Castwork.Application.Ferramentas.Queries;
 using Castwork.Domain.Entities.Atelie;
 using Castwork.Domain.Entities.Briefings;
 using Castwork.Domain.Exceptions;
@@ -55,22 +56,21 @@ public class BriefingCommandsTests : TesteDeIntegracao
     {
         var projetoId = await ProjetoComBriefingAsync();
 
-        var briefing = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+        var conversa = await AmbienteDeTeste.SendAsync(Conversar(projetoId));
 
-        briefing.Mensagens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Ordem = 2, Papel = PapelMensagem.Assistente, Texto = "Olá! Qual a medida?" });
-        (await LerAsync(projetoId)).Mensagens.Should().HaveCount(2, "a abertura do joalheiro fica guardada, só não aparece");
+        conversa.Mensagens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Papel = PapelMensagem.Assistente, Texto = "Olá! Qual a medida?" });
     }
 
     [Test]
-    public async Task DeveRefinarOBriefingPelaConversaEGuardarAsMensagensAsync()
+    public async Task DeveRefinarOBriefingPelaConversaDaFerramentaAsync()
     {
         var projetoId = await ProjetoComBriefingAsync();
-        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId));
 
-        var briefing = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = " Elos ovais de 4 mm em ouro 18k " });
+        var conversa = await AmbienteDeTeste.SendAsync(Conversar(projetoId, " Elos ovais de 4 mm em ouro 18k "));
 
-        briefing.OQueSeraFeito.Should().Be("Elos ovais de 4 mm em ouro 18k");
-        briefing.Mensagens.Select(m => (m.Papel, m.Texto)).Should().Equal(
+        (await LerAsync(projetoId)).OQueSeraFeito.Should().Be("Elos ovais de 4 mm em ouro 18k");
+        conversa.Mensagens.Select(m => (m.Papel, m.Texto)).Should().Equal(
             (PapelMensagem.Assistente, "Olá! Qual a medida?"),
             (PapelMensagem.Joalheiro, "Elos ovais de 4 mm em ouro 18k"),
             (PapelMensagem.Assistente, "Anotado."));
@@ -80,11 +80,23 @@ public class BriefingCommandsTests : TesteDeIntegracao
     public async Task DeveGerarOPdfQuandoAIaPedeAsync()
     {
         var projetoId = await ProjetoComBriefingAsync();
-        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId));
 
-        var briefing = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = "Pode gerar o PDF" });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId, "Pode gerar o PDF"));
 
-        briefing.Documentos.Should().ContainSingle().Which.NomeArquivo.Should().EndWith(".pdf");
+        var briefing = await AmbienteDeTeste.SendAsync(new GetBriefingQuery { ProjetoId = projetoId });
+        briefing!.Documentos.Should().ContainSingle().Which.NomeArquivo.Should().EndWith(".pdf");
+    }
+
+    [Test]
+    public async Task DeveSerAMesmaConversaEmQualquerVersaoDoProjetoAsync()
+    {
+        var projetoId = await ProjetoComBriefingAsync();
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId));
+
+        var pelaVersao = await AmbienteDeTeste.SendAsync(new GetConversaFerramentaQuery { ProjetoId = projetoId, VersaoId = 0, Ferramenta = "briefing" });
+
+        pelaVersao.Mensagens.Should().ContainSingle();
     }
 
     [Test]
@@ -130,11 +142,23 @@ public class BriefingCommandsTests : TesteDeIntegracao
     }
 
     [Test]
+    public async Task DeveSerSoParaVerDentroDeUmaVersaoAsync()
+    {
+        var projetoId = await ProjetoComBriefingAsync();
+        var command = Conversar(projetoId, "Oi");
+        command.VersaoId = 42;
+
+        var conversar = () => AmbienteDeTeste.SendAsync(command);
+
+        await conversar.Should().ThrowAsync<ValidationException>().WithMessage("*edite pela página do projeto*");
+    }
+
+    [Test]
     public async Task DeveExigirOFormularioAntesDaConversaAsync()
     {
         var projetoId = await Usar(new ProjetoBuilder()).BuildAsync();
 
-        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+        var conversar = () => AmbienteDeTeste.SendAsync(Conversar(projetoId));
 
         await conversar.Should().ThrowAsync<EntidadeNaoEncontradaException>();
     }
@@ -143,54 +167,25 @@ public class BriefingCommandsTests : TesteDeIntegracao
     public async Task DeveExigirTextoDepoisQueAConversaComecouAsync()
     {
         var projetoId = await ProjetoComBriefingAsync();
-        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId));
 
-        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = "  " });
+        var conversar = () => AmbienteDeTeste.SendAsync(Conversar(projetoId, "  "));
 
         await conversar.Should().ThrowAsync<RegraDeNegocioException>();
     }
 
     [Test]
-    public async Task DeveEnviarImagensAIaEGuardarNaMensagemDoJoalheiroAsync()
+    public async Task DeveGuardarImagensNaMensagemDoJoalheiroAsync()
     {
         var projetoId = await ProjetoComBriefingAsync();
-        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId));
+        var command = Conversar(projetoId, "Esta é a referência");
+        command.Imagens = [Convert.ToBase64String(Png)];
 
-        var briefing = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Imagens = [Convert.ToBase64String(Png)] });
+        var conversa = await AmbienteDeTeste.SendAsync(command);
 
-        var enviada = briefing.Mensagens.Should().Contain(m => m.Papel == PapelMensagem.Joalheiro).Which;
-        enviada.Texto.Should().BeNull();
-        var chave = enviada.Imagens.Should().ContainSingle().Which;
-        briefing.Mensagens[^1].Texto.Should().Be("Vi a imagem.");
-        AssistenteBriefingDeTeste.UltimasImagens.Should().ContainKey(chave).WhoseValue.Tipo.Should().Be("image/png");
-
-        var segundo = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = "Com essa textura" });
-
-        segundo.Mensagens.Should().HaveCount(5, "abertura, imagem, resposta, texto e resposta");
-        AssistenteBriefingDeTeste.UltimasImagens.Should().ContainKey(chave, "a IA relê as imagens antigas a cada turno");
-    }
-
-    [Test]
-    public async Task DeveRecusarArquivoQueNaoEImagemAsync()
-    {
-        var projetoId = await ProjetoComBriefingAsync();
-        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
-
-        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Imagens = [Convert.ToBase64String("%PDF-1.7"u8.ToArray())] });
-
-        await conversar.Should().ThrowAsync<ValorInvalidoException>();
-        (await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.ImagensBriefing.CountAsync())).Should().Be(0);
-    }
-
-    [Test]
-    public async Task DeveLimitarAQuantidadeDeImagensAsync()
-    {
-        var projetoId = await ProjetoComBriefingAsync();
-        var imagem = Convert.ToBase64String(Png);
-
-        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Imagens = [imagem, imagem, imagem, imagem, imagem] });
-
-        await conversar.Should().ThrowAsync<ValidationException>();
+        var chave = conversa.Mensagens.Single(m => m.Papel == PapelMensagem.Joalheiro).Imagens.Should().ContainSingle().Which;
+        AssistenteFerramentaDeTeste.UltimoPedido!.Imagens.Should().ContainKey(chave);
     }
 
     [Test]
@@ -198,10 +193,11 @@ public class BriefingCommandsTests : TesteDeIntegracao
     {
         var projetoId = await ProjetoComBriefingAsync();
 
-        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = "falhe" });
+        var conversar = () => AmbienteDeTeste.SendAsync(Conversar(projetoId, "falhe"));
 
         await conversar.Should().ThrowAsync<ServicoIndisponivelException>();
-        (await LerAsync(projetoId)).Mensagens.Should().BeEmpty();
+        var conversa = await AmbienteDeTeste.SendAsync(new GetConversaFerramentaQuery { ProjetoId = projetoId, Ferramenta = "briefing" });
+        conversa.Mensagens.Should().BeEmpty();
     }
 
     [Test]
@@ -214,6 +210,12 @@ public class BriefingCommandsTests : TesteDeIntegracao
         briefing.Should().BeNull();
     }
 
+    /// <summary>
+    /// A conversa do briefing é a da ferramenta "briefing" do projeto (sem versão).
+    /// </summary>
+    private static ConversarFerramentaCommand Conversar(long projetoId, string? texto = null)
+        => new() { ProjetoId = projetoId, Ferramenta = "briefing", Texto = texto };
+
     private static SalvarFormularioBriefingCommand Formulario(long projetoId, string? orcamento = "Até R$ 3.000") => new()
     {
         ProjetoId = projetoId,
@@ -225,7 +227,7 @@ public class BriefingCommandsTests : TesteDeIntegracao
     };
 
     private static Task<Briefing> LerAsync(long projetoId)
-        => AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Briefings.Include(b => b.Mensagens).AsNoTracking().SingleAsync(b => b.ProjetoId == projetoId));
+        => AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Briefings.AsNoTracking().SingleAsync(b => b.ProjetoId == projetoId));
 
     private async Task<long> ProjetoComBriefingAsync()
     {
