@@ -12,10 +12,14 @@ import { BarraAcoesComponent } from '@shared/ui/barra-acoes.component';
 import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
 import { CampoComponent } from '@shared/ui/campo.component';
 import { EstadoListaComponent } from '@shared/ui/estado-lista.component';
-import { VisualizadorPdfComponent } from '@shared/ui/visualizador-pdf.component';
+import { AnexosImagemComponent } from '@shared/ui/anexos-imagem/anexos-imagem.component';
+import type { ImagemAnexada } from '@shared/ui/anexos-imagem/preparar-imagem';
+import { ImagemProtegidaComponent } from '@shared/ui/imagem-protegida.component';
+import { PainelPdfComponent } from '@shared/ui/painel-pdf.component';
 import { finalize, map, switchMap } from 'rxjs';
 
 import { MATERIAIS_COMUNS, TIPOS_JOIA } from '../tipo-joia';
+
 
 /**
  * Briefing do projeto: formulário inicial, conversa com a IA (que consolida o briefing) e os PDFs gerados.
@@ -31,7 +35,9 @@ import { MATERIAIS_COMUNS, TIPOS_JOIA } from '../tipo-joia';
     CampoComponent,
     BarraAcoesComponent,
     EstadoListaComponent,
-    VisualizadorPdfComponent,
+    PainelPdfComponent,
+    AnexosImagemComponent,
+    ImagemProtegidaComponent,
   ],
   templateUrl: './briefing.component.html',
   styleUrl: './briefing.component.scss',
@@ -65,6 +71,8 @@ export class BriefingComponent {
   protected readonly pensando = signal(false);
   protected readonly gerandoPdf = signal(false);
   protected readonly fala = signal('');
+  /** Fotos e croquis anexados à próxima mensagem. */
+  protected readonly anexos = signal<readonly ImagemAnexada[]>([]);
 
   /**
    * Documento aberto no painel de pré-visualização: a prévia (ainda não salva) ou um PDF já guardado.
@@ -73,7 +81,7 @@ export class BriefingComponent {
   protected readonly abrindoPrevia = signal(false);
 
   /** Fala do joalheiro já enviada, mostrada enquanto a IA responde. */
-  protected readonly falaPendente = signal<string | null>(null);
+  protected readonly falaPendente = signal<{ readonly texto: string | null; readonly imagens: readonly ImagemAnexada[] } | null>(null);
 
   protected readonly mostrarFormulario = computed(() => this.briefing.value() === null || this.editandoFormulario());
 
@@ -106,7 +114,6 @@ export class BriefingComponent {
   });
 
   private readonly fimDaConversa = viewChild<ElementRef<HTMLElement>>('fimDaConversa');
-  private readonly painel = viewChild<ElementRef<HTMLDialogElement>>('painel');
 
   constructor() {
     // Mantém a última mensagem à vista quando a conversa cresce.
@@ -119,7 +126,7 @@ export class BriefingComponent {
 
   protected paragrafos(mensagem: MensagemBriefingDto): string[] {
     // A IA escreve texto simples; tira marcações que escaparem em vez de interpretar HTML.
-    return mensagem.texto
+    return (mensagem.texto ?? '')
       .replace(/\*\*|__/g, '')
       .split(/\n{2,}/)
       .map((p) => p.trim())
@@ -191,13 +198,18 @@ export class BriefingComponent {
 
   protected enviarFala(): void {
     const texto = this.fala().trim();
-    if (!texto || this.pensando()) return;
-    this.enviar(texto);
+    if ((!texto && this.anexos().length === 0) || this.pensando()) return;
+    this.enviar(texto || null, this.anexos());
   }
 
   /** Para quando a abertura falhou (IA indisponível): a IA abre a conversa a partir do formulário. */
   protected iniciarConversa(): void {
     this.enviar(null);
+  }
+
+  protected soltar(evento: DragEvent, anexador: AnexosImagemComponent): void {
+    evento.preventDefault();
+    void anexador.adicionar(evento.dataTransfer?.files ?? []);
   }
 
   protected teclaNaFala(evento: KeyboardEvent): void {
@@ -250,7 +262,6 @@ export class BriefingComponent {
   }
 
   protected fecharPainel(): void {
-    this.painel()?.nativeElement.close();
     this.visualizando.set(null);
   }
 
@@ -267,16 +278,19 @@ export class BriefingComponent {
 
   private abrirPainel(conteudo: { arquivo: Blob; titulo: string; salvo: { id: number; nome: string } | null }): void {
     this.visualizando.set(conteudo);
-    // Diálogo nativo: prende o foco, fecha com Esc e devolve o foco ao botão que abriu.
-    queueMicrotask(() => this.painel()?.nativeElement.showModal());
   }
 
-  private enviar(texto: string | null): void {
+  private enviar(texto: string | null, imagens: readonly ImagemAnexada[] = []): void {
     this.pensando.set(true);
-    this.falaPendente.set(texto);
+    this.falaPendente.set(texto || imagens.length > 0 ? { texto, imagens } : null);
     this.fala.set('');
+    this.anexos.set([]);
     this.briefingService
-      .postConversa(this.projetoId(), texto)
+      .postConversa(
+        this.projetoId(),
+        texto,
+        imagens.map((i) => i.base64),
+      )
       .pipe(
         finalize(() => {
           this.pensando.set(false);
@@ -285,8 +299,11 @@ export class BriefingComponent {
       )
       .subscribe({
         next: (atualizado) => this.briefing.set(atualizado),
-        // O interceptor já mostra o erro; devolve a fala ao campo para não perder o que foi escrito.
-        error: () => this.fala.set(texto ?? ''),
+        // O interceptor já mostra o erro; devolve a fala e as imagens para não perder o que foi feito.
+        error: () => {
+          this.fala.set(texto ?? '');
+          this.anexos.set(imagens);
+        },
       });
   }
 

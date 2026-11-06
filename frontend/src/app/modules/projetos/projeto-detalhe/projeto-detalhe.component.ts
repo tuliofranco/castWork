@@ -1,10 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
-import { ClientesService } from '@data/clientes/clientes/clientes.service';
 import { BriefingService } from '@data/projetos/briefing/briefing.service';
 import type { VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
@@ -12,13 +11,13 @@ import { ToastService } from '@shared/services/toast.service';
 import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
 import { EstadoListaComponent } from '@shared/ui/estado-lista.component';
 import { SeloComponent } from '@shared/ui/selo.component';
-import { type Observable, finalize, of } from 'rxjs';
+import { type Observable, finalize } from 'rxjs';
 
 import { STATUS_VERSAO } from '../status-versao';
 
 /**
- * Página do projeto: o cliente vinculado e a lista de versões (criar, publicar, arquivar).
- * A composição de cada versão fica na página da versão.
+ * Página do projeto: as versões (criar, publicar, arquivar). Cliente e briefing ficam nas configurações;
+ * aqui só a etiqueta do cliente e um lembrete enquanto o briefing não existe.
  */
 @Component({
   selector: 'cw-projeto-detalhe',
@@ -29,7 +28,6 @@ import { STATUS_VERSAO } from '../status-versao';
 })
 export class ProjetoDetalheComponent {
   private readonly projetosService = inject(ProjetosService);
-  private readonly clientesService = inject(ClientesService);
   private readonly briefingService = inject(BriefingService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
@@ -52,15 +50,6 @@ export class ProjetoDetalheComponent {
     stream: ({ params }) => this.briefingService.getBriefing(params),
   });
 
-  protected readonly clientes = rxResource({
-    params: () => this.podeEditar,
-    stream: ({ params }) => (params ? this.clientesService.getClientesOpcoes() : of([])),
-  });
-
-  /** Cliente escolhido no seletor; volta ao do projeto sempre que o projeto é relido. */
-  protected readonly clienteEscolhido = linkedSignal<number | null>(() => this.projeto.value()?.cliente?.id ?? null);
-  protected readonly clienteMudou = computed(() => this.clienteEscolhido() !== (this.projeto.value()?.cliente?.id ?? null));
-
   protected readonly arquivadas = computed(() => (this.projeto.value()?.versoes ?? []).filter((v) => v.status === 'ARQUIVADA'));
   /** Lista ordenada pelo número da versão, da primeira para a mais recente. */
   protected readonly versoesVisiveis = computed(() =>
@@ -72,11 +61,6 @@ export class ProjetoDetalheComponent {
   /** Formulário inline de nova versão: o nome é livre e obrigatório; o número vem do servidor. */
   protected readonly criandoVersao = signal(false);
   protected readonly nomeNovaVersao = signal('');
-
-  protected salvarCliente(): void {
-    const clienteId = this.clienteEscolhido();
-    this.executar(this.projetosService.putCliente(this.projetoId(), clienteId), clienteId === null ? 'Projeto desvinculado do cliente.' : 'Cliente vinculado.');
-  }
 
   protected abrirNovaVersao(): void {
     this.nomeNovaVersao.set('');

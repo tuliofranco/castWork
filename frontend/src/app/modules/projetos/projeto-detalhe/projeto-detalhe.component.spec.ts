@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
-import { ClientesService } from '@data/clientes/clientes/clientes.service';
 import type { ProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { BriefingService } from '@data/projetos/briefing/briefing.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
@@ -25,7 +24,6 @@ describe('ProjetoDetalheComponent', () => {
   };
   const servico = {
     getProjeto: vi.fn(() => of(projeto)),
-    putCliente: vi.fn(() => of(undefined)),
     postArquivarVersao: vi.fn(() => of(undefined)),
     postDesarquivarVersao: vi.fn(() => of(undefined)),
     postPublicarVersao: vi.fn(() => of(undefined)),
@@ -40,7 +38,6 @@ describe('ProjetoDetalheComponent', () => {
         provideRouter([{ path: '**', children: [] }]),
         { provide: ProjetosService, useValue: servico },
         { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
-        { provide: ClientesService, useValue: { getClientesOpcoes: () => of([{ id: 3, nome: 'Maria Silva' }, { id: 4, nome: 'Ana Lima' }]) } },
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
         { provide: ToastService, useValue: { sucesso: vi.fn() } },
       ],
@@ -80,19 +77,6 @@ describe('ProjetoDetalheComponent', () => {
     expect(publicada).toBe('');
     expect(servico.postArquivarVersao).toHaveBeenCalledWith(1, 22);
     expect(servico.postDesarquivarVersao).toHaveBeenCalledWith(1, 23);
-  });
-
-  it('deve vincular outro cliente só depois de confirmar a troca', async () => {
-    const { el, estabilizar } = await abrir();
-    const seletor = el.querySelector<HTMLSelectElement>('#cliente')!;
-    expect(botao(el, 'Vincular')).toBeUndefined();
-
-    seletor.value = seletor.options[2]!.value;
-    seletor.dispatchEvent(new Event('change'));
-    await estabilizar();
-    botao(el, 'Vincular')!.click();
-
-    expect(servico.putCliente).toHaveBeenCalledWith(1, 4);
   });
 
   it('deve criar uma versão e abrir a página dela', async () => {

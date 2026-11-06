@@ -1,0 +1,94 @@
+@if (projeto.error()) {
+  <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar o projeto." (tentarDeNovo)="projeto.reload()" />
+} @else if (projeto.value(); as p) {
+  <cw-cabecalho-pagina titulo="Configurações" [voltarPara]="'/projetos/' + id()" [voltarRotulo]="p.nome" />
+
+  <section class="secao" aria-labelledby="titulo-cliente">
+    <h2 id="titulo-cliente">Cliente</h2>
+    @if (podeEditar && (trocandoCliente() || !p.cliente)) {
+      <div class="vinculo">
+        <label class="visually-hidden" for="cliente">Cliente do projeto</label>
+        <select id="cliente" class="form-select" [ngModel]="clienteEscolhido()" (ngModelChange)="clienteEscolhido.set($event)" [disabled]="salvando()">
+          <option [ngValue]="null">Sem cliente (projeto autoral)</option>
+          @if (p.cliente; as atual) {
+            <option [ngValue]="atual.id">{{ atual.nome }}</option>
+          }
+          @for (opcao of clientes.value() ?? []; track opcao.id) {
+            @if (opcao.id !== p.cliente?.id) {
+              <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
+            }
+          }
+        </select>
+        @if (clienteMudou()) {
+          <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="salvarCliente()">
+            {{ clienteEscolhido() === null ? 'Desvincular' : 'Vincular' }}
+          </button>
+          <button type="button" class="btn btn-sutil" (click)="cancelarCliente()">Cancelar</button>
+        } @else if (trocandoCliente()) {
+          <button type="button" class="btn btn-sutil" (click)="cancelarCliente()">Cancelar</button>
+        }
+      </div>
+    } @else {
+      <div class="definido">
+        <i class="bi bi-person" aria-hidden="true"></i>
+        <span class="texto">{{ p.cliente?.nome ?? 'Projeto autoral' }}</span>
+        @if (podeEditar) {
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Trocar cliente" title="Trocar cliente" (click)="trocandoCliente.set(true)">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="secao" aria-labelledby="titulo-briefing">
+    <h2 id="titulo-briefing">Briefing</h2>
+    @if (briefing.value(); as b) {
+      @if (b.documentos[0]; as ultimo) {
+        <div class="definido">
+          <i class="bi bi-check-circle" aria-hidden="true"></i>
+          <span class="texto">Definido · PDF de {{ ultimo.geradoEm | date: 'dd/MM/yyyy' }}</span>
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Ver PDF do briefing" title="Ver PDF" (click)="verDocumento(b.projetoId, ultimo.id, ultimo.nomeArquivo, ultimo.geradoEm)">
+            <i class="bi bi-eye" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Baixar PDF do briefing" title="Baixar PDF" (click)="baixarDocumento(b.projetoId, ultimo.id, ultimo.nomeArquivo)">
+            <i class="bi bi-download" aria-hidden="true"></i>
+          </button>
+          <a class="btn btn-sutil btn-icone" routerLink="../briefing" aria-label="Editar briefing" title="Editar briefing"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+        </div>
+      } @else {
+        <a class="cw-linha briefing-andamento" routerLink="../briefing">
+          <span class="etiquetas">
+            <cw-selo tom="aviso" icone="hourglass-split">Em andamento</cw-selo>
+            <span class="etiqueta">{{ b.tipoJoia }}</span>
+            @if (b.prazo) {
+              <span class="etiqueta">entrega {{ b.prazo | date: 'dd/MM/yyyy' }}</span>
+            }
+            @if (b.orcamento) {
+              <span class="etiqueta">{{ valor(b.orcamento) }}</span>
+            }
+          </span>
+          <span class="continuar">Continuar conversa <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+        </a>
+      }
+    } @else if (briefing.value() === null) {
+      <div class="sem-briefing">
+        <p>Defina o que será feito antes das versões: anote o pedido e converse com a IA para completar.</p>
+        @if (podeEditar) {
+          <a class="btn btn-primary" routerLink="../briefing"><i class="bi bi-journal-text" aria-hidden="true"></i> Criar briefing</a>
+        }
+      </div>
+    }
+  </section>
+
+} @else if (projeto.value() === null) {
+  <cw-cabecalho-pagina titulo="Projeto não encontrado" voltarPara="/projetos" voltarRotulo="Projetos" />
+} @else {
+  <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="2" />
+}
+
+<cw-painel-pdf [arquivo]="documentoAberto()?.arquivo ?? null" [titulo]="documentoAberto()?.titulo ?? ''" (fechado)="documentoAberto.set(null)">
+  @if (documentoAberto(); as d) {
+    <button type="button" class="btn btn-primary" (click)="baixarDocumento(d.projetoId, d.id, d.nome)"><i class="bi bi-download" aria-hidden="true"></i> Baixar</button>
+  }
+</cw-painel-pdf>

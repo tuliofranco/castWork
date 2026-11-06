@@ -125,3 +125,14 @@
     color: var(--cw-danger-ink);
   }
 }
+
+// Enquanto a borda do assistente é arrastada (cw-ferramenta-ia): o iframe do CADCraft não pode
+// capturar o ponteiro, senão o arraste para no meio.
+body.cw-arrastando {
+  cursor: col-resize;
+  user-select: none;
+
+  iframe {
+    pointer-events: none;
+  }
+}

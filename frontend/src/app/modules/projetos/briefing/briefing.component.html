@@ -91,11 +91,20 @@
         @for (m of b.mensagens; track m.ordem) {
           <li class="mensagem" [class.minha]="m.papel === 'Joalheiro'">
             <span class="autor">{{ m.papel === 'Joalheiro' ? 'Você' : 'IA' }}</span>
-            <div class="balao">
-              @for (paragrafo of paragrafos(m); track $index) {
-                <p>{{ paragrafo }}</p>
-              }
-            </div>
+            @if (m.imagens.length > 0) {
+              <div class="imagens">
+                @for (chave of m.imagens; track chave; let i = $index) {
+                  <cw-imagem-protegida [src]="'projetos/' + b.projetoId + '/briefing/imagens/' + chave" [rotulo]="'Imagem ' + (i + 1) + ' enviada'" />
+                }
+              </div>
+            }
+            @if (m.texto) {
+              <div class="balao">
+                @for (paragrafo of paragrafos(m); track $index) {
+                  <p>{{ paragrafo }}</p>
+                }
+              </div>
+            }
           </li>
         } @empty {
           @if (!pensando()) {
@@ -112,7 +121,16 @@
         @if (falaPendente(); as pendente) {
           <li class="mensagem minha">
             <span class="autor">Você</span>
-            <div class="balao"><p>{{ pendente }}</p></div>
+            @if (pendente.imagens.length > 0) {
+              <div class="imagens">
+                @for (imagem of pendente.imagens; track imagem.url) {
+                  <img class="pendente" [src]="imagem.url" alt="Imagem enviando" />
+                }
+              </div>
+            }
+            @if (pendente.texto) {
+              <div class="balao"><p>{{ pendente.texto }}</p></div>
+            }
           </li>
         }
         @if (pensando()) {
@@ -125,7 +143,11 @@
       <span #fimDaConversa></span>
 
       @if (podeEditar) {
-        <form class="compositor" (ngSubmit)="enviarFala()">
+        <form class="compositor" (ngSubmit)="enviarFala()" (dragover)="$event.preventDefault()" (drop)="soltar($event, anexador)">
+          <cw-anexos-imagem #anexador class="anexos" [(imagens)]="anexos" />
+          <button type="button" class="btn btn-sutil btn-icone anexar" aria-label="Anexar foto ou croqui" title="Anexar imagem" [disabled]="pensando()" (click)="anexador.escolher()">
+            <i class="bi bi-paperclip" aria-hidden="true"></i>
+          </button>
           <label class="visually-hidden" for="fala">Mensagem para a IA</label>
           <textarea
             id="fala"
@@ -137,9 +159,10 @@
             [ngModel]="fala()"
             (ngModelChange)="fala.set($event)"
             (keydown)="teclaNaFala($event)"
+            (paste)="anexador.colar($event)"
             [disabled]="pensando()"
           ></textarea>
-          <button type="submit" class="btn btn-primary btn-icone enviar" [disabled]="pensando() || !fala().trim()" aria-label="Enviar mensagem">
+          <button type="submit" class="btn btn-primary btn-icone enviar" [disabled]="pensando() || (!fala().trim() && anexos().length === 0)" aria-label="Enviar mensagem">
             <i class="bi bi-send" aria-hidden="true"></i>
           </button>
         </form>
@@ -211,24 +234,13 @@
   </div>
 }
 
-<dialog #painel class="painel-pdf" aria-labelledby="titulo-pdf" (close)="visualizando.set(null)">
-  @if (visualizando(); as v) {
-    <header class="barra-pdf">
-      <h2 id="titulo-pdf">{{ v.titulo }}</h2>
-      <div class="acoes">
-        @if (v.salvo; as salvo) {
-          <button type="button" class="btn btn-primary" (click)="baixar(salvo.id, salvo.nome)"><i class="bi bi-download" aria-hidden="true"></i> Baixar</button>
-        } @else if (podeEditar) {
-          <button type="button" class="btn btn-secundario" (click)="ajustarNaConversa()"><i class="bi bi-chat-dots" aria-hidden="true"></i> Ajustar na conversa</button>
-          <button type="button" class="btn btn-primary" [disabled]="gerandoPdf()" (click)="salvarEBaixar()">
-            <i class="bi bi-download" aria-hidden="true"></i> {{ gerandoPdf() ? 'Salvando...' : 'Salvar e baixar' }}
-          </button>
-        }
-        <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="fecharPainel()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-      </div>
-    </header>
-    <div class="folha">
-      <cw-visualizador-pdf [arquivo]="v.arquivo" [rotulo]="v.titulo" />
-    </div>
+<cw-painel-pdf [arquivo]="visualizando()?.arquivo ?? null" [titulo]="visualizando()?.titulo ?? ''" (fechado)="visualizando.set(null)">
+  @if (visualizando()?.salvo; as salvo) {
+    <button type="button" class="btn btn-primary" (click)="baixar(salvo.id, salvo.nome)"><i class="bi bi-download" aria-hidden="true"></i> Baixar</button>
+  } @else if (podeEditar) {
+    <button type="button" class="btn btn-secundario" (click)="ajustarNaConversa()"><i class="bi bi-chat-dots" aria-hidden="true"></i> Ajustar na conversa</button>
+    <button type="button" class="btn btn-primary" [disabled]="gerandoPdf()" (click)="salvarEBaixar()">
+      <i class="bi bi-download" aria-hidden="true"></i> {{ gerandoPdf() ? 'Salvando...' : 'Salvar e baixar' }}
+    </button>
   }
-</dialog>
+</cw-painel-pdf>

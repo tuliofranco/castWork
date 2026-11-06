@@ -18,6 +18,13 @@ export const routes: CastworkRoute[] = [
     loadChildren: () => import('@modules/login/login.routes').then((m) => m.LOGIN_ROUTES),
   },
   {
+    // Ferramentas com IA abrem em tela cheia, fora do layout com menu (modo de foco).
+    path: 'projetos/:id/versoes/:versaoId/desenho-2d',
+    canActivate: [authGuard, permissionGuard],
+    data: { title: 'Desenho 2D', permissoes: ['projetos.ler'] },
+    loadComponent: () => import('@modules/projetos/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
+  },
+  {
     path: '',
     component: ContentLayoutComponent,
     // authGuard roda uma vez ao entrar no layout; permissionGuard roda a cada rota filha.

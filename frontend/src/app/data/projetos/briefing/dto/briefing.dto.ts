@@ -5,7 +5,10 @@ export type PapelMensagem = 'Joalheiro' | 'Assistente';
 export interface MensagemBriefingDto {
   readonly ordem: number;
   readonly papel: PapelMensagem;
-  readonly texto: string;
+  /** Nulo quando o joalheiro mandou só imagens. */
+  readonly texto: string | null;
+  /** Chaves das imagens anexadas (GET briefing/imagens/{chave}). */
+  readonly imagens: readonly string[];
   readonly criadaEm: string;
 }
 

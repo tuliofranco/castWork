@@ -22,7 +22,7 @@
   padding: 1rem 0.5rem;
   background: var(--cw-surface-2);
   border-right: 1px solid var(--cw-border);
-  overflow-y: auto;
+  overflow: visible;
 
   > .marca {
     display: flex;
@@ -124,7 +124,6 @@
     padding: 0.25rem 0.5rem calc(0.25rem + env(safe-area-inset-bottom));
     border-right: 0;
     border-top: 1px solid var(--cw-border);
-    overflow: visible;
 
     > .marca,
     .usuario-rail {
