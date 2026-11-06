@@ -18,7 +18,13 @@ internal sealed class ConfiguracaoAtelieConfiguration : IEntityTypeConfiguration
         builder.Property(c => c.Nome).HasMaxLength(ConfiguracaoAtelie.NomeMaxLength).IsRequired();
         builder.Property(c => c.Email).HasMaxLength(ConfiguracaoAtelie.EmailMaxLength);
         builder.Property(c => c.Telefone).HasMaxLength(ConfiguracaoAtelie.TelefoneMaxLength);
-        builder.Property(c => c.LogoArquivo).HasMaxLength(ConfiguracaoAtelie.LogoMaxLength);
+        builder.Property(c => c.Assinatura).HasMaxLength(ConfiguracaoAtelie.AssinaturaMaxLength);
+        builder.Property(c => c.CorMarca).HasMaxLength(7).IsFixedLength().IsRequired().HasDefaultValue(ConfiguracaoAtelie.CorPadrao);
+        builder.Property(c => c.Instagram).HasMaxLength(ConfiguracaoAtelie.InstagramMaxLength);
+        builder.Property(c => c.Site).HasMaxLength(ConfiguracaoAtelie.SiteMaxLength);
+        builder.Property(c => c.AvisoBriefing).HasMaxLength(ConfiguracaoAtelie.AvisoMaxLength);
+        builder.Property(c => c.Logo);
+        builder.Property(c => c.LogoTipo).HasMaxLength(20);
         builder.Property(c => c.ValorHoraPadrao).IsRequired();
         builder.ComplexProperty(c => c.Endereco, e => e.ConfigurarEndereco());
 
@@ -27,6 +33,8 @@ internal sealed class ConfiguracaoAtelieConfiguration : IEntityTypeConfiguration
         {
             Id = ConfiguracaoAtelie.IdUnico,
             Nome = "Meu ateliê",
+            CorMarca = ConfiguracaoAtelie.CorPadrao,
+            AvisoBriefing = ConfiguracaoAtelie.AvisoPadrao,
             ValorHoraPadrao = Dinheiro.Zero,
             CriadoEm = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
         });

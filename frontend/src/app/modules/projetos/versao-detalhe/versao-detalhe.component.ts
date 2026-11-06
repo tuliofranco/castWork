@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { PecaDto } from '@data/pecas/pecas/dto/peca.dto';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
@@ -18,6 +18,8 @@ import { SeloComponent } from '@shared/ui/selo.component';
 import { type Observable, debounceTime, distinctUntilChanged, finalize, of } from 'rxjs';
 
 import { STATUS_VERSAO } from '../status-versao';
+import { ArquivosVersaoComponent } from './arquivos-versao.component';
+import { EtapasVersaoComponent } from './etapas-versao.component';
 
 /**
  * Página de uma versão: composição e, enquanto ela estiver em desenvolvimento, a biblioteca ao lado
@@ -25,7 +27,7 @@ import { STATUS_VERSAO } from '../status-versao';
  */
 @Component({
   selector: 'cw-versao-detalhe',
-  imports: [DecimalPipe, DatePipe, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, QuantidadeComponent, SeloComponent],
+  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent],
   templateUrl: './versao-detalhe.component.html',
   styleUrl: './versao-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.prancheta {
+  position: absolute;
+  inset: 0;
+  background: #22282f;
+
+  iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+
+// Aviso por cima do CADCraft enquanto o desenho é trocado: o joalheiro não desenha num arquivo que vai sumir.
+.sincronizando {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+  background: rgb(34 40 47 / 0.72);
+  color: #e6e6e6;
+}

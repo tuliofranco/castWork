@@ -1,0 +1,35 @@
+<cw-ferramenta-ia
+  titulo="Desenho 2D"
+  [voltarPara]="voltarPara()"
+  voltarRotulo="Versão"
+  [mensagens]="mensagens()"
+  [pensando]="pensando()"
+  (enviar)="enviar($event)"
+  (desfazer)="desfazer($event)"
+  (apagarConversa)="apagarConversa()"
+>
+  <ng-container acoes>
+    <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
+      <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
+    </button>
+    <button type="button" class="btn btn-secundario" [disabled]="!!sincronizando() || pensando()" (click)="salvar()">
+      <i class="bi bi-cloud-check" aria-hidden="true"></i> Salvar
+    </button>
+  </ng-container>
+
+  <div area class="prancheta">
+    @if (sincronizando(); as aviso) {
+      <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
+    }
+    <!-- CADCraft web completo (WebAssembly), servido pelo próprio front em /cadcraft. -->
+    <iframe #cadcraft src="/cadcraft/" title="CADCraft" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen (load)="iniciar()"></iframe>
+  </div>
+</cw-ferramenta-ia>
+
+<cw-historico-desenho
+  [versoes]="historico()"
+  [ocupado]="!!sincronizando() || pensando()"
+  (restaurar)="restaurar($event)"
+  (baixar)="baixar($event)"
+  (fechado)="historico.set(null)"
+/>

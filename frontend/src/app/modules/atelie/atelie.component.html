@@ -1,0 +1,85 @@
+<cw-cabecalho-pagina titulo="Ateliê e marca" subtitulo="O que aparece no cabeçalho e no rodapé dos documentos enviados ao cliente." />
+
+@if (erro()) {
+  <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar os dados do ateliê." (tentarDeNovo)="carregar()" />
+} @else if (carregando()) {
+  <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="3" />
+} @else {
+  <form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+    <section class="bloco" aria-labelledby="titulo-marca">
+      <h2 id="titulo-marca">Marca</h2>
+
+      <div class="logo">
+        <div class="moldura" [style.border-color]="form.controls.corMarca.value">
+          @if (logoUrl(); as url) {
+            <img [src]="url" alt="Logo atual do ateliê" />
+          } @else {
+            <span class="sem-logo" [style.color]="form.controls.corMarca.value">{{ (form.controls.nome.value || 'A').charAt(0) }}</span>
+          }
+        </div>
+        <div class="acoes-logo">
+          <label class="btn btn-secundario" [class.disabled]="enviandoLogo()">
+            <i class="bi bi-upload" aria-hidden="true"></i> {{ logoUrl() ? 'Trocar logo' : 'Enviar logo' }}
+            <input type="file" accept="image/png,image/jpeg" class="visually-hidden" (change)="enviarLogo($event)" [disabled]="enviandoLogo()" />
+          </label>
+          @if (logoUrl()) {
+            <button type="button" class="btn btn-sutil" (click)="removerLogo()" [disabled]="enviandoLogo()">Remover</button>
+          }
+          <p class="dica">PNG ou JPEG, até 1 MB. Prefira fundo transparente e formato quadrado.</p>
+        </div>
+      </div>
+
+      <div class="grade">
+        <cw-campo class="c6" rotulo="Nome do ateliê" para="nome" [controle]="form.controls.nome" [mensagens]="{ required: 'Informe o nome do ateliê.' }">
+          <input id="nome" class="form-control" formControlName="nome" autocomplete="organization" />
+        </cw-campo>
+        <cw-campo class="c4" rotulo="Assinatura" para="assinatura" [opcional]="true" [controle]="form.controls.assinatura" dica="Aparece abaixo do nome.">
+          <input id="assinatura" class="form-control" formControlName="assinatura" placeholder="Ex.: Joias autorais feitas à mão" autocomplete="off" />
+        </cw-campo>
+        <cw-campo class="c2" rotulo="Cor da marca" para="corMarca" [controle]="form.controls.corMarca" [mensagens]="{ pattern: 'Use o formato #RRGGBB.' }">
+          <div class="cor">
+            <input type="color" class="seletor" [value]="form.controls.corMarca.value" (input)="escolherCor($event)" aria-label="Escolher cor da marca" />
+            <input id="corMarca" class="form-control" formControlName="corMarca" maxlength="7" autocomplete="off" />
+          </div>
+        </cw-campo>
+      </div>
+    </section>
+
+    <section class="bloco" aria-labelledby="titulo-contatos">
+      <h2 id="titulo-contatos">Contatos no rodapé</h2>
+      <div class="grade">
+        <cw-campo class="c3" rotulo="Telefone / WhatsApp" para="telefone" [opcional]="true" [controle]="form.controls.telefone">
+          <input id="telefone" class="form-control" formControlName="telefone" inputmode="tel" autocomplete="tel" />
+        </cw-campo>
+        <cw-campo class="c3" rotulo="E-mail" para="email" [opcional]="true" [controle]="form.controls.email" [mensagens]="{ email: 'E-mail inválido.' }">
+          <input id="email" type="email" class="form-control" formControlName="email" autocomplete="email" />
+        </cw-campo>
+        <cw-campo class="c3" rotulo="Instagram" para="instagram" [opcional]="true" [controle]="form.controls.instagram">
+          <input id="instagram" class="form-control" formControlName="instagram" placeholder="@seuatelie" autocomplete="off" />
+        </cw-campo>
+        <cw-campo class="c3" rotulo="Site" para="site" [opcional]="true" [controle]="form.controls.site">
+          <input id="site" class="form-control" formControlName="site" placeholder="seuatelie.com.br" autocomplete="url" />
+        </cw-campo>
+        <cw-campo class="c3" rotulo="CPF ou CNPJ" para="documento" [opcional]="true" [controle]="form.controls.documento">
+          <input id="documento" class="form-control" formControlName="documento" inputmode="numeric" autocomplete="off" />
+        </cw-campo>
+      </div>
+    </section>
+
+    <section class="bloco" aria-labelledby="titulo-briefing">
+      <h2 id="titulo-briefing">Briefing</h2>
+      <cw-campo rotulo="Aviso no fim do documento" para="avisoBriefing" [opcional]="true" [controle]="form.controls.avisoBriefing" dica="Deixe vazio para não mostrar.">
+        <textarea id="avisoBriefing" class="form-control" rows="2" formControlName="avisoBriefing"></textarea>
+      </cw-campo>
+    </section>
+
+    @for (mensagem of errosGerais(); track mensagem) {
+      <p class="aviso-formulario" role="alert">{{ mensagem }}</p>
+    }
+
+    <cw-barra-acoes>
+      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="salvando() || form.pristine">Desfazer</button>
+      <button type="submit" class="btn btn-primary" [disabled]="salvando()">{{ salvando() ? 'Salvando...' : 'Salvar marca' }}</button>
+    </cw-barra-acoes>
+  </form>
+}

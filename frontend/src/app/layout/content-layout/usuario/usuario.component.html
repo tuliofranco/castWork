@@ -22,6 +22,11 @@
           }
         </div>
       </div>
+      @if (podeConfigurar) {
+        <a class="btn btn-sutil w-100 configurar" routerLink="/atelie" (click)="aberto.set(false)">
+          <i class="bi bi-brush" aria-hidden="true"></i> Ateliê e marca
+        </a>
+      }
       <button type="button" class="btn btn-secundario w-100" (click)="sair()">
         <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sair
       </button>

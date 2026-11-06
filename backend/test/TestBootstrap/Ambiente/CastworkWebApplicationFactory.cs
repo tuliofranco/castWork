@@ -11,7 +11,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Castwork.TestBootstrap.Ambiente;
 
 /// <summary>
-/// Sobe a API de verdade (o mesmo Program.cs), trocando só o banco (container), o relógio e o usuário logado.
+/// Sobe a API de verdade (o mesmo Program.cs), trocando só o banco (container), o relógio, o usuário logado
+/// e os serviços externos do briefing (IA e gerador de PDF).
 /// As migrations rodam no startup, como em produção.
 /// </summary>
 public sealed class CastworkWebApplicationFactory(
@@ -44,6 +45,16 @@ public sealed class CastworkWebApplicationFactory(
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(relogio);
+
+            // Serviços externos (IA paga, binários do WordCraft e do CADCraft) ficam de fora dos testes.
+            services.RemoveAll<IAssistenteBriefing>();
+            services.AddScoped<IAssistenteBriefing, AssistenteBriefingDeTeste>();
+            services.RemoveAll<IGeradorDocumentoBriefing>();
+            services.AddScoped<IGeradorDocumentoBriefing, GeradorDocumentoBriefingDeTeste>();
+            services.RemoveAll<IAssistenteFerramenta>();
+            services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaDeTeste>();
+            services.RemoveAll<IPreviaFerramenta>();
+            services.AddSingleton<IPreviaFerramenta, PreviaFerramentaDeTeste>();
 
             // Requisição HTTP autenticada: sessão real, lida do JWT. Fora disso (SendAsync): sessão de teste.
             services.RemoveAll<ISessaoService>();

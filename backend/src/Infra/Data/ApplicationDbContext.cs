@@ -1,6 +1,8 @@
 using Castwork.Domain.Entities.Acesso;
 using Castwork.Domain.Entities.Atelie;
+using Castwork.Domain.Entities.Briefings;
 using Castwork.Domain.Entities.Clientes;
+using Castwork.Domain.Entities.Ferramentas;
 using Castwork.Domain.Entities.Pecas;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.ValueObjects;
@@ -21,6 +23,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Peca> Pecas => Set<Peca>();
 
     public DbSet<Projeto> Projetos => Set<Projeto>();
+
+    public DbSet<Briefing> Briefings => Set<Briefing>();
+
+    public DbSet<DocumentoBriefing> DocumentosBriefing => Set<DocumentoBriefing>();
+
+    public DbSet<ImagemBriefing> ImagensBriefing => Set<ImagemBriefing>();
+
+    public DbSet<ConversaFerramenta> ConversasFerramenta => Set<ConversaFerramenta>();
+
+    public DbSet<ArquivoFerramenta> ArquivosFerramenta => Set<ArquivoFerramenta>();
+
+    public DbSet<ImagemConversa> ImagensConversa => Set<ImagemConversa>();
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
 
@@ -52,6 +66,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         // Enums como texto (nome do valor): legível no banco e estável a renumerações.
         configurationBuilder.Properties<TipoPeca>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<StatusVersao>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<TipoJoia>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<PapelMensagem>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<OrigemArquivo>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(18, 2);
     }
 }

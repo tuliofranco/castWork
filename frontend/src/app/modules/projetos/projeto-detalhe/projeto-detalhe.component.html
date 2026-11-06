@@ -3,35 +3,18 @@
 } @else if (projeto.value() === null) {
   <cw-cabecalho-pagina titulo="Projeto não encontrado" voltarPara="/projetos" voltarRotulo="Projetos" subtitulo="Ele pode ter sido removido, ou o endereço está incompleto." />
 } @else if (projeto.value(); as p) {
-  <cw-cabecalho-pagina [titulo]="p.nome" voltarPara="/projetos" voltarRotulo="Projetos" [subtitulo]="p.descricao ?? undefined" />
+  <cw-cabecalho-pagina [titulo]="p.nome" [subtitulo]="p.descricao ?? undefined">
+    <ng-container acoes>
+      <span class="etiqueta-cliente" [class.autoral]="!p.cliente"><i class="bi bi-person" aria-hidden="true"></i> {{ p.cliente?.nome ?? 'Projeto autoral' }}</span>
+      <a class="btn btn-sutil btn-icone" routerLink="configuracoes" aria-label="Configurações do projeto" title="Configurações"><i class="bi bi-gear" aria-hidden="true"></i></a>
+    </ng-container>
+  </cw-cabecalho-pagina>
 
-  <section class="secao" aria-labelledby="titulo-cliente">
-    <h2 id="titulo-cliente">Cliente</h2>
-    @if (podeEditar) {
-      <div class="vinculo">
-        <label class="visually-hidden" for="cliente">Cliente do projeto</label>
-        <select id="cliente" class="form-select" [ngModel]="clienteEscolhido()" (ngModelChange)="clienteEscolhido.set($event)" [disabled]="salvando()">
-          <option [ngValue]="null">Sem cliente (projeto autoral)</option>
-          @if (p.cliente; as atual) {
-            <option [ngValue]="atual.id">{{ atual.nome }}</option>
-          }
-          @for (opcao of clientes.value() ?? []; track opcao.id) {
-            @if (opcao.id !== p.cliente?.id) {
-              <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
-            }
-          }
-        </select>
-        @if (clienteMudou()) {
-          <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="salvarCliente()">
-            {{ clienteEscolhido() === null ? 'Desvincular' : 'Vincular' }}
-          </button>
-          <button type="button" class="btn btn-sutil" (click)="clienteEscolhido.set(p.cliente?.id ?? null)">Cancelar</button>
-        }
-      </div>
-    } @else {
-      <p class="cliente-fixo"><i class="bi bi-person" aria-hidden="true"></i> {{ p.cliente?.nome ?? 'Projeto autoral' }}</p>
-    }
-  </section>
+  @if (briefing.value() === null && podeEditar) {
+    <a class="lembrete" routerLink="configuracoes">
+      <i class="bi bi-journal-text" aria-hidden="true"></i> Falta definir o briefing <i class="bi bi-chevron-right" aria-hidden="true"></i>
+    </a>
+  }
 
   <section class="secao" aria-labelledby="titulo-versoes">
     <div class="cabecalho-secao">

@@ -1,8 +1,10 @@
+using Castwork.Infra.Documentos;
 using Castwork.Infra.FluentValidation;
 using Castwork.Infra.Hosting.Autenticacao;
 using Castwork.Infra.Hosting.Mapping;
 using Castwork.Infra.Hosting.MediatR;
 using Castwork.Infra.Hosting.Persistencia;
+using Castwork.Infra.IA;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +26,9 @@ public static class DependencyInjection
         services.AddPipelineMediatR();
         services.AddMapeamento();
         services.AddValidacao();
+
+        services.AddIa(configuration);
+        services.AddDocumentos(configuration);
 
         return services;
     }

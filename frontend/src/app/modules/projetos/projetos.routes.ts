@@ -16,6 +16,16 @@ export const PROJETOS_ROUTES: CastworkRoute[] = [
     data: { title: 'Projeto' },
   },
   {
+    path: ':id/configuracoes',
+    loadComponent: () => import('./projeto-configuracoes/projeto-configuracoes.component').then((m) => m.ProjetoConfiguracoesComponent),
+    data: { title: 'Configurações do projeto' },
+  },
+  {
+    path: ':id/briefing',
+    loadComponent: () => import('./briefing/briefing.component').then((m) => m.BriefingComponent),
+    data: { title: 'Briefing' },
+  },
+  {
     path: ':id/versoes/:versaoId',
     loadComponent: () => import('./versao-detalhe/versao-detalhe.component').then((m) => m.VersaoDetalheComponent),
     data: { title: 'Versão' },

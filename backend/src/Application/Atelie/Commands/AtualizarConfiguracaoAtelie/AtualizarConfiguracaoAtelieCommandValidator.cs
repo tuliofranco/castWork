@@ -29,6 +29,12 @@ public sealed class AtualizarConfiguracaoAtelieCommandValidator : ValidatorBase<
             .WithName("E-mail");
 
         RuleFor(c => c.Telefone).MaximumLength(ConfiguracaoAtelie.TelefoneMaxLength).WithName("Telefone");
+        RuleFor(c => c.Assinatura).MaximumLength(ConfiguracaoAtelie.AssinaturaMaxLength).WithName("Assinatura");
+        RuleFor(c => c.CorMarca!).Matches("^#[0-9A-Fa-f]{6}$").When(c => !string.IsNullOrWhiteSpace(c.CorMarca))
+            .WithMessage("Use o formato #RRGGBB.").WithName("Cor da marca");
+        RuleFor(c => c.Instagram).MaximumLength(ConfiguracaoAtelie.InstagramMaxLength).WithName("Instagram");
+        RuleFor(c => c.Site).MaximumLength(ConfiguracaoAtelie.SiteMaxLength).WithName("Site");
+        RuleFor(c => c.AvisoBriefing).MaximumLength(ConfiguracaoAtelie.AvisoMaxLength).WithName("Aviso do briefing");
 
         RuleFor(c => c.ValorHoraPadrao)
             .InclusiveBetween(0, ValorHoraMaximo)

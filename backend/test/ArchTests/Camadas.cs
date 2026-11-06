@@ -30,6 +30,8 @@ internal static class Camadas
         typeof(Infra.Auth.AssemblyReference).Assembly,
         typeof(Infra.MediatR.AssemblyReference).Assembly,
         typeof(Infra.FluentValidation.AssemblyReference).Assembly,
+        typeof(Infra.IA.AssemblyReference).Assembly,
+        typeof(Infra.Documentos.AssemblyReference).Assembly,
     ];
 
     /// <summary>
@@ -45,6 +47,7 @@ internal static class Camadas
         "System.IdentityModel.Tokens.Jwt",
         "Npgsql",
         "AutoMapper",
+        "Anthropic",
     ];
 
     public static readonly string[] FrameworksDeInfraExcetoEfCore =

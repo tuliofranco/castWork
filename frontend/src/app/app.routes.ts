@@ -18,6 +18,13 @@ export const routes: CastworkRoute[] = [
     loadChildren: () => import('@modules/login/login.routes').then((m) => m.LOGIN_ROUTES),
   },
   {
+    // Ferramentas com IA abrem em tela cheia, fora do layout com menu (modo de foco).
+    path: 'projetos/:id/versoes/:versaoId/desenho-2d',
+    canActivate: [authGuard, permissionGuard],
+    data: { title: 'Desenho 2D', permissoes: ['projetos.ler'] },
+    loadComponent: () => import('@modules/projetos/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
+  },
+  {
     path: '',
     component: ContentLayoutComponent,
     // authGuard roda uma vez ao entrar no layout; permissionGuard roda a cada rota filha.
@@ -50,6 +57,12 @@ export const routes: CastworkRoute[] = [
         path: 'documentos',
         data: { title: 'Documentos', menu: true, order: 5, icon: 'file-earmark-pdf', permissoes: ['documentos.ler'] },
         loadChildren: () => import('@modules/documentos/documentos.routes').then((m) => m.DOCUMENTOS_ROUTES),
+      },
+      {
+        // Fora do menu: abre pelo painel do usuário.
+        path: 'atelie',
+        data: { title: 'Ateliê', permissoes: ['atelie.configurar'] },
+        loadChildren: () => import('@modules/atelie/atelie.routes').then((m) => m.ATELIE_ROUTES),
       },
       {
         path: 'portfolio',

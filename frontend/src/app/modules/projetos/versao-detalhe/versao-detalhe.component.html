@@ -47,6 +47,22 @@
     }
   }
 
+  <cw-etapas-versao [versaoId]="v.id" [editavel]="podeEditar && v.status !== 'ARQUIVADA'" />
+
+  <section class="ferramentas" aria-labelledby="titulo-ferramentas">
+    <h2 id="titulo-ferramentas">Ferramentas</h2>
+    <div class="lista-ferramentas">
+      <a class="ferramenta" routerLink="desenho-2d">
+        <i class="bi bi-vector-pen" aria-hidden="true"></i>
+        <span><strong>Desenho 2D</strong><small>Planificação e cotas com o assistente</small></span>
+      </a>
+      <span class="ferramenta em-breve" aria-disabled="true">
+        <i class="bi bi-box" aria-hidden="true"></i>
+        <span><strong>Modelagem 3D</strong><small>Em breve</small></span>
+      </span>
+    </div>
+  </section>
+
   <div class="area" [class.com-biblioteca]="editavel()">
     <section class="composicao" aria-labelledby="titulo-composicao">
       <header class="cabecalho-secao">
@@ -58,6 +74,8 @@
           }
         </span>
       </header>
+
+      <cw-arquivos-versao [projetoId]="+id()" [versaoId]="v.id" />
 
       @if (v.itens.length === 0) {
         <div class="vazia">

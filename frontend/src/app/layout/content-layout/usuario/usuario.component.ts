@@ -1,15 +1,17 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
+import { PermissaoService } from '@core/services/permissao.service';
 import { SessaoService } from '@core/services/sessao.service';
 import { IniciaisComponent } from '@shared/ui/iniciais.component';
 
 /**
- * Usuário logado: iniciais no rail e, ao tocar, um painel com nome, ateliê e "Sair".
+ * Usuário logado: iniciais no rail e, ao tocar, um painel com nome, ateliê, configurações da marca e "Sair".
  * Fecha ao tocar fora ou com Esc. `posicao` define para onde o painel abre (lado do rail ou abaixo, no celular).
  */
 @Component({
   selector: 'cw-usuario',
-  imports: [IniciaisComponent],
+  imports: [IniciaisComponent, RouterLink],
   templateUrl: './usuario.component.html',
   styleUrl: './usuario.component.scss',
   host: {
@@ -23,6 +25,7 @@ export class UsuarioComponent {
   private readonly auth = inject(AuthService);
   private readonly elemento = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly sessao = inject(SessaoService);
+  protected readonly podeConfigurar = inject(PermissaoService).temAlguma(['atelie.configurar']);
 
   readonly posicao = input<'lateral' | 'abaixo'>('lateral');
 
