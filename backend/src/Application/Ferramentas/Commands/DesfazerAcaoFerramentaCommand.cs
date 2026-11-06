@@ -1,0 +1,53 @@
+using Castwork.Application.Abstractions;
+using Castwork.Application.Common.Security;
+using Castwork.Application.Common.Validators;
+using Castwork.Application.Ferramentas.Queries;
+using Castwork.Domain.Entities.Ferramentas;
+using Castwork.Domain.Exceptions;
+
+using MediatR;
+
+namespace Castwork.Application.Ferramentas.Commands;
+
+/// <summary>
+/// Desfaz a última ação da IA: o arquivo de antes dela volta a ser o atual (gravado de novo, o histórico
+/// só cresce) e o cartão da mensagem fica como desfeito.
+/// </summary>
+[Permissao(Regras.Projetos.Editar)]
+public sealed class DesfazerAcaoFerramentaCommand : ComandoDeFerramenta, IRequest<ConversaFerramentaDto>
+{
+    public int Ordem { get; set; }
+}
+
+public sealed class DesfazerAcaoFerramentaCommandHandler(IUnitOfWork unitOfWork, TimeProvider relogio)
+    : IRequestHandler<DesfazerAcaoFerramentaCommand, ConversaFerramentaDto>
+{
+    public async Task<ConversaFerramentaDto> Handle(DesfazerAcaoFerramentaCommand request, CancellationToken cancellationToken)
+    {
+        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
+            ?? throw new EntidadeNaoEncontradaException("Conversa", request.Ferramenta);
+
+        var antesId = conversa.DesfazerAcao(request.Ordem);
+        var arquivos = unitOfWork.GetRepository<ArquivoFerramenta>();
+        var agora = relogio.GetUtcNow();
+
+        // Sem arquivo de antes (a ação criou o primeiro), volta ao desenho em branco. Nada é apagado: o que
+        // o joalheiro salvou depois continua no histórico.
+        var restaurado = antesId > 0
+            ? (await arquivos.FindBy(a => a.Id == antesId && a.ConversaId == conversa.Id).AsNoTracking().SingleAsync(cancellationToken))
+                .Copiar(OrigemArquivo.Desfazer, agora)
+            : ArquivoFerramenta.EmBrancoPara(conversa.Id, agora);
+        arquivos.Adicionar(restaurado);
+        await unitOfWork.SalvarAsync(cancellationToken);
+        var arquivoId = restaurado.EmBranco ? null : (long?)restaurado.Id;
+
+        return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId);
+    }
+}
+
+public sealed class DesfazerAcaoFerramentaCommandValidator : ValidatorBase<DesfazerAcaoFerramentaCommand>
+{
+    public DesfazerAcaoFerramentaCommandValidator(IUnitOfWork unitOfWork, IAssistenteFerramenta assistente)
+        : base(unitOfWork) => this.ValidarFerramenta(UnitOfWork, assistente);
+}

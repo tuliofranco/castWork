@@ -73,6 +73,26 @@ public class BriefingEndpointsTests : TesteDeIntegracao
     }
 
     [Test]
+    public async Task DeveEnviarImagemNaConversaEServirOArquivoAsync()
+    {
+        var projetoId = await CriarProjetoAsync();
+        await _http.PutAsJsonAsync(Rota(projetoId), new { tipoJoia = "Anel", oQueOClienteQuer = "Anel faixa texturizado" });
+        await _http.PostAsJsonAsync($"{Rota(projetoId)}/conversa", new { });
+        byte[] jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00];
+
+        var resposta = await _http.PostAsJsonAsync($"{Rota(projetoId)}/conversa", new { texto = "Referência", imagens = new[] { Convert.ToBase64String(jpeg) } });
+        var briefing = await resposta.Content.ReadFromJsonAsync<BriefingComImagensDto>();
+        var chave = briefing!.Mensagens.Single(m => m.Imagens.Count > 0).Imagens.Single();
+        var imagem = await _http.GetAsync($"{Rota(projetoId)}/imagens/{chave}");
+        var deOutroProjeto = await _http.GetAsync($"{Rota(await CriarProjetoAsync())}/imagens/{chave}");
+
+        resposta.StatusCode.Should().Be(HttpStatusCode.OK);
+        imagem.Content.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
+        (await imagem.Content.ReadAsByteArrayAsync()).Should().Equal(jpeg);
+        deOutroProjeto.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Test]
     public async Task DeveNaoEntregarDocumentoDeOutroProjetoAsync()
     {
         var projetoA = await CriarProjetoAsync();
@@ -120,4 +140,8 @@ public class BriefingEndpointsTests : TesteDeIntegracao
     private sealed record BriefingLido(string TipoJoia, List<MensagemLida> Mensagens, List<IdDto> Documentos);
 
     private sealed record MensagemLida(string Papel, string Texto);
+
+    private sealed record BriefingComImagensDto(List<MensagemComImagensDto> Mensagens);
+
+    private sealed record MensagemComImagensDto(List<Guid> Imagens);
 }

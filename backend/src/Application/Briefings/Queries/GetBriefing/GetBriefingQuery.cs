@@ -32,9 +32,9 @@ public sealed class GetBriefingQueryHandler(IUnitOfWork unitOfWork) : IRequestHa
             .AsNoTracking().ToListAsync(cancellationToken);
 
         var mensagens = briefing.Mensagens
-            .Where(m => m.Papel != PapelMensagem.Ferramenta && m.Texto is not null)
+            .Where(m => m.Papel != PapelMensagem.Ferramenta && (m.Texto is not null || m.Imagens.Count > 0))
             .OrderBy(m => m.Ordem)
-            .Select(m => new MensagemBriefingDto(m.Ordem, m.Papel, m.Texto!, m.CriadaEm))
+            .Select(m => new MensagemBriefingDto(m.Ordem, m.Papel, m.Texto, m.Imagens, m.CriadaEm))
             .ToList();
 
         return new BriefingDto(

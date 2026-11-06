@@ -8,6 +8,7 @@ using Anthropic.Models.Beta.Messages;
 using Castwork.Application.Abstractions;
 using Castwork.Application.Common.Exceptions;
 using Castwork.Domain.Entities.Briefings;
+using Castwork.Infra.IA.Conversa;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -32,6 +33,8 @@ internal sealed partial class AssistenteBriefingClaude(IOptions<AnthropicOptions
         string contexto,
         IReadOnlyList<MensagemDaConversa> historico,
         string? falaDoJoalheiro,
+        IReadOnlyList<Guid> imagensDaFala,
+        IReadOnlyDictionary<Guid, ImagemDaConversa> imagens,
         IFerramentasDoBriefing ferramentas,
         CancellationToken cancellationToken)
     {
@@ -41,16 +44,21 @@ internal sealed partial class AssistenteBriefingClaude(IOptions<AnthropicOptions
         }
 
         var cliente = new AnthropicClient { ApiKey = _opcoes.ApiKey };
-        var novas = new List<MensagemDaConversa>
+
+        // As imagens vêm antes do texto, como a documentação da API recomenda. Sem fala nem imagem
+        // (abertura), a mensagem do joalheiro fica oculta no chat: só a IA a vê.
+        var blocosDaFala = imagensDaFala.Select(c => new BlocoGuardado("imagem", Id: c.ToString())).ToList();
+        if (falaDoJoalheiro is not null || blocosDaFala.Count == 0)
         {
-            // Sem fala (abertura), a mensagem do joalheiro fica oculta no chat: só a IA a vê.
-            Mensagem(PapelMensagem.Joalheiro, falaDoJoalheiro, [new BlocoGuardado("texto", falaDoJoalheiro ?? Instrucoes.AberturaOculta)]),
-        };
+            blocosDaFala.Add(new BlocoGuardado("texto", falaDoJoalheiro ?? Instrucoes.AberturaOculta));
+        }
+
+        var novas = new List<MensagemDaConversa> { Mensagem(PapelMensagem.Joalheiro, falaDoJoalheiro, blocosDaFala) };
 
         for (var chamada = 0; chamada < _opcoes.MaximoDeChamadasPorTurno; chamada++)
         {
-            var resposta = await ChamarAsync(cliente, contexto, [.. historico, .. novas], cancellationToken);
-            var blocos = Guardar(resposta);
+            var resposta = await ChamarAsync(cliente, contexto, [.. historico, .. novas], imagens, cancellationToken);
+            var blocos = BlocosDaConversa.Guardar(resposta);
             var texto = string.Join("\n\n", blocos.Where(b => b.Tipo == "texto").Select(b => b.Texto));
             var pedidos = blocos.Where(b => b.Tipo == "ferramenta").ToList();
 
@@ -84,57 +92,6 @@ internal sealed partial class AssistenteBriefingClaude(IOptions<AnthropicOptions
 
     private static MensagemDaConversa Mensagem(PapelMensagem papel, string? texto, IReadOnlyList<BlocoGuardado> blocos)
         => new(papel, string.IsNullOrWhiteSpace(texto) ? null : texto, new ConteudoGuardado(blocos).Gravar());
-
-    private static List<BlocoGuardado> Guardar(BetaMessage resposta)
-    {
-        var blocos = new List<BlocoGuardado>();
-        foreach (var bloco in resposta.Content)
-        {
-            if (bloco.TryPickText(out var texto))
-            {
-                blocos.Add(new BlocoGuardado("texto", texto.Text));
-            }
-            else if (bloco.TryPickThinking(out var pensamento))
-            {
-                blocos.Add(new BlocoGuardado("pensamento", pensamento.Thinking, pensamento.Signature));
-            }
-            else if (bloco.TryPickRedactedThinking(out var oculto))
-            {
-                blocos.Add(new BlocoGuardado("pensamentoOculto", oculto.Data));
-            }
-            else if (bloco.TryPickToolUse(out var uso))
-            {
-                blocos.Add(new BlocoGuardado("ferramenta", Id: uso.ID, Nome: uso.Name, Entrada: uso.Input.ToDictionary(kv => kv.Key, kv => kv.Value)));
-            }
-        }
-
-        return blocos;
-    }
-
-    private static BetaMessageParam Reconstruir(MensagemDaConversa mensagem)
-    {
-        var blocos = new List<BetaContentBlockParam>();
-        foreach (var bloco in ConteudoGuardado.Ler(mensagem.Conteudo).Blocos)
-        {
-            BetaContentBlockParam? param = bloco.Tipo switch
-            {
-                "texto" => new BetaTextBlockParam { Text = bloco.Texto! },
-                "pensamento" => new BetaThinkingBlockParam { Thinking = bloco.Texto!, Signature = bloco.Assinatura! },
-                "pensamentoOculto" => new BetaRedactedThinkingBlockParam { Data = bloco.Texto! },
-                "ferramenta" => new BetaToolUseBlockParam { ID = bloco.Id!, Name = bloco.Nome!, Input = bloco.Entrada! },
-                "resultado" => new BetaToolResultBlockParam { ToolUseID = bloco.Id!, Content = bloco.Texto!, IsError = bloco.Erro },
-                _ => null,
-            };
-            if (param is not null)
-            {
-                blocos.Add(param);
-            }
-        }
-
-        return mensagem.Papel == PapelMensagem.Assistente
-            ? new BetaAssistantMessageParam { Content = blocos }
-            : new BetaUserMessageParam { Content = blocos };
-    }
 
     private static async Task<(string Saida, bool Erro)> ExecutarAsync(BlocoGuardado pedido, IFerramentasDoBriefing ferramentas, CancellationToken cancellationToken)
     {
@@ -189,7 +146,12 @@ internal sealed partial class AssistenteBriefingClaude(IOptions<AnthropicOptions
     [LoggerMessage(Level = LogLevel.Error, Message = "Falha ao chamar a IA do briefing.")]
     private static partial void LogFalhaDaIa(ILogger logger, Exception ex);
 
-    private async Task<BetaMessage> ChamarAsync(AnthropicClient cliente, string contexto, IReadOnlyList<MensagemDaConversa> conversa, CancellationToken cancellationToken)
+    private async Task<BetaMessage> ChamarAsync(
+        AnthropicClient cliente,
+        string contexto,
+        IReadOnlyList<MensagemDaConversa> conversa,
+        IReadOnlyDictionary<Guid, ImagemDaConversa> imagens,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -208,14 +170,14 @@ internal sealed partial class AssistenteBriefingClaude(IOptions<AnthropicOptions
                         new() { Text = "Estado atual do briefing (JSON):\n" + contexto },
                     },
                     Tools = Ferramentas.Todas,
-                    Messages = [.. conversa.Select(Reconstruir)],
+                    Messages = [.. conversa.Select(m => BlocosDaConversa.Reconstruir(m, imagens))],
                 },
                 cancellationToken);
         }
         catch (AnthropicException ex)
         {
             LogFalhaDaIa(logger, ex);
-            throw new ServicoIndisponivelException("A IA não respondeu agora. Tente de novo em instantes.", ex);
+            throw new ServicoIndisponivelException(FalhaDaIa.Mensagem(ex), ex);
         }
     }
 

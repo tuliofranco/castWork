@@ -15,4 +15,9 @@ public sealed class AnthropicOptions
     /// Limite de idas e vindas com ferramentas num único turno, para a conversa nunca entrar em laço.
     /// </summary>
     public int MaximoDeChamadasPorTurno { get; set; } = 6;
+
+    /// <summary>
+    /// Nas ferramentas a IA trabalha mais por turno (desenha, confere, olha o render, corrige).
+    /// </summary>
+    public int MaximoDeChamadasPorTurnoNasFerramentas { get; set; } = 24;
 }

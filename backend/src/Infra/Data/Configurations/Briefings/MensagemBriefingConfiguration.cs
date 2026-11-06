@@ -21,6 +21,9 @@ internal sealed class MensagemBriefingConfiguration : IEntityTypeConfiguration<M
         builder.Property(m => m.Conteudo).HasColumnType("jsonb").IsRequired();
         builder.Property(m => m.CriadaEm).IsRequired();
 
+        // Chaves das imagens anexadas (uuid[]): o arquivo fica em briefing_imagens.
+        builder.Property(m => m.Imagens).IsRequired();
+
         builder.HasIndex("BriefingId", nameof(MensagemBriefing.Ordem)).IsUnique();
     }
 }

@@ -48,9 +48,9 @@ public sealed partial class Briefing
     /// Acrescenta uma mensagem ao fim da conversa. A conversa só cresce: reescrever o histórico invalidaria
     /// o que a IA já respondeu.
     /// </summary>
-    public MensagemBriefing RegistrarMensagem(PapelMensagem papel, string? texto, string conteudo, DateTimeOffset em)
+    public MensagemBriefing RegistrarMensagem(PapelMensagem papel, string? texto, string conteudo, DateTimeOffset em, IReadOnlyList<Guid>? imagens = null)
     {
-        var mensagem = new MensagemBriefing(_mensagens.Count + 1, papel, texto, conteudo, em);
+        var mensagem = new MensagemBriefing(_mensagens.Count + 1, papel, texto, conteudo, imagens ?? [], em);
         _mensagens.Add(mensagem);
         return mensagem;
     }

@@ -20,6 +20,11 @@ namespace Castwork.IntegrationTests.Briefings;
 /// </summary>
 public class BriefingCommandsTests : TesteDeIntegracao
 {
+    /// <summary>
+    /// Cabeçalho PNG: basta para o tipo ser reconhecido pelos primeiros bytes.
+    /// </summary>
+    private static byte[] Png => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00];
+
     [Test]
     public async Task DeveCriarOBriefingECorrigirOFormularioNoMesmoRegistroAsync()
     {
@@ -143,6 +148,49 @@ public class BriefingCommandsTests : TesteDeIntegracao
         var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = "  " });
 
         await conversar.Should().ThrowAsync<RegraDeNegocioException>();
+    }
+
+    [Test]
+    public async Task DeveEnviarImagensAIaEGuardarNaMensagemDoJoalheiroAsync()
+    {
+        var projetoId = await ProjetoComBriefingAsync();
+        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+
+        var briefing = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Imagens = [Convert.ToBase64String(Png)] });
+
+        var enviada = briefing.Mensagens.Should().Contain(m => m.Papel == PapelMensagem.Joalheiro).Which;
+        enviada.Texto.Should().BeNull();
+        var chave = enviada.Imagens.Should().ContainSingle().Which;
+        briefing.Mensagens[^1].Texto.Should().Be("Vi a imagem.");
+        AssistenteBriefingDeTeste.UltimasImagens.Should().ContainKey(chave).WhoseValue.Tipo.Should().Be("image/png");
+
+        var segundo = await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Texto = "Com essa textura" });
+
+        segundo.Mensagens.Should().HaveCount(5, "abertura, imagem, resposta, texto e resposta");
+        AssistenteBriefingDeTeste.UltimasImagens.Should().ContainKey(chave, "a IA relê as imagens antigas a cada turno");
+    }
+
+    [Test]
+    public async Task DeveRecusarArquivoQueNaoEImagemAsync()
+    {
+        var projetoId = await ProjetoComBriefingAsync();
+        await AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId });
+
+        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Imagens = [Convert.ToBase64String("%PDF-1.7"u8.ToArray())] });
+
+        await conversar.Should().ThrowAsync<ValorInvalidoException>();
+        (await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.ImagensBriefing.CountAsync())).Should().Be(0);
+    }
+
+    [Test]
+    public async Task DeveLimitarAQuantidadeDeImagensAsync()
+    {
+        var projetoId = await ProjetoComBriefingAsync();
+        var imagem = Convert.ToBase64String(Png);
+
+        var conversar = () => AmbienteDeTeste.SendAsync(new ConversarBriefingCommand { ProjetoId = projetoId, Imagens = [imagem, imagem, imagem, imagem, imagem] });
+
+        await conversar.Should().ThrowAsync<ValidationException>();
     }
 
     [Test]

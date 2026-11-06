@@ -46,11 +46,13 @@ public sealed class CastworkWebApplicationFactory(
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(relogio);
 
-            // Serviços externos do briefing (IA paga, binário do WordCraft) ficam de fora dos testes.
+            // Serviços externos (IA paga, binários do WordCraft e do CADCraft) ficam de fora dos testes.
             services.RemoveAll<IAssistenteBriefing>();
             services.AddScoped<IAssistenteBriefing, AssistenteBriefingDeTeste>();
             services.RemoveAll<IGeradorDocumentoBriefing>();
             services.AddScoped<IGeradorDocumentoBriefing, GeradorDocumentoBriefingDeTeste>();
+            services.RemoveAll<IAssistenteFerramenta>();
+            services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaDeTeste>();
 
             // Requisição HTTP autenticada: sessão real, lida do JWT. Fora disso (SendAsync): sessão de teste.
             services.RemoveAll<ISessaoService>();

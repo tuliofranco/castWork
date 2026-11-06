@@ -9,13 +9,16 @@ namespace Castwork.Application.Abstractions;
 public interface IAssistenteBriefing
 {
     /// <summary>
-    /// Continua a conversa: acrescenta a fala do joalheiro (ou, sem fala e sem histórico, deixa a IA abrir)
-    /// e devolve as mensagens novas, na ordem, para serem gravadas no briefing.
+    /// Continua a conversa: acrescenta a fala do joalheiro, com as imagens anexadas (ou, sem fala e sem
+    /// histórico, deixa a IA abrir), e devolve as mensagens novas, na ordem, para serem gravadas no briefing.
+    /// <paramref name="imagens"/> traz todas as imagens da conversa, as antigas e as desta fala.
     /// </summary>
     Task<IReadOnlyList<MensagemDaConversa>> ConversarAsync(
         string contexto,
         IReadOnlyList<MensagemDaConversa> historico,
         string? falaDoJoalheiro,
+        IReadOnlyList<Guid> imagensDaFala,
+        IReadOnlyDictionary<Guid, ImagemDaConversa> imagens,
         IFerramentasDoBriefing ferramentas,
         CancellationToken cancellationToken);
 }

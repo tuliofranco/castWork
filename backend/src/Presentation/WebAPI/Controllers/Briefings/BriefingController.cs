@@ -3,6 +3,7 @@ using Castwork.Application.Briefings.Commands.GerarPdfBriefing;
 using Castwork.Application.Briefings.Commands.SalvarFormularioBriefing;
 using Castwork.Application.Briefings.Queries.GetBriefing;
 using Castwork.Application.Briefings.Queries.GetDocumentoBriefing;
+using Castwork.Application.Briefings.Queries.GetImagemBriefing;
 using Castwork.Application.Briefings.Queries.PreVisualizarPdfBriefing;
 
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +36,8 @@ public sealed class BriefingController : ApiController
     }
 
     [HttpPost("conversa")]
-    [EndpointSummary("Envia a mensagem do joalheiro à IA (vazia abre a conversa) e devolve o briefing atualizado.")]
+    [EndpointSummary("Envia a mensagem do joalheiro à IA, com imagens em base64 (vazia abre a conversa), e devolve o briefing atualizado.")]
+    [RequestSizeLimit(30 * 1024 * 1024)]
     [ProducesResponseType<BriefingDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
@@ -67,6 +69,16 @@ public sealed class BriefingController : ApiController
     {
         var arquivo = await Mediator.Send(new GetDocumentoBriefingQuery { ProjetoId = projetoId, DocumentoId = documentoId }, cancellationToken);
         return File(arquivo.Conteudo, "application/pdf", arquivo.NomeArquivo);
+    }
+
+    [HttpGet("imagens/{chave:guid}")]
+    [EndpointSummary("Uma imagem enviada na conversa do briefing.")]
+    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK, "image/png", "image/jpeg", "image/webp")]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Imagem([FromRoute] long projetoId, [FromRoute] Guid chave, CancellationToken cancellationToken)
+    {
+        var imagem = await Mediator.Send(new GetImagemBriefingQuery { ProjetoId = projetoId, Chave = chave }, cancellationToken);
+        return File(imagem.Conteudo, imagem.Tipo);
     }
 
     private ObjectResult Criado(long id) => StatusCode(StatusCodes.Status201Created, new IdCriado(id));
