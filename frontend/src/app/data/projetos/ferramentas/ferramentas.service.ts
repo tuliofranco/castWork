@@ -1,14 +1,16 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, type HttpEvent, HttpEventType } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { IdCriadoDto } from '@data/common/http/id-criado.dto';
-import { type Observable, map } from 'rxjs';
+import { semLoading } from '@shared/injection-tokens/http-context.tokens';
+import { Observable, map } from 'rxjs';
 
-import type { ConversaFerramentaDto, ListaDeArquivosDto, VersaoDoArquivoDto } from './dto/ferramenta.dto';
+import type { ChatDaConversaDto, ConversaFerramentaDto, EventoDoTurnoDto, ListaDeArquivosDto, VersaoDoArquivoDto } from './dto/ferramenta.dto';
 
-/** Arquivo de trabalho da ferramenta: conteúdo e a versão (Id) dele. */
+/** Arquivo de trabalho da ferramenta: conteúdo, a versão (Id) dele e o nome dado pelo joalheiro. */
 export interface ArquivoFerramenta {
   readonly id: number;
   readonly conteudo: Blob;
+  readonly nome: string | null;
 }
 
 /**
@@ -18,20 +20,78 @@ export interface ArquivoFerramenta {
 export class FerramentasService {
   private readonly http = inject(HttpClient);
 
-  getConversa(projetoId: number, versaoId: number, ferramenta: string): Observable<ConversaFerramentaDto> {
-    return this.http.get<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa`);
+  /** Sem a barra de carregamento global: enquanto a IA trabalha, quem mostra o andamento é o chat. */
+  getConversa(projetoId: number, versaoId: number | null, ferramenta: string): Observable<ConversaFerramentaDto> {
+    return this.http.get<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa`, { context: semLoading() });
   }
 
-  /** `imagens` em base64, já reduzidas no tablet (ver `prepararImagem`). */
-  postConversa(projetoId: number, versaoId: number, ferramenta: string, texto: string | null, imagens: readonly string[]): Observable<ConversaFerramentaDto> {
-    return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa`, { texto, imagens });
+  /**
+   * `imagens` em base64, já reduzidas no tablet (ver `prepararImagem`). Pode levar minutos: o andamento vem
+   * por `acompanhar`, não pela barra de carregamento global.
+   */
+  postConversa(projetoId: number, versaoId: number | null, ferramenta: string, texto: string | null, imagens: readonly string[]): Observable<ConversaFerramentaDto> {
+    return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa`, { texto, imagens }, { context: semLoading() });
   }
 
-  deleteConversa(projetoId: number, versaoId: number, ferramenta: string): Observable<void> {
+  /**
+   * O turno da IA ao vivo (Server-Sent Events): pensamento, passos e texto até o `fim`. Pelo HttpClient (e
+   * não EventSource) para levar o token e a renovação dele; cada trecho recebido é lido do texto parcial.
+   * `aguardar`: aberto junto com o envio da mensagem, espera o turno começar no servidor.
+   */
+  acompanhar(projetoId: number, versaoId: number | null, ferramenta: string, aguardar: boolean): Observable<EventoDoTurnoDto> {
+    const url = `${this.base(projetoId, versaoId, ferramenta)}/conversa/eventos${aguardar ? '?aguardar=true' : ''}`;
+    return new Observable<EventoDoTurnoDto>((assinante) => {
+      let lido = 0;
+      let resto = '';
+      const entregar = (texto: string) => {
+        resto += texto;
+        const blocos = resto.split('\n\n');
+        resto = blocos.pop() ?? '';
+        for (const bloco of blocos) {
+          const dados = bloco.split('\n').filter((l) => l.startsWith('data: ')).map((l) => l.slice(6)).join('\n');
+          if (!dados) continue;
+          const evento = JSON.parse(dados) as EventoDoTurnoDto;
+          assinante.next(evento);
+          if (evento.tipo === 'fim') assinante.complete();
+        }
+      };
+
+      const assinatura = this.http
+        .get(url, { observe: 'events', reportProgress: true, responseType: 'text', context: semLoading() })
+        .subscribe({
+          next: (evento: HttpEvent<string>) => {
+            let parcial: string | null | undefined = null;
+            if (evento.type === HttpEventType.DownloadProgress) parcial = evento.partialText;
+            else if (evento.type === HttpEventType.Response) parcial = evento.body;
+            if (parcial == null || parcial.length <= lido) return;
+            entregar(parcial.slice(lido));
+            lido = parcial.length;
+          },
+          error: (erro: unknown) => assinante.error(erro),
+          complete: () => assinante.complete(),
+        });
+      return () => assinatura.unsubscribe();
+    });
+  }
+
+  getChats(projetoId: number, versaoId: number | null, ferramenta: string): Observable<readonly ChatDaConversaDto[]> {
+    return this.http.get<readonly ChatDaConversaDto[]>(`${this.base(projetoId, versaoId, ferramenta)}/conversa/chats`);
+  }
+
+  /** Novo chat: o atual vai para o histórico; o desenho continua o mesmo. */
+  postNovoChat(projetoId: number, versaoId: number | null, ferramenta: string): Observable<ConversaFerramentaDto> {
+    return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa/chats`, null);
+  }
+
+  postContinuarChat(projetoId: number, versaoId: number | null, ferramenta: string, numero: number): Observable<ConversaFerramentaDto> {
+    return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa/chats/${numero}/continuar`, null);
+  }
+
+  deleteConversa(projetoId: number, versaoId: number | null, ferramenta: string): Observable<void> {
     return this.http.delete(`${this.base(projetoId, versaoId, ferramenta)}/conversa`).pipe(map(() => undefined));
   }
 
-  postDesfazer(projetoId: number, versaoId: number, ferramenta: string, ordem: number): Observable<ConversaFerramentaDto> {
+  postDesfazer(projetoId: number, versaoId: number | null, ferramenta: string, ordem: number): Observable<ConversaFerramentaDto> {
     return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa/mensagens/${ordem}/desfazer`, null);
   }
 
@@ -39,7 +99,13 @@ export class FerramentasService {
   getArquivo(projetoId: number, versaoId: number, ferramenta: string): Observable<ArquivoFerramenta | null> {
     return this.http
       .get(`${this.base(projetoId, versaoId, ferramenta)}/arquivo`, { observe: 'response', responseType: 'blob' })
-      .pipe(map((r) => (r.status === 204 || !r.body ? null : { id: Number(r.headers.get('X-Arquivo-Id')), conteudo: r.body })));
+      .pipe(
+        map((r) => {
+          if (r.status === 204 || !r.body) return null;
+          const nome = r.headers.get('X-Arquivo-Nome');
+          return { id: Number(r.headers.get('X-Arquivo-Id')), conteudo: r.body, nome: nome ? decodeURIComponent(nome) : null };
+        }),
+      );
   }
 
   /** `conteudo` em base64. Devolve o Id da nova versão do arquivo. */
@@ -96,12 +162,13 @@ export class FerramentasService {
     return this.http.delete(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}`).pipe(map(() => undefined));
   }
 
-  /** Caminho da API de uma imagem das conversas da versão (para `cw-imagem-protegida`). */
-  caminhoDaImagem(projetoId: number, versaoId: number, chave: string): string {
-    return `projetos/${projetoId}/versoes/${versaoId}/ferramentas/imagens/${chave}`;
+  /** Caminho da API de uma imagem das conversas (para `cw-imagem-protegida`); sem versão, as do projeto. */
+  caminhoDaImagem(projetoId: number, versaoId: number | null, chave: string): string {
+    return versaoId === null ? `projetos/${projetoId}/ferramentas/imagens/${chave}` : `projetos/${projetoId}/versoes/${versaoId}/ferramentas/imagens/${chave}`;
   }
 
-  private base(projetoId: number, versaoId: number, ferramenta: string): string {
-    return `projetos/${projetoId}/versoes/${versaoId}/ferramentas/${ferramenta}`;
+  /** Sem versão: as ferramentas do projeto (o briefing vale para todas as versões). */
+  private base(projetoId: number, versaoId: number | null, ferramenta: string): string {
+    return versaoId === null ? `projetos/${projetoId}/ferramentas/${ferramenta}` : `projetos/${projetoId}/versoes/${versaoId}/ferramentas/${ferramenta}`;
   }
 }

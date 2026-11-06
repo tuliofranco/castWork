@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterRenderEffect, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterRenderEffect, effect, input, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { AnexosImagemComponent } from '../anexos-imagem/anexos-imagem.component';
 import { ImagemProtegidaComponent } from '../imagem-protegida.component';
+import { type AndamentoDoTurno, AndamentoIaComponent } from './andamento-ia.component';
 import type { ImagemAnexada } from '../anexos-imagem/preparar-imagem';
 
 /** Uma fala do chat. `acao` é o que a IA executou pelo MCP, mostrado como cartão com desfazer. */
@@ -14,6 +15,19 @@ export interface MensagemFerramenta {
   /** Imagens: caminho da API ou URL local (`data:`, recém-anexada). */
   readonly imagens?: readonly string[];
   readonly acao?: { readonly descricao: string; readonly desfeita: boolean };
+  /** Resposta final da IA: resumo do pensamento, passos e tokens do turno ("Como a IA trabalhou"). */
+  readonly pensamento?: string | null;
+  readonly passos?: readonly string[] | null;
+  readonly tokens?: number | null;
+}
+
+/** Um chat da conversa, na lista de conversas anteriores. */
+export interface ChatDaConversa {
+  readonly numero: number;
+  readonly ultimaMensagemEm: string;
+  readonly titulo: string | null;
+  readonly mensagens: number;
+  readonly atual: boolean;
 }
 
 /** O que o joalheiro manda ao assistente. */
@@ -34,7 +48,7 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
  */
 @Component({
   selector: 'cw-ferramenta-ia',
-  imports: [FormsModule, RouterLink, AnexosImagemComponent, ImagemProtegidaComponent],
+  imports: [FormsModule, RouterLink, AnexosImagemComponent, ImagemProtegidaComponent, AndamentoIaComponent],
   template: `
     <header class="barra">
       <a class="voltar" [routerLink]="voltarPara()" [attr.aria-label]="'Voltar para ' + voltarRotulo()">
@@ -52,8 +66,9 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
           </button>
           @if (menuAberto()) {
             <div class="menu-painel" role="menu">
-              <button type="button" role="menuitem" (click)="abrirHistorico()"><i class="bi bi-clock-history" aria-hidden="true"></i> Histórico da conversa</button>
-              <button type="button" role="menuitem" class="perigo" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar conversa</button>
+              <button type="button" role="menuitem" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo chat</button>
+              <button type="button" role="menuitem" (click)="pedirChats()"><i class="bi bi-clock-history" aria-hidden="true"></i> Conversas anteriores</button>
+              <button type="button" role="menuitem" class="perigo" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar este chat</button>
               <ng-content select="[menu]" />
             </div>
           }
@@ -85,7 +100,13 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
             <h2 id="titulo-assistente"><i class="bi bi-stars" aria-hidden="true"></i> Assistente</h2>
             <i class="bi seta" [class]="chatAberto() ? 'bi-chevron-down' : 'bi-chevron-up'" aria-hidden="true"></i>
           </button>
-          <button type="button" class="btn btn-sutil btn-icone" aria-label="Apagar conversa" title="Apagar conversa" [disabled]="mensagens().length === 0" (click)="pedirApagar()">
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Novo chat" title="Novo chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Conversas anteriores" title="Conversas anteriores" (click)="pedirChats()">
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Apagar este chat" title="Apagar este chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirApagar()">
             <i class="bi bi-trash3" aria-hidden="true"></i>
           </button>
           <button
@@ -104,7 +125,7 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
         </div>
         @if (confirmandoApagar()) {
           <div class="confirmar" role="alertdialog" aria-labelledby="texto-apagar">
-            <span id="texto-apagar">Apagar toda a conversa? O desenho não muda.</span>
+            <span id="texto-apagar">Apagar este chat? As conversas anteriores e o desenho não mudam.</span>
             <button type="button" class="btn btn-perigo-sutil" (click)="apagar()">Apagar</button>
             <button type="button" class="btn btn-sutil" (click)="confirmandoApagar.set(false)">Cancelar</button>
           </div>
@@ -122,6 +143,21 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
               @if (m.texto) {
                 <p>{{ m.texto }}</p>
               }
+              @if (m.passos?.length || m.pensamento) {
+                <details class="como-trabalhou">
+                  <summary>Como a IA trabalhou@if (m.tokens) {<span class="tokens"> · {{ tokensLegiveis(m.tokens) }}</span>}</summary>
+                  @if (m.passos?.length) {
+                    <ol>
+                      @for (passo of m.passos; track $index) {
+                        <li>{{ passo }}</li>
+                      }
+                    </ol>
+                  }
+                  @if (m.pensamento) {
+                    <p class="pensamento">{{ m.pensamento }}</p>
+                  }
+                </details>
+              }
               @if (m.acao; as acao) {
                 <div class="cartao-acao" [class.desfeita]="acao.desfeita">
                   <i class="bi" [class]="acao.desfeita ? 'bi-arrow-counterclockwise' : 'bi-check2-circle'" aria-hidden="true"></i>
@@ -134,7 +170,13 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
             </li>
           }
           @if (pensando()) {
-            <li class="fala fala-assistente pensando"><p><span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span> Trabalhando no desenho...</p></li>
+            <li class="fala fala-assistente pensando">
+              @if (andamento(); as a) {
+                <cw-andamento-ia [andamento]="a" />
+              } @else {
+                <p><span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span> Trabalhando no desenho...</p>
+              }
+            </li>
           }
           <li #fim aria-hidden="true"></li>
         </ol>
@@ -161,23 +203,24 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
       </aside>
     </div>
 
-    <dialog #historico class="historico" aria-labelledby="titulo-historico" (close)="historicoAberto.set(false)">
+    <dialog #historico class="historico" aria-labelledby="titulo-historico" (close)="fecharChats.emit()">
       <header>
-        <h2 id="titulo-historico">Histórico da conversa</h2>
+        <h2 id="titulo-historico">Conversas anteriores</h2>
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="historico.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
-      @if (historicoAberto()) {
-        <ol>
-          @for (m of mensagens(); track m.id) {
+      @if (chats(); as lista) {
+        <ul class="chats">
+          @for (c of lista; track c.numero) {
             <li>
-              <span class="quem">{{ m.papel === 'joalheiro' ? 'Você' : 'Assistente' }}</span>
-              <span>{{ m.texto }}</span>
-              @if (m.acao; as acao) {
-                <span class="acao-historico">{{ acao.desfeita ? 'Desfeito' : 'Aplicou' }}: {{ acao.descricao }}</span>
-              }
+              <button type="button" [disabled]="pensando() && !c.atual" (click)="abrirChat.emit(c.numero)">
+                <span class="titulo">{{ c.titulo ?? 'Conversa só com imagens' }}</span>
+                <small>{{ quando(c.ultimaMensagemEm) }} · {{ c.mensagens }} {{ c.mensagens === 1 ? 'mensagem' : 'mensagens' }}@if (c.atual) { · <strong>em andamento</strong>}</small>
+              </button>
             </li>
+          } @empty {
+            <li class="vazio">Nenhuma conversa ainda.</li>
           }
-        </ol>
+        </ul>
       }
     </dialog>
   `,
@@ -190,13 +233,23 @@ export class FerramentaIaComponent {
   readonly voltarRotulo = input('Voltar');
   readonly mensagens = input.required<readonly MensagemFerramenta[]>();
   readonly pensando = input(false);
+  /** O turno ao vivo (pensamento, passos e texto); nulo mostra só "Trabalhando...". */
+  readonly andamento = input<AndamentoDoTurno | null>(null);
 
   readonly enviar = output<FalaFerramenta>();
   readonly desfazer = output<number>();
   readonly apagarConversa = output();
+  readonly novoChat = output();
+  /** Pede a lista de chats; o modal abre quando `chats` chega. */
+  readonly verChats = output();
+  /** Abre o chat na conversa com a IA (ele vira o em andamento). */
+  readonly abrirChat = output<number>();
+  readonly fecharChats = output();
+
+  /** Lista de conversas anteriores; com valor, o modal fica aberto. */
+  readonly chats = input<readonly ChatDaConversa[] | null>(null);
 
   protected readonly menuAberto = signal(false);
-  protected readonly historicoAberto = signal(false);
   /** No tablet em pé o assistente vira gaveta; deitado ou no computador fica sempre aberto. */
   protected readonly chatAberto = signal(false);
   /** Minimizado, o assistente sai da tela e a área de trabalho ocupa tudo. */
@@ -213,17 +266,39 @@ export class FerramentaIaComponent {
   private readonly fim = viewChild.required<ElementRef<HTMLElement>>('fim');
 
   constructor() {
+    // O modal das conversas abre quando a lista chega e fecha quando ela some.
+    effect(() => {
+      const dialogo = this.historico().nativeElement;
+      if (this.chats() && !dialogo.open) dialogo.showModal();
+      else if (!this.chats() && dialogo.open) dialogo.close();
+    });
+
     afterRenderEffect(() => {
       this.mensagens();
+      this.andamento();
       this.pensando();
       this.fim().nativeElement.scrollIntoView({ block: 'end' });
     });
   }
 
-  protected abrirHistorico(): void {
+  protected pedirChats(): void {
     this.menuAberto.set(false);
-    this.historicoAberto.set(true);
-    this.historico().nativeElement.showModal();
+    this.verChats.emit();
+  }
+
+  protected pedirNovoChat(): void {
+    this.menuAberto.set(false);
+    this.novoChat.emit();
+  }
+
+  /** "06/11 15:40". */
+  protected quando(data: string): string {
+    return new Date(data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  /** 18234 → "18,2 mil tokens". */
+  protected tokensLegiveis(tokens: number): string {
+    return tokens >= 1000 ? `${(tokens / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil tokens` : `${tokens} tokens`;
   }
 
   protected minimizar(): void {

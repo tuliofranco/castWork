@@ -5,6 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
+import { BriefingService } from '@data/projetos/briefing/briefing.service';
 import type { ProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
@@ -57,6 +58,7 @@ describe('VersaoDetalheComponent', () => {
         },
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
         { provide: ToastService, useValue: { sucesso: vi.fn() } },
+        { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
       ],
     });
     const fixture = TestBed.createComponent(VersaoDetalheComponent);

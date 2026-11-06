@@ -123,3 +123,56 @@
     color: var(--cw-ink);
   }
 }
+
+// Mesmo cartão das ferramentas da versão.
+.lista-ferramentas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ferramenta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.625rem 1rem 0.625rem 0.75rem;
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+  color: var(--cw-ink);
+  text-decoration: none;
+
+  > .bi {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--cw-radius);
+    background: var(--cw-accent-soft);
+    color: var(--cw-accent-ink);
+    font-size: 1.125rem;
+  }
+
+  span {
+    display: flex;
+    flex-direction: column;
+  }
+
+  small {
+    color: var(--cw-ink-muted);
+    font-size: 0.8125rem;
+  }
+
+  &:hover:not(.em-breve) {
+    background: var(--cw-surface-hover);
+  }
+
+  &.em-breve {
+    opacity: 0.55;
+
+    > .bi {
+      background: var(--cw-surface-2);
+      color: var(--cw-ink-muted);
+    }
+  }
+}

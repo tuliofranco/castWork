@@ -88,10 +88,17 @@ export class PonteCadCraft {
     };
   }
 
+  /** Libera o CADCraft deste iframe (memória do WebAssembly) quando ele sai de cena. */
+  descarregar(): void {
+    this.iframe.src = 'about:blank';
+  }
+
+  /** Recarrega o CADCraft, ou o carrega pela primeira vez num iframe ainda vazio. */
   private async recarregar(): Promise<Window & typeof globalThis> {
     await new Promise<void>((resolve) => {
       this.iframe.addEventListener('load', () => resolve(), { once: true });
-      this.iframe.contentWindow?.location.reload();
+      if (this.iframe.contentWindow?.location.pathname.startsWith('/cadcraft')) this.iframe.contentWindow.location.reload();
+      else this.iframe.src = '/cadcraft/';
     });
     const janela = this.janela();
     await this.canvas(janela);

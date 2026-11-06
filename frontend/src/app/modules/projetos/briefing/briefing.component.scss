@@ -1,4 +1,12 @@
-// Mesa do briefing: conversa à esquerda, resumo e documentos à direita a partir de 1024 px; empilhados abaixo.
+// Formulário inicial (e a correção dele): página de foco, fora do layout com menu.
+.pagina-formulario {
+  max-width: 64rem;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 0;
+  background: var(--cw-bg);
+}
+
 .introducao {
   max-width: 44rem;
   margin: 0 0 1.5rem;
@@ -67,264 +75,88 @@
   margin-bottom: 0.5rem;
 }
 
-.mesa {
-  display: grid;
-  gap: 1.5rem;
 
-  @media (min-width: 1024px) {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    align-items: start;
-  }
+// Área de trabalho do briefing: o PDF como está agora, com a lista de PDFs guardados por cima.
+.folha {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--cw-surface-2);
+  -webkit-overflow-scrolling: touch;
 }
 
-.conversa {
+.aviso-folha {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.mensagens {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mensagem {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-  max-width: 88%;
-
-  &.minha {
-    align-self: flex-end;
-    align-items: flex-end;
-
-    .balao {
-      border-color: transparent;
-      background: var(--cw-accent-soft);
-      color: var(--cw-ink);
-    }
-  }
-}
-
-.autor {
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  margin: 0 auto 0.75rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  background: var(--cw-surface);
   color: var(--cw-ink-muted);
   font-size: 0.8125rem;
-  font-weight: 600;
+  box-shadow: var(--cw-shadow-pop);
 }
 
-.balao {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--cw-border);
-  border-radius: var(--cw-radius-lg);
-  background: var(--cw-surface);
-  line-height: 1.5;
-
-  p {
-    margin: 0;
-    white-space: pre-line;
-  }
-
-  p + p {
-    margin-top: 0.625rem;
-  }
-}
-
-.pensando .balao {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
+.sem-previa {
+  margin: 2rem auto;
+  max-width: 28rem;
   color: var(--cw-ink-muted);
-}
-
-.pontos {
-  display: inline-flex;
-  gap: 3px;
-
-  i {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: pulso 1.2s var(--cw-ease) infinite;
-  }
-
-  i:nth-child(2) {
-    animation-delay: 0.15s;
-  }
-
-  i:nth-child(3) {
-    animation-delay: 0.3s;
-  }
-}
-
-@keyframes pulso {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pontos i {
-    animation: none;
-  }
-}
-
-.vazia {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.75rem;
-  color: var(--cw-ink-muted);
-
-  p {
-    margin: 0;
-  }
-}
-
-// O campo de mensagem fica ao alcance do polegar: gruda no fim da área de conteúdo.
-.imagens {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-
-  .pendente {
-    width: 9rem;
-    height: 9rem;
-    border-radius: var(--cw-radius);
-    object-fit: cover;
-    opacity: 0.6;
-  }
-}
-
-.compositor {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: flex-end;
-  margin-top: 1.25rem;
-  padding: 0.75rem 0;
-  background: var(--cw-bg);
-
-  .anexos {
-    flex-basis: 100%;
-  }
-
-  .anexos:empty {
-    display: none;
-  }
-
-  textarea {
-    flex: 1 1 0;
-    min-height: var(--cw-alvo);
-    resize: vertical;
-  }
-
-  .enviar {
-    flex: none;
-    width: 3rem;
-    height: 3rem;
-  }
-}
-
-.painel {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-
-  @media (min-width: 1024px) {
-    position: sticky;
-    top: 1rem;
-  }
-}
-
-.bloco {
-  padding: 1.25rem;
-  border: 1px solid var(--cw-border);
-  border-radius: var(--cw-radius-lg);
-  background: var(--cw-surface);
-}
-
-.cabecalho-bloco {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-
-  h2 {
-    margin: 0;
-    font-size: 1.0625rem;
-    font-weight: 600;
-  }
-}
-
-.definicao {
-  margin: 0 0 1rem;
-  line-height: 1.5;
-}
-
-.campos {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0;
-
-  div {
-    display: grid;
-    grid-template-columns: 8rem minmax(0, 1fr);
-    gap: 0.75rem;
-  }
-
-  dt {
-    color: var(--cw-ink-muted);
-    font-weight: 500;
-  }
-
-  dd {
-    margin: 0;
-  }
-}
-
-.acoes-pdf {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  text-align: center;
 }
 
 .documentos {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
+  width: min(22rem, calc(100% - 1.5rem));
+  border: 1px solid var(--cw-border);
+  border-radius: var(--cw-radius-lg);
+  background: var(--cw-surface);
+  box-shadow: var(--cw-shadow-pop);
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    border-bottom: 1px solid var(--cw-border);
+
+    h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+
+  ul {
+    max-height: 22rem;
+    margin: 0;
+    padding: 0.25rem 0.5rem 0.5rem;
+    overflow-y: auto;
+    list-style: none;
+  }
 
   li {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    min-height: 3.5rem;
-    border-top: 1px solid var(--cw-border);
+    gap: 0.25rem;
+    padding: 0.25rem 0 0.25rem 0.5rem;
   }
 
   .nome {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
+    flex: 1 1 auto;
+    font-size: 0.9375rem;
   }
 
   .recente {
+    margin-left: 0.375rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
     background: var(--cw-accent-soft);
@@ -333,12 +165,8 @@
     font-weight: 600;
   }
 
-  .sem-documentos {
+  .vazio {
+    padding: 0.75rem 0.5rem;
     color: var(--cw-ink-muted);
   }
-}
-
-.acoes-documento {
-  display: inline-flex;
-  gap: 0.25rem;
 }
