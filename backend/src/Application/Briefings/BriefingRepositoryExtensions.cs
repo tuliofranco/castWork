@@ -7,7 +7,7 @@ namespace Castwork.Application.Briefings;
 internal static class BriefingRepositoryExtensions
 {
     /// <summary>
-    /// O briefing do projeto, rastreado e com a conversa, ou 404 se o formulário ainda não foi preenchido.
+    /// O briefing do projeto, rastreado, ou 404 se o formulário ainda não foi preenchido.
     /// </summary>
     public static async Task<Briefing> ObterDoProjetoAsync(this IUnitOfWork unitOfWork, long projetoId, CancellationToken cancellationToken)
     {

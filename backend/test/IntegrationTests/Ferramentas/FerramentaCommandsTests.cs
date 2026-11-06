@@ -24,6 +24,59 @@ public class FerramentaCommandsTests : TesteDeIntegracao
     private const string Desenho = "desenho-2d";
 
     [Test]
+    public async Task DeveComecarUmChatNovoNoMesmoDesenhoESemOHistoricoAnteriorAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Desenhe o anel"));
+
+        var novo = await AmbienteDeTeste.SendAsync(new NovoChatFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "E agora?"));
+
+        novo.Should().BeEquivalentTo(new { Chat = 2, ChatsAnteriores = 1 });
+        novo.Mensagens.Should().BeEmpty();
+        novo.ArquivoId.Should().NotBeNull("o desenho continua o mesmo");
+        var pedido = AssistenteFerramentaDeTeste.UltimoPedido!;
+        pedido.Historico.Should().BeEmpty("o chat novo começa do zero");
+        Encoding.UTF8.GetString(pedido.Arquivo!).Should().Be("DXF:Desenhe o anel");
+    }
+
+    [Test]
+    public async Task DeveListarLerERetomarChatsAnterioresAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Primeira conversa"));
+        await AmbienteDeTeste.SendAsync(new NovoChatFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho });
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Segunda conversa"));
+
+        var chats = await AmbienteDeTeste.SendAsync(new GetChatsFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho });
+        var anterior = await AmbienteDeTeste.SendAsync(new GetChatFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, Numero = 1 });
+        var retomado = await AmbienteDeTeste.SendAsync(new ContinuarChatFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, Numero = 1 });
+
+        chats.Select(c => (c.Numero, c.Titulo, c.Mensagens, c.Atual)).Should().Equal((2, "Segunda conversa", 2, true), (1, "Primeira conversa", 2, false));
+        anterior.Mensagens[0].Texto.Should().Be("Primeira conversa");
+        retomado.Chat.Should().Be(1);
+        await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Continuando"));
+        AssistenteFerramentaDeTeste.UltimoPedido!.Historico.Should().HaveCount(2, "o chat retomado leva a conversa dele à IA");
+    }
+
+    [Test]
+    public async Task DeveGuardarOPensamentoOsPassosEOConsumoDoTurnoAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+
+        var conversa = await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Desenhe o anel"));
+
+        conversa.Mensagens[^1].Should().BeEquivalentTo(new
+        {
+            Pensamento = "Pensando no pedido.",
+            Passos = new List<string> { "Desenhando círculos" },
+            Tokens = AssistenteFerramentaDeTeste.Consumo.Total,
+        });
+        var consumo = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.ConsumosDaIa.SingleAsync());
+        consumo.Should().BeEquivalentTo(new { Origem = Desenho, Modelo = "claude-teste", Chamadas = 2, Entrada = 1200, Saida = 300, CacheLeitura = 800, CacheEscrita = 100 });
+    }
+
+    [Test]
     public async Task DeveConversarSemMudarOArquivoQuandoAIaSoRespondeAsync()
     {
         var (projetoId, versaoId) = await VersaoAsync();

@@ -7,7 +7,7 @@ using MediatR;
 namespace Castwork.Application.Briefings.Queries.GetBriefing;
 
 /// <summary>
-/// O briefing do projeto com a conversa e os PDFs gerados, ou nulo se o formulário ainda não foi preenchido.
+/// O briefing do projeto com os PDFs gerados (a conversa é a da ferramenta "briefing"), ou nulo se o formulário ainda não foi preenchido.
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
 public sealed class GetBriefingQuery : IRequest<BriefingDto?>
@@ -20,7 +20,7 @@ public sealed class GetBriefingQueryHandler(IUnitOfWork unitOfWork) : IRequestHa
     public async Task<BriefingDto?> Handle(GetBriefingQuery request, CancellationToken cancellationToken)
     {
         var briefing = await unitOfWork.GetRepository<Briefing>().FindBy(b => b.ProjetoId == request.ProjetoId)
-            .Include(b => b.Mensagens).AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+            .AsNoTracking().SingleOrDefaultAsync(cancellationToken);
         if (briefing is null)
         {
             return null;
@@ -30,12 +30,6 @@ public sealed class GetBriefingQueryHandler(IUnitOfWork unitOfWork) : IRequestHa
             .OrderByDescending(d => d.GeradoEm)
             .Select(d => new DocumentoBriefingDto(d.Id, d.NomeArquivo, d.GeradoEm))
             .AsNoTracking().ToListAsync(cancellationToken);
-
-        var mensagens = briefing.Mensagens
-            .Where(m => m.Papel != PapelMensagem.Ferramenta && (m.Texto is not null || m.Imagens.Count > 0))
-            .OrderBy(m => m.Ordem)
-            .Select(m => new MensagemBriefingDto(m.Ordem, m.Papel, m.Texto, m.Imagens, m.CriadaEm))
-            .ToList();
 
         return new BriefingDto(
             briefing.Id,
@@ -52,7 +46,6 @@ public sealed class GetBriefingQueryHandler(IUnitOfWork unitOfWork) : IRequestHa
             briefing.Pedras,
             briefing.Fecho,
             briefing.Observacoes,
-            mensagens,
             documentos);
     }
 }

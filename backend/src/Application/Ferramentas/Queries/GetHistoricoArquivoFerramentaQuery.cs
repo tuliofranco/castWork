@@ -26,7 +26,7 @@ public sealed class GetHistoricoArquivoFerramentaQueryHandler(IUnitOfWork unitOf
     public async Task<IReadOnlyList<VersaoDoArquivoDto>> Handle(GetHistoricoArquivoFerramentaQuery request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken);
+        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken);
         if (conversa is null)
         {
             return [];

@@ -1,9 +1,7 @@
-using Castwork.Application.Briefings.Commands.ConversarBriefing;
 using Castwork.Application.Briefings.Commands.GerarPdfBriefing;
 using Castwork.Application.Briefings.Commands.SalvarFormularioBriefing;
 using Castwork.Application.Briefings.Queries.GetBriefing;
 using Castwork.Application.Briefings.Queries.GetDocumentoBriefing;
-using Castwork.Application.Briefings.Queries.GetImagemBriefing;
 using Castwork.Application.Briefings.Queries.PreVisualizarPdfBriefing;
 
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Castwork.WebAPI.Controllers.Briefings;
 
 /// <summary>
-/// Briefing do projeto: formulário, conversa com a IA e PDFs. A conversa e os arquivos não cabem bem no
+/// Briefing do projeto: formulário e PDFs (a conversa é a da ferramenta "briefing", em /ferramentas/briefing). Os arquivos não cabem bem no
 /// GraphQL (texto longo, binário), por isso a leitura também fica aqui.
 /// </summary>
 [Route("api/projetos/{projetoId:long}/briefing")]
@@ -19,7 +17,7 @@ namespace Castwork.WebAPI.Controllers.Briefings;
 public sealed class BriefingController : ApiController
 {
     [HttpGet]
-    [EndpointSummary("Briefing do projeto com a conversa e os PDFs; 204 se o formulário ainda não foi preenchido.")]
+    [EndpointSummary("Briefing do projeto com os PDFs; 204 se o formulário ainda não foi preenchido.")]
     [ProducesResponseType<BriefingDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Obter([FromRoute] long projetoId, CancellationToken cancellationToken)
@@ -33,18 +31,6 @@ public sealed class BriefingController : ApiController
     {
         command.ProjetoId = projetoId;
         return Ok(new IdCriado(await Mediator.Send(command, cancellationToken)));
-    }
-
-    [HttpPost("conversa")]
-    [EndpointSummary("Envia a mensagem do joalheiro à IA, com imagens em base64 (vazia abre a conversa), e devolve o briefing atualizado.")]
-    [RequestSizeLimit(30 * 1024 * 1024)]
-    [ProducesResponseType<BriefingDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<IActionResult> Conversar([FromRoute] long projetoId, [FromBody] ConversarBriefingCommand command, CancellationToken cancellationToken)
-    {
-        command.ProjetoId = projetoId;
-        return Ok(await Mediator.Send(command, cancellationToken));
     }
 
     [HttpPost("pdf")]
@@ -69,16 +55,6 @@ public sealed class BriefingController : ApiController
     {
         var arquivo = await Mediator.Send(new GetDocumentoBriefingQuery { ProjetoId = projetoId, DocumentoId = documentoId }, cancellationToken);
         return File(arquivo.Conteudo, "application/pdf", arquivo.NomeArquivo);
-    }
-
-    [HttpGet("imagens/{chave:guid}")]
-    [EndpointSummary("Uma imagem enviada na conversa do briefing.")]
-    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK, "image/png", "image/jpeg", "image/webp")]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Imagem([FromRoute] long projetoId, [FromRoute] Guid chave, CancellationToken cancellationToken)
-    {
-        var imagem = await Mediator.Send(new GetImagemBriefingQuery { ProjetoId = projetoId, Chave = chave }, cancellationToken);
-        return File(imagem.Conteudo, imagem.Tipo);
     }
 
     private ObjectResult Criado(long id) => StatusCode(StatusCodes.Status201Created, new IdCriado(id));

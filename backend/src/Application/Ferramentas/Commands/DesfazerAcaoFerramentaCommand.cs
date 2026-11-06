@@ -25,7 +25,7 @@ public sealed class DesfazerAcaoFerramentaCommandHandler(IUnitOfWork unitOfWork,
     public async Task<ConversaFerramentaDto> Handle(DesfazerAcaoFerramentaCommand request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
+        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken)
             ?? throw new EntidadeNaoEncontradaException("Conversa", request.Ferramenta);
 
         var agora = relogio.GetUtcNow();

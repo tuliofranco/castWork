@@ -29,7 +29,7 @@ public sealed class SalvarArquivoFerramentaCommandHandler(IUnitOfWork unitOfWork
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
         var agora = relogio.GetUtcNow();
-        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.VersaoId, request.Ferramenta, agora, cancellationToken);
+        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, agora, cancellationToken);
 
         var arquivo = ArquivoFerramenta.Criar(conversa.Id, Convert.FromBase64String(request.Conteudo), OrigemArquivo.Joalheiro, agora);
         unitOfWork.GetRepository<ArquivoFerramenta>().Adicionar(arquivo);

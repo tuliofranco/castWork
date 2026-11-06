@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Castwork.IntegrationTests.Briefings;
 
 /// <summary>
-/// O briefing pela API: formulário, conversa, PDF e download, como o front usa.
+/// O briefing pela API: formulário, conversa (a ferramenta "briefing" do projeto), PDF e download, como o front usa.
 /// </summary>
 public class BriefingEndpointsTests : TesteDeIntegracao
 {
@@ -43,7 +43,7 @@ public class BriefingEndpointsTests : TesteDeIntegracao
         var semBriefing = await _http.GetAsync(Rota(projetoId));
 
         var formulario = await _http.PutAsJsonAsync(Rota(projetoId), new { tipoJoia = "Colar", oQueOClienteQuer = "Colar com pingente de gota", prazo = "2026-12-20" });
-        var abertura = await _http.PostAsJsonAsync($"{Rota(projetoId)}/conversa", new { });
+        var abertura = await _http.PostAsJsonAsync($"{Conversa(projetoId)}/conversa", new { });
         var pdf = await _http.PostAsync(new Uri($"{Rota(projetoId)}/pdf", UriKind.Relative), null);
         var documentoId = (await pdf.Content.ReadFromJsonAsync<IdDto>())!.Id;
         var download = await _http.GetAsync($"{Rota(projetoId)}/documentos/{documentoId}");
@@ -55,7 +55,8 @@ public class BriefingEndpointsTests : TesteDeIntegracao
 
         var briefing = await _http.GetFromJsonAsync<BriefingLido>(Rota(projetoId));
         briefing!.TipoJoia.Should().Be("Colar");
-        briefing.Mensagens.Should().ContainSingle().Which.Papel.Should().Be("Assistente");
+        var conversa = await _http.GetFromJsonAsync<ConversaLida>($"{Conversa(projetoId)}/conversa");
+        conversa!.Mensagens.Should().ContainSingle().Which.Papel.Should().Be("Assistente");
         briefing.Documentos.Should().ContainSingle().Which.Id.Should().Be(documentoId);
     }
 
@@ -77,14 +78,14 @@ public class BriefingEndpointsTests : TesteDeIntegracao
     {
         var projetoId = await CriarProjetoAsync();
         await _http.PutAsJsonAsync(Rota(projetoId), new { tipoJoia = "Anel", oQueOClienteQuer = "Anel faixa texturizado" });
-        await _http.PostAsJsonAsync($"{Rota(projetoId)}/conversa", new { });
+        await _http.PostAsJsonAsync($"{Conversa(projetoId)}/conversa", new { });
         byte[] jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00];
 
-        var resposta = await _http.PostAsJsonAsync($"{Rota(projetoId)}/conversa", new { texto = "Referência", imagens = new[] { Convert.ToBase64String(jpeg) } });
-        var briefing = await resposta.Content.ReadFromJsonAsync<BriefingComImagensDto>();
-        var chave = briefing!.Mensagens.Single(m => m.Imagens.Count > 0).Imagens.Single();
-        var imagem = await _http.GetAsync($"{Rota(projetoId)}/imagens/{chave}");
-        var deOutroProjeto = await _http.GetAsync($"{Rota(await CriarProjetoAsync())}/imagens/{chave}");
+        var resposta = await _http.PostAsJsonAsync($"{Conversa(projetoId)}/conversa", new { texto = "Referência", imagens = new[] { Convert.ToBase64String(jpeg) } });
+        var conversa = await resposta.Content.ReadFromJsonAsync<ConversaComImagensDto>();
+        var chave = conversa!.Mensagens.Single(m => m.Imagens.Count > 0).Imagens.Single();
+        var imagem = await _http.GetAsync($"/api/projetos/{projetoId}/ferramentas/imagens/{chave}");
+        var deOutroProjeto = await _http.GetAsync($"/api/projetos/{await CriarProjetoAsync()}/ferramentas/imagens/{chave}");
 
         resposta.StatusCode.Should().Be(HttpStatusCode.OK);
         imagem.Content.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
@@ -111,7 +112,7 @@ public class BriefingEndpointsTests : TesteDeIntegracao
         var projetoId = await CriarProjetoAsync();
         await _http.PutAsJsonAsync(Rota(projetoId), new { tipoJoia = "Anel", oQueOClienteQuer = "Anel" });
 
-        var resposta = await _http.PostAsJsonAsync($"{Rota(projetoId)}/conversa", new { texto = "falhe" });
+        var resposta = await _http.PostAsJsonAsync($"{Conversa(projetoId)}/conversa", new { texto = "falhe" });
 
         resposta.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
@@ -128,6 +129,11 @@ public class BriefingEndpointsTests : TesteDeIntegracao
 
     private static string Rota(long projetoId) => $"/api/projetos/{projetoId}/briefing";
 
+    /// <summary>
+    /// A conversa do briefing: a ferramenta "briefing" do projeto, sem versão na rota.
+    /// </summary>
+    private static string Conversa(long projetoId) => $"/api/projetos/{projetoId}/ferramentas/briefing";
+
     private async Task<long> CriarProjetoAsync()
     {
         var resposta = await _http.PostAsJsonAsync("/api/projetos", new { nome = "Projeto" });
@@ -137,11 +143,13 @@ public class BriefingEndpointsTests : TesteDeIntegracao
 
     private sealed record IdDto(long Id);
 
-    private sealed record BriefingLido(string TipoJoia, List<MensagemLida> Mensagens, List<IdDto> Documentos);
+    private sealed record BriefingLido(string TipoJoia, List<IdDto> Documentos);
+
+    private sealed record ConversaLida(List<MensagemLida> Mensagens);
 
     private sealed record MensagemLida(string Papel, string Texto);
 
-    private sealed record BriefingComImagensDto(List<MensagemComImagensDto> Mensagens);
+    private sealed record ConversaComImagensDto(List<MensagemComImagensDto> Mensagens);
 
     private sealed record MensagemComImagensDto(List<Guid> Imagens);
 }

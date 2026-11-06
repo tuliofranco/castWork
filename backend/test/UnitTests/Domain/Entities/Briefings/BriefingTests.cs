@@ -21,7 +21,6 @@ public class BriefingTests
             Prazo = (DateOnly?)new DateOnly(2026, 12, 20),
             OQueSeraFeito = (string?)null,
         });
-        briefing.Mensagens.Should().BeEmpty();
     }
 
     [TestCase(" ")]
@@ -66,29 +65,6 @@ public class BriefingTests
         briefing.PreencherFormulario(Formulario() with { Orcamento = "Até R$ 5.000" });
 
         (briefing.Orcamento, briefing.Fecho).Should().Be(("Até R$ 5.000", "Gaveta"));
-    }
-
-    [Test]
-    public void DeveNumerarAsMensagensNaOrdemDaConversa()
-    {
-        var briefing = Briefing.Criar(7, Formulario());
-
-        briefing.RegistrarMensagem(PapelMensagem.Joalheiro, null, "{}", Agora);
-        briefing.RegistrarMensagem(PapelMensagem.Assistente, " Qual o aro? ", "{}", Agora);
-
-        briefing.Mensagens.Select(m => (m.Ordem, m.Papel, m.Texto)).Should().Equal(
-            (1, PapelMensagem.Joalheiro, (string?)null),
-            (2, PapelMensagem.Assistente, "Qual o aro?"));
-    }
-
-    [Test]
-    public void DeveExigirConteudoNaMensagem()
-    {
-        var briefing = Briefing.Criar(7, Formulario());
-
-        var registrar = () => briefing.RegistrarMensagem(PapelMensagem.Assistente, "Oi", " ", Agora);
-
-        registrar.Should().Throw<ValorInvalidoException>();
     }
 
     [Test]

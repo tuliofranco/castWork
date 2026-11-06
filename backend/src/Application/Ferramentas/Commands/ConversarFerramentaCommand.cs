@@ -1,8 +1,10 @@
 using Castwork.Application.Abstractions;
+using Castwork.Application.Briefings;
 using Castwork.Application.Common.Security;
 using Castwork.Application.Common.Validators;
 using Castwork.Application.Ferramentas.Queries;
 using Castwork.Domain.Entities.Ferramentas;
+using Castwork.Domain.Entities.Ia;
 using Castwork.Domain.Exceptions;
 
 using FluentValidation;
@@ -29,22 +31,30 @@ public sealed class ConversarFerramentaCommand : ComandoDeFerramenta, IRequest<C
     public IReadOnlyList<string> Imagens { get; set; } = [];
 }
 
-public sealed class ConversarFerramentaCommandHandler(IUnitOfWork unitOfWork, IAssistenteFerramenta assistente, TimeProvider relogio)
+public sealed class ConversarFerramentaCommandHandler(
+    IUnitOfWork unitOfWork,
+    IAssistenteFerramenta assistente,
+    IPainelDoTurno painel,
+    IGeradorDocumentoBriefing gerador,
+    TimeProvider relogio)
     : IRequestHandler<ConversarFerramentaCommand, ConversaFerramentaDto>
 {
     public async Task<ConversaFerramentaDto> Handle(ConversarFerramentaCommand request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
         var texto = string.IsNullOrWhiteSpace(request.Texto) ? null : request.Texto.Trim();
-        if (texto is null && request.Imagens.Count == 0)
+        var agora = relogio.GetUtcNow();
+        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, agora, cancellationToken);
+
+        // Sem fala nem imagem, só a abertura: a IA de uma ferramenta do projeto começa o chat novo (o briefing
+        // resume o formulário e pergunta o que falta).
+        if (texto is null && request.Imagens.Count == 0 && !(EscopoDaFerramenta.DoProjeto(request.Ferramenta) && !conversa.MensagensDoChat.Any()))
         {
             throw new RegraDeNegocioException("Escreva uma mensagem ou anexe uma imagem.");
         }
 
-        var agora = relogio.GetUtcNow();
-        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.VersaoId, request.Ferramenta, agora, cancellationToken);
         var arquivo = await ConversaDaVersao.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
-        var contexto = await ContextoDaFerramenta.MontarAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        var (contexto, locais) = await ContextoEFerramentasAsync(request, cancellationToken);
 
         var repositorioDeImagens = unitOfWork.GetRepository<ImagemConversa>();
         var novas = request.Imagens.Select(i => ImagemConversa.Criar(conversa.Id, Convert.FromBase64String(i), agora)).ToList();
@@ -61,18 +71,32 @@ public sealed class ConversarFerramentaCommandHandler(IUnitOfWork unitOfWork, IA
         var fala = conversa.RegistrarFala(texto, [.. novas.Select(i => i.Chave)], agora);
         novas.ForEach(repositorioDeImagens.Adicionar);
         await unitOfWork.SalvarAsync(cancellationToken);
-        var historico = conversa.Mensagens.Where(m => m != fala).OrderBy(m => m.Ordem).Select(m => new MensagemDaConversa(m.Papel, m.Texto, m.Conteudo)).ToList();
+
+        // Só o chat em andamento vai para a IA: um chat novo começa do zero.
+        var historico = conversa.MensagensDoChat.Where(m => m != fala).Select(m => new MensagemDaConversa(m.Papel, m.Texto, m.Conteudo)).ToList();
 
         // Daqui em diante o turno vai até o fim mesmo que o joalheiro saia da tela: a resposta fica guardada.
+        // Enquanto isso, a tela acompanha o pensamento e os passos pelo painel do turno.
         TurnoDaFerramenta turno;
+        painel.Comecar(conversa.Id);
         try
         {
             turno = await assistente.ConversarAsync(
-                new PedidoAFerramenta(request.Ferramenta, contexto, historico, texto, [.. novas.Select(i => i.Chave)], imagens, arquivo is { EmBranco: false } ? arquivo.Conteudo : null),
+                new PedidoAFerramenta(
+                    request.Ferramenta,
+                    contexto,
+                    historico,
+                    texto,
+                    [.. novas.Select(i => i.Chave)],
+                    imagens,
+                    arquivo is { EmBranco: false } ? arquivo.Conteudo : null,
+                    evento => painel.Publicar(conversa.Id, evento),
+                    locais),
                 CancellationToken.None);
         }
         catch
         {
+            painel.Terminar(conversa.Id);
             conversa.DescartarFala(fala);
             novas.ForEach(repositorioDeImagens.Remover);
             await unitOfWork.SalvarAsync(CancellationToken.None);
@@ -98,11 +122,38 @@ public sealed class ConversarFerramentaCommandHandler(IUnitOfWork unitOfWork, IA
         foreach (var mensagem in turno.Mensagens.Skip(1))
         {
             var acao = mensagem.Acao is null || turno.ArquivoNovo is null ? null : new AcaoDaIa(mensagem.Acao, arquivo?.Id ?? 0);
-            conversa.RegistrarMensagem(mensagem.Papel, mensagem.Texto, mensagem.Conteudo, agora, mensagem.Imagens, acao);
+            var detalhes = mensagem.Passos is null ? null : new DetalhesDoTurno(mensagem.Pensamento, mensagem.Passos, turno.Consumo?.Total);
+            conversa.RegistrarMensagem(mensagem.Papel, mensagem.Texto, mensagem.Conteudo, agora, mensagem.Imagens, acao, detalhes);
+        }
+
+        if (turno.Consumo is { } consumo)
+        {
+            unitOfWork.GetRepository<ConsumoDaIa>().Adicionar(ConsumoDaIa.Registrar(
+                request.Ferramenta, conversa.Id, consumo.Modelo, consumo.Chamadas, consumo.Entrada, consumo.Saida, consumo.CacheLeitura, consumo.CacheEscrita, agora));
         }
 
         await unitOfWork.SalvarAsync(CancellationToken.None);
+
+        // Só agora: quem acompanha recebe o fim depois que a resposta já está gravada e pode ser lida.
+        painel.Terminar(conversa.Id);
         return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId, processando: false);
+    }
+
+    /// <summary>
+    /// O contexto que a IA recebe e as ferramentas locais dela. O briefing manda o estado do briefing e grava os
+    /// campos e o PDF; as ferramentas da versão mandam projeto, versão, composição e briefing, e usam só o MCP.
+    /// </summary>
+    private async Task<(string Contexto, IFerramentasLocais? Locais)> ContextoEFerramentasAsync(ConversarFerramentaCommand request, CancellationToken cancellationToken)
+    {
+        if (request.Ferramenta != EscopoDaFerramenta.Briefing)
+        {
+            return (await ContextoDaFerramenta.MontarAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken), null);
+        }
+
+        var briefing = await unitOfWork.ObterDoProjetoAsync(request.ProjetoId, cancellationToken);
+        var nomes = await ContextoDoBriefing.NomesAsync(unitOfWork, request.ProjetoId, cancellationToken);
+        var contexto = ContextoDoBriefing.ParaIa(briefing, nomes, DateOnly.FromDateTime(relogio.GetLocalNow().DateTime));
+        return (contexto, new FerramentasDoBriefing(unitOfWork, gerador, relogio, briefing));
     }
 }
 

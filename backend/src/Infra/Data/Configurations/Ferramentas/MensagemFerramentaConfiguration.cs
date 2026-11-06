@@ -15,10 +15,14 @@ internal sealed class MensagemFerramentaConfiguration : IEntityTypeConfiguration
 
         builder.Property<long>("ConversaId");
         builder.Property(m => m.Papel).IsRequired();
+        builder.Property(m => m.Chat).IsRequired();
         builder.Property(m => m.Texto);
         builder.Property(m => m.Conteudo).HasColumnType("jsonb").IsRequired();
         builder.Property(m => m.Imagens).IsRequired();
         builder.Property(m => m.CriadaEm).IsRequired();
+        builder.Property(m => m.Pensamento);
+        builder.Property(m => m.Passos).IsRequired();
+        builder.Property(m => m.Tokens);
 
         builder.OwnsOne(m => m.Acao, acao =>
         {

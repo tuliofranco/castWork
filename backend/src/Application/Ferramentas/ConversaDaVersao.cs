@@ -11,35 +11,48 @@ namespace Castwork.Application.Ferramentas;
 /// </summary>
 internal static class ConversaDaVersao
 {
+    /// <summary>
+    /// <paramref name="versaoId"/> 0 é a rota do projeto (ferramentas do projeto): basta o projeto existir.
+    /// </summary>
     public static async Task GarantirVersaoAsync(IUnitOfWork unitOfWork, long projetoId, long versaoId, CancellationToken cancellationToken)
     {
         var existe = await unitOfWork.GetRepository<Projeto>()
-            .FindBy(p => p.Id == projetoId && p.Versoes.Any(v => v.Id == versaoId))
+            .FindBy(p => p.Id == projetoId && (versaoId == 0 || p.Versoes.Any(v => v.Id == versaoId)))
             .AnyAsync(cancellationToken);
         if (!existe)
         {
-            throw new EntidadeNaoEncontradaException("Versão", versaoId);
+            throw versaoId == 0 ? new EntidadeNaoEncontradaException("Projeto", projetoId) : new EntidadeNaoEncontradaException("Versão", versaoId);
         }
     }
 
-    public static Task<ConversaFerramenta?> ObterAsync(IUnitOfWork unitOfWork, long versaoId, string ferramenta, CancellationToken cancellationToken)
-        => unitOfWork.GetRepository<ConversaFerramenta>()
-            .FindBy(c => c.VersaoId == versaoId && c.Ferramenta == ferramenta)
+    public static Task<ConversaFerramenta?> ObterAsync(IUnitOfWork unitOfWork, long projetoId, long versaoId, string ferramenta, CancellationToken cancellationToken)
+    {
+        var versao = EscopoDaFerramenta.Versao(ferramenta, versaoId);
+        return unitOfWork.GetRepository<ConversaFerramenta>()
+            .FindBy(c => c.ProjetoId == projetoId && c.VersaoId == versao && c.Ferramenta == ferramenta)
             .Include(c => c.Mensagens)
             .SingleOrDefaultAsync(cancellationToken);
+    }
 
     /// <summary>
     /// A conversa nasce na primeira mensagem ou no primeiro salvamento do arquivo, e já vai para o banco:
     /// o arquivo e as imagens precisam do Id dela.
     /// </summary>
-    public static async Task<ConversaFerramenta> ObterOuCriarAsync(IUnitOfWork unitOfWork, long versaoId, string ferramenta, DateTimeOffset agora, CancellationToken cancellationToken)
+    public static async Task<ConversaFerramenta> ObterOuCriarAsync(IUnitOfWork unitOfWork, long projetoId, long versaoId, string ferramenta, DateTimeOffset agora, CancellationToken cancellationToken)
     {
-        if (await ObterAsync(unitOfWork, versaoId, ferramenta, cancellationToken) is { } existente)
+        if (await ObterAsync(unitOfWork, projetoId, versaoId, ferramenta, cancellationToken) is { } existente)
         {
             return existente;
         }
 
-        var conversa = ConversaFerramenta.Criar(versaoId, ferramenta, agora);
+        // Ferramenta da versão chamada pela rota do projeto: não há versão para criar a conversa.
+        var versao = EscopoDaFerramenta.Versao(ferramenta, versaoId);
+        if (versao == 0)
+        {
+            throw new EntidadeNaoEncontradaException("Versão", versaoId);
+        }
+
+        var conversa = ConversaFerramenta.Criar(projetoId, versao, ferramenta, agora);
         unitOfWork.GetRepository<ConversaFerramenta>().Adicionar(conversa);
         await unitOfWork.SalvarAsync(cancellationToken);
         return conversa;
@@ -62,7 +75,7 @@ internal static class ConversaDaVersao
     public static async Task<ArquivoFerramenta> ObterArquivoAsync(IUnitOfWork unitOfWork, ComandoDeArquivo request, CancellationToken cancellationToken)
     {
         await GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
+        var conversa = await ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken)
             ?? throw new EntidadeNaoEncontradaException("Arquivo", request.ArquivoId);
         return await unitOfWork.GetRepository<ArquivoFerramenta>()
             .FindBy(a => a.Id == request.ArquivoId && a.ConversaId == conversa.Id)

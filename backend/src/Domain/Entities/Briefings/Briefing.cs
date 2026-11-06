@@ -4,14 +4,12 @@ namespace Castwork.Domain.Entities.Briefings;
 
 /// <summary>
 /// Definição do que será feito no projeto, acima das versões. Nasce do formulário inicial e é refinado
-/// na conversa com a IA; um por projeto. A conversa pertence ao agregado para ser retomada depois.
+/// na conversa com a IA (a ferramenta "briefing" do projeto); um por projeto.
 /// </summary>
 public sealed partial class Briefing : BaseEntity<long>, IAggregateRoot, IAuditavel
 {
     public const int TextoCurtoMaxLength = 300;
     public const int TextoLongoMaxLength = 2000;
-
-    private readonly List<MensagemBriefing> _mensagens = [];
 
     private Briefing()
     {
@@ -51,8 +49,6 @@ public sealed partial class Briefing : BaseEntity<long>, IAggregateRoot, IAudita
     public string? Fecho { get; private set; }
 
     public string? Observacoes { get; private set; }
-
-    public IReadOnlyCollection<MensagemBriefing> Mensagens => _mensagens.AsReadOnly();
 
     public DateTimeOffset CriadoEm { get; private set; }
 
