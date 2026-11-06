@@ -1,10 +1,10 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { ArquivoDaVersaoDto, ListaDeArquivosDto, OrigemArquivo } from '@data/projetos/ferramentas/dto/ferramenta.dto';
-import { BriefingService } from '@data/projetos/briefing/briefing.service';
-import type { DocumentoBriefingDto } from '@data/projetos/briefing/dto/briefing.dto';
-import { FerramentasService } from '@data/projetos/ferramentas/ferramentas.service';
+import type { ArquivoDaVersaoDto, ListaDeArquivosDto, OrigemArquivo } from '@data/assistente/dto/ferramenta.dto';
+import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
+import type { DocumentoBriefingDto } from '@data/ferramentas/briefing/dto/briefing.dto';
+import { FerramentasService } from '@data/assistente/ferramentas.service';
 import { DownloadService } from '@shared/services/download.service';
 import { nomeDeArquivo } from '@shared/arquivos/nome-de-arquivo';
 import { PaginacaoComponent } from '@shared/ui/paginacao.component';

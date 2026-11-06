@@ -1,9 +1,8 @@
 using Castwork.Domain.Entities.Acesso;
+using Castwork.Domain.Entities.Assistente;
 using Castwork.Domain.Entities.Atelie;
-using Castwork.Domain.Entities.Briefings;
 using Castwork.Domain.Entities.Clientes;
-using Castwork.Domain.Entities.Ferramentas;
-using Castwork.Domain.Entities.Ia;
+using Castwork.Domain.Entities.Ferramentas.Briefings;
 using Castwork.Domain.Entities.Pecas;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.ValueObjects;

@@ -4,7 +4,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
-import { BriefingService } from '@data/projetos/briefing/briefing.service';
+import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
 import type { VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';

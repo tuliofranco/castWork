@@ -1,4 +1,4 @@
-using Castwork.Domain.Entities.Ia;
+using Castwork.Domain.Entities.Assistente;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

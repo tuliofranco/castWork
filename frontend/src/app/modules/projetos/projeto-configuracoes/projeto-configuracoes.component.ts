@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import { ClientesService } from '@data/clientes/clientes/clientes.service';
-import { BriefingService } from '@data/projetos/briefing/briefing.service';
+import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
 import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';

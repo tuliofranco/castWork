@@ -1,4 +1,4 @@
-using Castwork.Domain.Entities.Briefings;
+using Castwork.Domain.Entities.Assistente;
 
 namespace Castwork.Application.Abstractions;
 
