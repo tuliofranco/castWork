@@ -20,7 +20,7 @@ public sealed class GetConversaFerramentaQuery : IRequest<ConversaFerramentaDto>
     public string Ferramenta { get; set; } = string.Empty;
 }
 
-public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork) : IRequestHandler<GetConversaFerramentaQuery, ConversaFerramentaDto>
+public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, TimeProvider relogio) : IRequestHandler<GetConversaFerramentaQuery, ConversaFerramentaDto>
 {
     public async Task<ConversaFerramentaDto> Handle(GetConversaFerramentaQuery request, CancellationToken cancellationToken)
     {
@@ -28,18 +28,18 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork) : 
         var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken);
         if (conversa is null)
         {
-            return new ConversaFerramentaDto([], null);
+            return new ConversaFerramentaDto([], null, false);
         }
 
         var arquivoId = await unitOfWork.GetRepository<ArquivoFerramenta>()
-            .FindBy(a => a.ConversaId == conversa.Id)
+            .FindBy(a => a.ConversaId == conversa.Id && a.ArquivadoEm == null)
             .OrderByDescending(a => a.Id)
             .Select(a => a.Conteudo.Length == 0 ? null : (long?)a.Id)
             .FirstOrDefaultAsync(cancellationToken);
-        return Mapear(conversa, arquivoId);
+        return Mapear(conversa, arquivoId, conversa.AguardandoIa(relogio.GetUtcNow()));
     }
 
-    internal static ConversaFerramentaDto Mapear(ConversaFerramenta conversa, long? arquivoId) => new(
+    internal static ConversaFerramentaDto Mapear(ConversaFerramenta conversa, long? arquivoId, bool processando) => new(
         conversa.Mensagens
             .Where(m => m.Papel != PapelMensagem.Ferramenta && (m.Texto is not null || m.Imagens.Count > 0))
             .OrderBy(m => m.Ordem)
@@ -51,5 +51,6 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork) : 
                 m.Acao is null ? null : new AcaoDaIaDto(m.Acao.Descricao, m.AcaoDesfeita),
                 m.CriadaEm))
             .ToList(),
-        arquivoId);
+        arquivoId,
+        processando);
 }

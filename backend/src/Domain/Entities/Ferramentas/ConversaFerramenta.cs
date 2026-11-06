@@ -10,6 +10,16 @@ public sealed partial class ConversaFerramenta : BaseEntity<long>, IAggregateRoo
 {
     public const int FerramentaMaxLength = 40;
 
+    /// <summary>
+    /// Quanto um turno da IA pode durar; depois disso, uma fala sem resposta é considerada abandonada.
+    /// </summary>
+    public static readonly TimeSpan TempoMaximoDoTurno = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Conteúdo da fala enquanto a IA trabalha (a coluna é jsonb e obrigatória).
+    /// </summary>
+    private const string ConteudoProvisorio = "{\"blocos\":[]}";
+
     private readonly List<MensagemFerramenta> _mensagens = [];
 
     private ConversaFerramenta()

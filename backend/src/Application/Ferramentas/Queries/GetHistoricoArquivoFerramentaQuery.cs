@@ -7,7 +7,8 @@ using MediatR;
 namespace Castwork.Application.Ferramentas.Queries;
 
 /// <summary>
-/// As versões do arquivo da ferramenta, da mais recente para a mais antiga, sem o conteúdo. A primeira é a atual.
+/// As versões do arquivo da ferramenta (sem as arquivadas), da mais recente para a mais antiga, sem o conteúdo.
+/// A primeira é a atual.
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
 public sealed class GetHistoricoArquivoFerramentaQuery : IRequest<IReadOnlyList<VersaoDoArquivoDto>>
@@ -32,9 +33,9 @@ public sealed class GetHistoricoArquivoFerramentaQueryHandler(IUnitOfWork unitOf
         }
 
         return await unitOfWork.GetRepository<ArquivoFerramenta>()
-            .FindBy(a => a.ConversaId == conversa.Id)
+            .FindBy(a => a.ConversaId == conversa.Id && a.ArquivadoEm == null)
             .OrderByDescending(a => a.Id)
-            .Select(a => new VersaoDoArquivoDto(a.Id, a.Origem, a.CriadoEm, a.Conteudo.Length))
+            .Select(a => new VersaoDoArquivoDto(a.Id, a.Origem, a.CriadoEm, a.Conteudo.Length, a.Nome))
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

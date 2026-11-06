@@ -17,6 +17,8 @@ internal sealed class ArquivoFerramentaConfiguration : IEntityTypeConfiguration<
         builder.Property(a => a.Conteudo).IsRequired();
         builder.Property(a => a.Origem).IsRequired();
         builder.Property(a => a.CriadoEm).IsRequired();
+        builder.Property(a => a.Nome).HasMaxLength(ArquivoFerramenta.NomeMaxLength);
+        builder.Property(a => a.ArquivadoEm);
 
         builder.HasIndex(a => new { a.ConversaId, a.Id });
     }

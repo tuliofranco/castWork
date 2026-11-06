@@ -48,6 +48,48 @@ public class ConversaFerramentaTests
     }
 
     [Test]
+    public void DeveFicarAguardandoAIaEnquantoAFalaNaoTemResposta()
+    {
+        var conversa = ConversaFerramenta.Criar(5, "desenho-2d", Agora);
+        var fala = conversa.RegistrarFala("Desenhe o anel", [], Agora);
+
+        conversa.AguardandoIa(Agora.AddMinutes(5)).Should().BeTrue();
+        var outra = () => conversa.RegistrarFala("E agora?", [], Agora.AddMinutes(5));
+        outra.Should().Throw<RegraDeNegocioException>().WithMessage("*trabalhando*");
+
+        conversa.ConfirmarFala(fala, "{\"blocos\":[{\"tipo\":\"texto\"}]}");
+        conversa.RegistrarMensagem(PapelMensagem.Assistente, "Pronto.", "{}", Agora.AddMinutes(6));
+        conversa.AguardandoIa(Agora.AddMinutes(6)).Should().BeFalse();
+        fala.Conteudo.Should().Contain("texto");
+    }
+
+    [Test]
+    public void DeveDescartarAFalaOrfaQuandoOTurnoExpirou()
+    {
+        var conversa = ConversaFerramenta.Criar(5, "desenho-2d", Agora);
+        conversa.RegistrarFala("Ficou sem resposta", [], Agora);
+        var depois = Agora + ConversaFerramenta.TempoMaximoDoTurno;
+
+        conversa.AguardandoIa(depois).Should().BeFalse();
+        var nova = conversa.RegistrarFala("De novo", [], depois);
+
+        conversa.Mensagens.Should().ContainSingle().Which.Should().Be(nova);
+        nova.Ordem.Should().Be(1);
+    }
+
+    [Test]
+    public void DeveTirarAFalaQuandoAIaFalha()
+    {
+        var conversa = ConversaFerramenta.Criar(5, "desenho-2d", Agora);
+        var fala = conversa.RegistrarFala("falhe", [], Agora);
+
+        conversa.DescartarFala(fala);
+
+        conversa.Mensagens.Should().BeEmpty();
+        conversa.AguardandoIa(Agora).Should().BeFalse();
+    }
+
+    [Test]
     public void DeveRecusarArquivoVazio()
     {
         var criar = () => ArquivoFerramenta.Criar(3, [], OrigemArquivo.Ia, Agora);

@@ -19,6 +19,8 @@ export interface ConversaFerramentaDto {
   readonly mensagens: readonly MensagemFerramentaDto[];
   /** Versão atual do arquivo; muda quando a IA desenha, quando se desfaz ou quando se salva. */
   readonly arquivoId: number | null;
+  /** A IA ainda trabalha na última fala (o joalheiro saiu e voltou no meio do turno). */
+  readonly processando: boolean;
 }
 
 /** Quem gravou a versão do arquivo. */

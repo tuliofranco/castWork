@@ -48,4 +48,7 @@ public sealed class MensagemFerramenta : BaseEntity<long>
     public DateTimeOffset CriadaEm { get; private set; }
 
     internal void MarcarDesfeita() => AcaoDesfeita = true;
+
+    internal void DefinirConteudo(string conteudo)
+        => Conteudo = string.IsNullOrWhiteSpace(conteudo) ? throw new ValorInvalidoException(nameof(Conteudo), "é obrigatório") : conteudo;
 }

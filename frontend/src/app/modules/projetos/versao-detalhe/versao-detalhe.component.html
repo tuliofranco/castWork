@@ -49,6 +49,8 @@
 
   <cw-etapas-versao [versaoId]="v.id" [editavel]="podeEditar && v.status !== 'ARQUIVADA'" />
 
+  <cw-previa-desenho [projetoId]="+id()" [versaoId]="v.id" />
+
   <section class="ferramentas" aria-labelledby="titulo-ferramentas">
     <h2 id="titulo-ferramentas">Ferramentas</h2>
     <div class="lista-ferramentas">

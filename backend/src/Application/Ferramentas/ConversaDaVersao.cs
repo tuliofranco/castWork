@@ -1,4 +1,5 @@
 using Castwork.Application.Abstractions;
+using Castwork.Application.Ferramentas.Commands;
 using Castwork.Domain.Entities.Ferramentas;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.Exceptions;
@@ -45,13 +46,27 @@ internal static class ConversaDaVersao
     }
 
     /// <summary>
-    /// O arquivo atual é a versão mais recente. Pode estar em branco (<see cref="ArquivoFerramenta.EmBranco"/>):
+    /// O arquivo atual é a versão mais recente que não está arquivada. Pode estar em branco (<see cref="ArquivoFerramenta.EmBranco"/>):
     /// então não há desenho.
     /// </summary>
     public static Task<ArquivoFerramenta?> ArquivoAtualAsync(IUnitOfWork unitOfWork, long conversaId, CancellationToken cancellationToken)
         => unitOfWork.GetRepository<ArquivoFerramenta>()
-            .FindBy(a => a.ConversaId == conversaId)
+            .FindBy(a => a.ConversaId == conversaId && a.ArquivadoEm == null)
             .OrderByDescending(a => a.Id)
             .AsNoTracking()
             .FirstOrDefaultAsync(cancellationToken);
+
+    /// <summary>
+    /// Um arquivo da conversa da ferramenta da versão, para alterar (renomear, arquivar, apagar).
+    /// </summary>
+    public static async Task<ArquivoFerramenta> ObterArquivoAsync(IUnitOfWork unitOfWork, ComandoDeArquivo request, CancellationToken cancellationToken)
+    {
+        await GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        var conversa = await ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
+            ?? throw new EntidadeNaoEncontradaException("Arquivo", request.ArquivoId);
+        return await unitOfWork.GetRepository<ArquivoFerramenta>()
+            .FindBy(a => a.Id == request.ArquivoId && a.ConversaId == conversa.Id)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new EntidadeNaoEncontradaException("Arquivo", request.ArquivoId);
+    }
 }

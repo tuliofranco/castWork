@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import type { ConversaFerramentaDto, VersaoDoArquivoDto } from '@data/projetos/ferramentas/dto/ferramenta.dto';
 import { FerramentasService } from '@data/projetos/ferramentas/ferramentas.service';
 import { DownloadService } from '@shared/services/download.service';
@@ -11,6 +11,8 @@ import { HistoricoDesenhoComponent } from './historico-desenho.component';
 import { PonteCadCraft } from './ponte-cadcraft';
 
 const FERRAMENTA = 'desenho-2d';
+/** Intervalo para consultar a conversa enquanto a IA trabalha num turno que esta tela não enviou. */
+const INTERVALO_DE_CONSULTA_MS = 4000;
 
 /**
  * Desenho 2D: o CADCraft completo na área de trabalho e a IA desta ferramenta no chat. Os dois trabalham
@@ -36,7 +38,7 @@ export class Desenho2dComponent {
   protected readonly pensando = signal(false);
   /** Recarregando o desenho no CADCraft (abrir, salvar, trazer o que a IA fez). */
   protected readonly sincronizando = signal<string | null>('Abrindo o CADCraft...');
-  protected readonly conversa = signal<ConversaFerramentaDto>({ mensagens: [], arquivoId: null });
+  protected readonly conversa = signal<ConversaFerramentaDto>({ mensagens: [], arquivoId: null, processando: false });
   /** Versões do arquivo no painel de histórico; nulo com o painel fechado. */
   protected readonly historico = signal<readonly VersaoDoArquivoDto[] | null>(null);
   /** Fala enviada, mostrada enquanto a IA trabalha. */
@@ -58,6 +60,12 @@ export class Desenho2dComponent {
 
   private readonly iframe = viewChild.required<ElementRef<HTMLIFrameElement>>('cadcraft');
   private ponte: PonteCadCraft | null = null;
+  private destruido = false;
+
+  constructor() {
+    // O turno da IA continua no servidor se o joalheiro sair: a resposta é lida quando ele voltar.
+    inject(DestroyRef).onDestroy(() => (this.destruido = true));
+  }
 
   protected async iniciar(): Promise<void> {
     if (this.ponte) return;
@@ -68,6 +76,30 @@ export class Desenho2dComponent {
     ]);
     this.conversa.set(conversa);
     await this.abrir(arquivo?.conteudo ?? null, 'Abrindo o desenho da versão...');
+    if (conversa.processando) await this.aguardarIa();
+  }
+
+  /**
+   * A fala já está no servidor e a IA trabalha nela (enviada antes de sair da tela): consulta até a resposta
+   * chegar e traz o desenho se ela mudou.
+   */
+  private async aguardarIa(): Promise<void> {
+    this.pensando.set(true);
+    const anterior = this.conversa().arquivoId;
+    try {
+      while (!this.destruido) {
+        await new Promise((ok) => setTimeout(ok, INTERVALO_DE_CONSULTA_MS));
+        if (this.destruido) return;
+        const conversa = await firstValueFrom(this.ferramentas.getConversa(this.projetoId, this.numeroDaVersao, FERRAMENTA));
+        this.conversa.set(conversa);
+        if (!conversa.processando) {
+          if (conversa.arquivoId !== anterior) await this.trazerArquivo('Trazendo o desenho da IA...');
+          return;
+        }
+      }
+    } finally {
+      this.pensando.set(false);
+    }
   }
 
   protected async enviar({ texto, imagens }: FalaFerramenta): Promise<void> {
@@ -85,6 +117,7 @@ export class Desenho2dComponent {
       const conversa = await firstValueFrom(
         this.ferramentas.postConversa(this.projetoId, this.numeroDaVersao, FERRAMENTA, texto || null, imagens.map((i) => i.base64)),
       );
+      if (this.destruido) return;
       this.pendente.set(null);
       this.conversa.set(conversa);
       if (conversa.arquivoId !== anterior) {

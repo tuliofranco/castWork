@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddOptions<CadCraftOptions>().Bind(configuration.GetSection(CadCraftOptions.Secao));
         services.AddHostedService<VerificacaoCadCraft>();
         services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaClaude>();
+        services.AddMemoryCache();
+        services.AddSingleton<IPreviaFerramenta, PreviaFerramentaMcp>();
         return services;
     }
 }

@@ -11,6 +11,7 @@ namespace Castwork.Domain.Entities.Ferramentas;
 public sealed class ArquivoFerramenta : BaseEntity<long>, IAggregateRoot
 {
     public const int TamanhoMaximo = 20 * 1024 * 1024;
+    public const int NomeMaxLength = 120;
 
     private ArquivoFerramenta()
     {
@@ -23,6 +24,18 @@ public sealed class ArquivoFerramenta : BaseEntity<long>, IAggregateRoot
     public OrigemArquivo Origem { get; private set; }
 
     public DateTimeOffset CriadoEm { get; private set; }
+
+    /// <summary>
+    /// Nome dado pelo joalheiro; sem nome, a tela mostra o da ferramenta com o número (ex.: "Desenho 2D #5").
+    /// </summary>
+    public string? Nome { get; private set; }
+
+    /// <summary>
+    /// Arquivado: some da pasta e do histórico e deixa de poder ser o atual. Só arquivado pode ser apagado.
+    /// </summary>
+    public DateTimeOffset? ArquivadoEm { get; private set; }
+
+    public bool Arquivado => ArquivadoEm is not null;
 
     /// <summary>
     /// Versão sem desenho: o Desfazer da ação que criou o primeiro arquivo volta a ela.
@@ -59,4 +72,38 @@ public sealed class ArquivoFerramenta : BaseEntity<long>, IAggregateRoot
         Origem = Enum.IsDefined(origem) ? origem : throw new ValorInvalidoException(nameof(Origem), "inválida"),
         CriadoEm = em,
     };
+
+    public void Renomear(string? nome)
+        => Nome = string.IsNullOrWhiteSpace(nome) ? null : Guard.Obrigatorio(nome.Trim(), nameof(Nome), NomeMaxLength);
+
+    public void Arquivar(DateTimeOffset em)
+    {
+        if (Arquivado)
+        {
+            throw new RegraDeNegocioException("O arquivo já está arquivado.");
+        }
+
+        ArquivadoEm = em;
+    }
+
+    public void Desarquivar()
+    {
+        if (!Arquivado)
+        {
+            throw new RegraDeNegocioException("O arquivo não está arquivado.");
+        }
+
+        ArquivadoEm = null;
+    }
+
+    /// <summary>
+    /// Apagar é definitivo e só vale para arquivado: arquivar antes é a confirmação de que não faz falta.
+    /// </summary>
+    public void GarantirQuePodeApagar()
+    {
+        if (!Arquivado)
+        {
+            throw new RegraDeNegocioException("Arquive o arquivo antes de apagar.");
+        }
+    }
 }

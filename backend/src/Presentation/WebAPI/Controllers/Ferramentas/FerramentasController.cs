@@ -1,3 +1,4 @@
+using Castwork.Application.Common.Pagination;
 using Castwork.Application.Ferramentas.Commands;
 using Castwork.Application.Ferramentas.Queries;
 
@@ -83,6 +84,23 @@ public sealed class FerramentasController : ApiController
         return Ok(new IdCriado(await Mediator.Send(command, cancellationToken)));
     }
 
+    [HttpGet("arquivo/previa")]
+    [HttpGet("arquivo/historico/{arquivoId:long}/previa")]
+    [EndpointSummary("A prévia (SVG) de um arquivo (o atual, sem arquivoId); 204 se não há desenho ou prévia.")]
+    [ProducesResponseType<FileContentResult>(StatusCodes.Status200OK, "image/svg+xml")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Previa([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, [FromRoute] long? arquivoId, CancellationToken cancellationToken)
+    {
+        var previa = await Mediator.Send(new GetPreviaArquivoFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, ArquivoId = arquivoId }, cancellationToken);
+        if (previa is null)
+        {
+            return NoContent();
+        }
+
+        Response.Headers["X-Arquivo-Id"] = previa.ArquivoId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return File(previa.Svg, "image/svg+xml");
+    }
+
     [HttpGet("arquivo/historico")]
     [EndpointSummary("As versões do arquivo, da mais recente (a atual) para a mais antiga, sem o conteúdo.")]
     [ProducesResponseType<IReadOnlyList<VersaoDoArquivoDto>>(StatusCodes.Status200OK)]
@@ -108,6 +126,66 @@ public sealed class FerramentasController : ApiController
         => Ok(new ArquivoRestaurado(await Mediator.Send(
             new RestaurarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, ArquivoId = arquivoId },
             cancellationToken)));
+
+    [HttpPut("arquivo/historico/{arquivoId:long}/nome")]
+    [EndpointSummary("Renomeia o arquivo (nome vazio volta ao padrão da ferramenta).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Renomear(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromRoute] string ferramenta,
+        [FromRoute] long arquivoId,
+        [FromBody] RenomearArquivoFerramentaCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId, command.Ferramenta, command.ArquivoId) = (projetoId, versaoId, ferramenta, arquivoId);
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("arquivo/historico/{arquivoId:long}/arquivar")]
+    [EndpointSummary("Arquiva o arquivo; se era o atual, o anterior não arquivado passa a ser.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Arquivar([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, [FromRoute] long arquivoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new ArquivarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, ArquivoId = arquivoId }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("arquivo/historico/{arquivoId:long}/desarquivar")]
+    [EndpointSummary("Volta o arquivo para a pasta.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Desarquivar([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, [FromRoute] long arquivoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new DesarquivarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, ArquivoId = arquivoId }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("arquivo/historico/{arquivoId:long}")]
+    [EndpointSummary("Apaga de vez um arquivo arquivado.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApagarArquivo([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] string ferramenta, [FromRoute] long arquivoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new ApagarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = ferramenta, ArquivoId = arquivoId }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("~/api/projetos/{projetoId:long}/versoes/{versaoId:long}/ferramentas/arquivos")]
+    [EndpointSummary("Os arquivos da versão, de todas as ferramentas, do mais recente para o mais antigo (paginado).")]
+    [ProducesResponseType<ListaPaginada<ArquivoDaVersaoDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Arquivos(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromQuery] bool arquivados = false,
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamanhoPagina = 10,
+        CancellationToken cancellationToken = default)
+        => Ok(await Mediator.Send(
+            new GetArquivosDaVersaoQuery { ProjetoId = projetoId, VersaoId = versaoId, Arquivados = arquivados, Pagina = pagina, TamanhoPagina = tamanhoPagina },
+            cancellationToken));
 
     [HttpGet("~/api/projetos/{projetoId:long}/versoes/{versaoId:long}/ferramentas/imagens/{chave:guid}")]
     [EndpointSummary("Uma imagem das conversas das ferramentas da versão (anexada ou gerada pela IA).")]

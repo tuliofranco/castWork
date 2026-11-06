@@ -47,6 +47,13 @@ export class FerramentasService {
     return this.http.put<IdCriadoDto>(`${this.base(projetoId, versaoId, ferramenta)}/arquivo`, { conteudo }).pipe(map((r) => r.id));
   }
 
+  /** Prévia (SVG) do arquivo atual; nula se ainda não há desenho (204). */
+  getPrevia(projetoId: number, versaoId: number, ferramenta: string): Observable<Blob | null> {
+    return this.http
+      .get(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/previa`, { observe: 'response', responseType: 'blob' })
+      .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
+  }
+
   /** Versões do arquivo, da atual para a mais antiga (sem o conteúdo). */
   getHistorico(projetoId: number, versaoId: number, ferramenta: string): Observable<readonly VersaoDoArquivoDto[]> {
     return this.http.get<readonly VersaoDoArquivoDto[]>(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico`);

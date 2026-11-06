@@ -35,8 +35,8 @@ public sealed class ConversarFerramentaCommandHandler(IUnitOfWork unitOfWork, IA
     public async Task<ConversaFerramentaDto> Handle(ConversarFerramentaCommand request, CancellationToken cancellationToken)
     {
         await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var fala = string.IsNullOrWhiteSpace(request.Texto) ? null : request.Texto.Trim();
-        if (fala is null && request.Imagens.Count == 0)
+        var texto = string.IsNullOrWhiteSpace(request.Texto) ? null : request.Texto.Trim();
+        if (texto is null && request.Imagens.Count == 0)
         {
             throw new RegraDeNegocioException("Escreva uma mensagem ou anexe uma imagem.");
         }
@@ -56,13 +56,29 @@ public sealed class ConversarFerramentaCommandHandler(IUnitOfWork unitOfWork, IA
                 .ToListAsync(cancellationToken))
             .Concat(novas.Select(i => new ImagemDaConversa(i.Chave, i.Tipo, i.Conteudo)))
             .ToDictionary(i => i.Chave);
-        var historico = conversa.Mensagens.OrderBy(m => m.Ordem).Select(m => new MensagemDaConversa(m.Papel, m.Texto, m.Conteudo)).ToList();
 
-        var turno = await assistente.ConversarAsync(
-            new PedidoAFerramenta(request.Ferramenta, contexto, historico, fala, [.. novas.Select(i => i.Chave)], imagens, arquivo is { EmBranco: false } ? arquivo.Conteudo : null),
-            cancellationToken);
-
+        // A fala (e as imagens dela) vai para o banco já: quem sai da tela e volta vê a mensagem e a IA trabalhando.
+        var fala = conversa.RegistrarFala(texto, [.. novas.Select(i => i.Chave)], agora);
         novas.ForEach(repositorioDeImagens.Adicionar);
+        await unitOfWork.SalvarAsync(cancellationToken);
+        var historico = conversa.Mensagens.Where(m => m != fala).OrderBy(m => m.Ordem).Select(m => new MensagemDaConversa(m.Papel, m.Texto, m.Conteudo)).ToList();
+
+        // Daqui em diante o turno vai até o fim mesmo que o joalheiro saia da tela: a resposta fica guardada.
+        TurnoDaFerramenta turno;
+        try
+        {
+            turno = await assistente.ConversarAsync(
+                new PedidoAFerramenta(request.Ferramenta, contexto, historico, texto, [.. novas.Select(i => i.Chave)], imagens, arquivo is { EmBranco: false } ? arquivo.Conteudo : null),
+                CancellationToken.None);
+        }
+        catch
+        {
+            conversa.DescartarFala(fala);
+            novas.ForEach(repositorioDeImagens.Remover);
+            await unitOfWork.SalvarAsync(CancellationToken.None);
+            throw;
+        }
+
         foreach (var gerada in turno.ImagensGeradas)
         {
             repositorioDeImagens.Adicionar(ImagemConversa.Criar(conversa.Id, gerada.Conteudo, agora, gerada.Chave));
@@ -73,18 +89,20 @@ public sealed class ConversarFerramentaCommandHandler(IUnitOfWork unitOfWork, IA
         {
             var novo = ArquivoFerramenta.Criar(conversa.Id, conteudo, OrigemArquivo.Ia, agora);
             unitOfWork.GetRepository<ArquivoFerramenta>().Adicionar(novo);
-            await unitOfWork.SalvarAsync(cancellationToken);
+            await unitOfWork.SalvarAsync(CancellationToken.None);
             arquivoId = novo.Id;
         }
 
-        foreach (var mensagem in turno.Mensagens)
+        // A primeira mensagem do turno é a própria fala, com o conteúdo como a IA a recebeu.
+        conversa.ConfirmarFala(fala, turno.Mensagens[0].Conteudo);
+        foreach (var mensagem in turno.Mensagens.Skip(1))
         {
             var acao = mensagem.Acao is null || turno.ArquivoNovo is null ? null : new AcaoDaIa(mensagem.Acao, arquivo?.Id ?? 0);
             conversa.RegistrarMensagem(mensagem.Papel, mensagem.Texto, mensagem.Conteudo, agora, mensagem.Imagens, acao);
         }
 
-        await unitOfWork.SalvarAsync(cancellationToken);
-        return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId);
+        await unitOfWork.SalvarAsync(CancellationToken.None);
+        return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId, processando: false);
     }
 }
 

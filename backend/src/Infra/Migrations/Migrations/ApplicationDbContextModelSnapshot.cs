@@ -813,6 +813,10 @@ namespace Castwork.Infra.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTimeOffset?>("ArquivadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("arquivado_em");
+
                     b.Property<byte[]>("Conteudo")
                         .IsRequired()
                         .HasColumnType("bytea")
@@ -825,6 +829,11 @@ namespace Castwork.Infra.Migrations
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("criado_em");
+
+                    b.Property<string>("Nome")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("nome");
 
                     b.Property<string>("Origem")
                         .IsRequired()

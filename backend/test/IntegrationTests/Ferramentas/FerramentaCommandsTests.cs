@@ -128,6 +128,78 @@ public class FerramentaCommandsTests : TesteDeIntegracao
     }
 
     [Test]
+    public async Task DeveGerarAPreviaDoArquivoAtualSoQuandoHaDesenhoAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        var consulta = new GetPreviaArquivoFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho };
+        (await AmbienteDeTeste.SendAsync(consulta)).Should().BeNull("ainda não há desenho");
+
+        var conversa = await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Desenhe o aro"));
+
+        var previa = await AmbienteDeTeste.SendAsync(consulta);
+        previa!.ArquivoId.Should().Be(conversa.ArquivoId!.Value);
+        Encoding.UTF8.GetString(previa.Svg).Should().Contain("DXF:Desenhe o aro");
+
+        var salvo = await SalvarAsync(projetoId, versaoId, "DXF:depois");
+        consulta.ArquivoId = previa.ArquivoId;
+        Encoding.UTF8.GetString((await AmbienteDeTeste.SendAsync(consulta))!.Svg).Should().Contain("DXF:Desenhe o aro", "a prévia é do arquivo pedido, não do atual");
+        salvo.Should().NotBe(previa.ArquivoId);
+    }
+
+    [Test]
+    public async Task DeveListarOsArquivosDaVersaoPaginadosSemODesenhoEmBrancoAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        var primeira = await AmbienteDeTeste.SendAsync(Conversar(projetoId, versaoId, "Desenhe o anel"));
+        await AmbienteDeTeste.SendAsync(new DesfazerAcaoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, Ordem = primeira.Mensagens[^1].Ordem });
+        for (var i = 0; i < 11; i++)
+        {
+            await SalvarAsync(projetoId, versaoId, $"DXF:{i}");
+        }
+
+        var outraVersao = await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = projetoId, Nome = "Outra" });
+        await SalvarAsync(projetoId, outraVersao, "DXF:outra");
+
+        var pagina1 = await AmbienteDeTeste.SendAsync(new GetArquivosDaVersaoQuery { ProjetoId = projetoId, VersaoId = versaoId, TamanhoPagina = 10 });
+        var pagina2 = await AmbienteDeTeste.SendAsync(new GetArquivosDaVersaoQuery { ProjetoId = projetoId, VersaoId = versaoId, TamanhoPagina = 10, Pagina = 2 });
+
+        pagina1.TotalRegistros.Should().Be(12, "11 salvos + o da IA; o em branco fica de fora");
+        pagina1.Lista.Should().HaveCount(10).And.OnlyContain(a => a.Ferramenta == Desenho);
+        pagina1.Lista.Select(a => a.Id).Should().BeInDescendingOrder();
+        pagina2.Lista.Should().HaveCount(2);
+        pagina2.Lista[^1].Origem.Should().Be(OrigemArquivo.Ia);
+    }
+
+    [Test]
+    public async Task DeveArquivarOAtualVoltandoOAnteriorEApagarSoArquivadoAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        var antigo = await SalvarAsync(projetoId, versaoId, "DXF:antigo");
+        var atual = await SalvarAsync(projetoId, versaoId, "DXF:atual");
+
+        var apagarSemArquivar = () => AmbienteDeTeste.SendAsync(new ApagarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, ArquivoId = atual });
+        await apagarSemArquivar.Should().ThrowAsync<RegraDeNegocioException>().WithMessage("*Arquive*");
+
+        await AmbienteDeTeste.SendAsync(new RenomearArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, ArquivoId = antigo, Nome = "  Proposta A  " });
+        await AmbienteDeTeste.SendAsync(new ArquivarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, ArquivoId = atual });
+
+        var arquivo = await AmbienteDeTeste.SendAsync(new GetArquivoFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho });
+        arquivo!.Id.Should().Be(antigo, "o atual arquivado deixa o anterior como atual");
+        var ativos = await AmbienteDeTeste.SendAsync(new GetArquivosDaVersaoQuery { ProjetoId = projetoId, VersaoId = versaoId });
+        ativos.Lista.Should().ContainSingle().Which.Nome.Should().Be("Proposta A");
+        var arquivados = await AmbienteDeTeste.SendAsync(new GetArquivosDaVersaoQuery { ProjetoId = projetoId, VersaoId = versaoId, Arquivados = true });
+        arquivados.Lista.Should().ContainSingle().Which.Id.Should().Be(atual);
+
+        await AmbienteDeTeste.SendAsync(new ApagarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, ArquivoId = atual });
+
+        (await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.ArquivosFerramenta.AnyAsync(a => a.Id == atual))).Should().BeFalse();
+        await AmbienteDeTeste.SendAsync(new ArquivarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, ArquivoId = antigo });
+        (await AmbienteDeTeste.SendAsync(new GetArquivoFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho })).Should().BeNull("tudo arquivado: o editor abre em branco");
+        await AmbienteDeTeste.SendAsync(new DesarquivarArquivoFerramentaCommand { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho, ArquivoId = antigo });
+        (await AmbienteDeTeste.SendAsync(new GetArquivoFerramentaQuery { ProjetoId = projetoId, VersaoId = versaoId, Ferramenta = Desenho }))!.Id.Should().Be(antigo);
+    }
+
+    [Test]
     public async Task DeveSalvarOArquivoEditadoNaTelaComoAtualAsync()
     {
         var (projetoId, versaoId) = await VersaoAsync();

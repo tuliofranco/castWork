@@ -53,6 +53,8 @@ public sealed class CastworkWebApplicationFactory(
             services.AddScoped<IGeradorDocumentoBriefing, GeradorDocumentoBriefingDeTeste>();
             services.RemoveAll<IAssistenteFerramenta>();
             services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaDeTeste>();
+            services.RemoveAll<IPreviaFerramenta>();
+            services.AddSingleton<IPreviaFerramenta, PreviaFerramentaDeTeste>();
 
             // Requisição HTTP autenticada: sessão real, lida do JWT. Fora disso (SendAsync): sessão de teste.
             services.RemoveAll<ISessaoService>();

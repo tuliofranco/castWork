@@ -52,5 +52,8 @@ internal static class Desenho2d
         FerramentasQueAlteram: new HashSet<string> { "command_line", "script", "execute" },
         AbrirArquivo: caminho => ("open", JsonSerializer.Serialize(new { path = caminho })),
         NovoArquivo: ("new_drawing", JsonSerializer.Serialize(new { metric = true })),
-        SalvarArquivo: caminho => ("save", JsonSerializer.Serialize(new { path = caminho })));
+        SalvarArquivo: caminho => ("save", JsonSerializer.Serialize(new { path = caminho })),
+
+        // Salvar com extensão .svg exporta o desenho (ajustado à extensão dele) sem mudar o arquivo.
+        ExportarPrevia: caminho => ("save", JsonSerializer.Serialize(new { path = caminho })));
 }

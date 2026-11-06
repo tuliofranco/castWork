@@ -28,21 +28,27 @@ public sealed class DesfazerAcaoFerramentaCommandHandler(IUnitOfWork unitOfWork,
         var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.VersaoId, request.Ferramenta, cancellationToken)
             ?? throw new EntidadeNaoEncontradaException("Conversa", request.Ferramenta);
 
+        var agora = relogio.GetUtcNow();
+        if (conversa.AguardandoIa(agora))
+        {
+            throw new RegraDeNegocioException("Espere a IA terminar antes de desfazer.");
+        }
+
         var antesId = conversa.DesfazerAcao(request.Ordem);
         var arquivos = unitOfWork.GetRepository<ArquivoFerramenta>();
-        var agora = relogio.GetUtcNow();
 
         // Sem arquivo de antes (a ação criou o primeiro), volta ao desenho em branco. Nada é apagado: o que
         // o joalheiro salvou depois continua no histórico.
         var restaurado = antesId > 0
-            ? (await arquivos.FindBy(a => a.Id == antesId && a.ConversaId == conversa.Id).AsNoTracking().SingleAsync(cancellationToken))
+            ? (await arquivos.FindBy(a => a.Id == antesId && a.ConversaId == conversa.Id).AsNoTracking().SingleOrDefaultAsync(cancellationToken)
+                    ?? throw new RegraDeNegocioException("O desenho de antes desta ação foi apagado: não dá para desfazer."))
                 .Copiar(OrigemArquivo.Desfazer, agora)
             : ArquivoFerramenta.EmBrancoPara(conversa.Id, agora);
         arquivos.Adicionar(restaurado);
         await unitOfWork.SalvarAsync(cancellationToken);
         var arquivoId = restaurado.EmBranco ? null : (long?)restaurado.Id;
 
-        return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId);
+        return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId, processando: false);
     }
 }
 
