@@ -22,14 +22,14 @@ export const routes: CastworkRoute[] = [
     path: 'projetos/:id/versoes/:versaoId/desenho-2d',
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D', permissoes: ['projetos.ler'] },
-    loadComponent: () => import('@modules/projetos/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
+    loadComponent: () => import('@modules/ferramentas/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
   },
   {
     // O briefing é a ferramenta do projeto que escreve o documento: tela de foco, como o desenho 2D.
     path: 'projetos/:id/briefing',
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Briefing', permissoes: ['projetos.ler'] },
-    loadComponent: () => import('@modules/projetos/briefing/briefing.component').then((m) => m.BriefingComponent),
+    loadComponent: () => import('@modules/ferramentas/briefing/briefing.component').then((m) => m.BriefingComponent),
   },
   {
     path: '',

@@ -1,8 +1,7 @@
 using Castwork.Application.Abstractions;
-using Castwork.Infra.IA.Briefing;
-using Castwork.Infra.IA.CadCraft;
-using Castwork.Infra.IA.Conversa;
-using Castwork.Infra.IA.Ferramentas;
+using Castwork.Infra.IA.Assistente;
+using Castwork.Infra.IA.Assistente.Conversa;
+using Castwork.Infra.IA.Ferramentas.Desenho2d;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,16 +11,25 @@ namespace Castwork.Infra.IA;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Sem chave configurada a API sobe normalmente; só o briefing e as ferramentas respondem 503 até a
-    /// chave existir. O mesmo vale para o CADCraft: sem ele, só o desenho 2D fica indisponível.
+    /// O Assistente (a conversa com a IA) e o lado da IA de cada ferramenta. Sem chave configurada a API sobe
+    /// normalmente; só as ferramentas respondem 503 até a chave existir. Sem o CADCraft, só o desenho 2D fica
+    /// indisponível.
     /// </summary>
     public static IServiceCollection AddIa(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<AnthropicOptions>().Bind(configuration.GetSection(AnthropicOptions.Secao));
 
-        services.AddOptions<CadCraftOptions>().Bind(configuration.GetSection(CadCraftOptions.Secao));
-        services.AddHostedService<VerificacaoCadCraft>();
         services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaClaude>();
+
+        // Cada ferramenta registra o seu lado da IA (Ferramentas/<Nome>); o Assistente as descobre.
+        var ferramentas = typeof(DependencyInjection).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IFerramentaNaIa).IsAssignableFrom(t));
+        foreach (var ferramenta in ferramentas)
+        {
+            services.AddSingleton(typeof(IFerramentaNaIa), ferramenta);
+        }
+
+        services.AddDesenho2d(configuration);
         services.AddSingleton<IPainelDoTurno, PainelDoTurnoEmMemoria>();
         services.AddMemoryCache();
         services.AddSingleton<IPreviaFerramenta, PreviaFerramentaMcp>();

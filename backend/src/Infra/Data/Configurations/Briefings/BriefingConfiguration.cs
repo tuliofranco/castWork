@@ -1,4 +1,4 @@
-using Castwork.Domain.Entities.Briefings;
+using Castwork.Domain.Entities.Ferramentas.Briefings;
 using Castwork.Domain.Entities.Projetos;
 
 using Microsoft.EntityFrameworkCore;

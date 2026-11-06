@@ -1,3 +1,4 @@
+using Castwork.Application.Assistente;
 using Castwork.Infra.Documentos;
 using Castwork.Infra.FluentValidation;
 using Castwork.Infra.Hosting.Autenticacao;
@@ -29,7 +30,25 @@ public static class DependencyInjection
 
         services.AddIa(configuration);
         services.AddDocumentos(configuration);
+        services.AddFerramentasDoAssistente();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Cada ferramenta se registra no Assistente pela sua implementação de <see cref="IFerramentaComIa"/>, na
+    /// Application (<c>Ferramentas/&lt;Nome&gt;</c>): ferramenta nova entra sem mexer aqui nem no Assistente.
+    /// </summary>
+    private static IServiceCollection AddFerramentasDoAssistente(this IServiceCollection services)
+    {
+        var ferramentas = typeof(Application.AssemblyReference).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IFerramentaComIa).IsAssignableFrom(t));
+        foreach (var ferramenta in ferramentas)
+        {
+            services.AddScoped(typeof(IFerramentaComIa), ferramenta);
+        }
+
+        services.AddScoped<CatalogoDeFerramentas>();
         return services;
     }
 }

@@ -1,4 +1,4 @@
-import type { TipoJoia } from '@data/projetos/briefing/dto/briefing.dto';
+import type { TipoJoia } from '@data/ferramentas/briefing/dto/briefing.dto';
 
 export const TIPOS_JOIA: readonly { readonly valor: TipoJoia; readonly rotulo: string }[] = [
   { valor: 'Anel', rotulo: 'Anel' },

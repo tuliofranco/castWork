@@ -6,7 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { PecaDto } from '@data/pecas/pecas/dto/peca.dto';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
-import { BriefingService } from '@data/projetos/briefing/briefing.service';
+import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
 import type { ItemComposicaoDto, VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { formatarTeor, iconeTipoPeca, rotuloTipoPeca } from '@shared/pecas/tipo-peca';

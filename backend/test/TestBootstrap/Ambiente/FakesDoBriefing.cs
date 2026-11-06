@@ -2,7 +2,7 @@ using System.Text.Json;
 
 using Castwork.Application.Abstractions;
 using Castwork.Application.Common.Exceptions;
-using Castwork.Domain.Entities.Briefings;
+using Castwork.Domain.Entities.Ferramentas.Briefings;
 
 namespace Castwork.TestBootstrap.Ambiente;
 
