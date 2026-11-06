@@ -32,4 +32,26 @@ export interface VersaoDoArquivoDto {
   readonly origem: OrigemArquivo;
   readonly criadoEm: string;
   readonly tamanho: number;
+  readonly nome: string | null;
+}
+
+/** Um arquivo da pasta da versão (de qualquer ferramenta). */
+export interface ArquivoDaVersaoDto {
+  readonly id: number;
+  /** Código da ferramenta (`desenho-2d`). */
+  readonly ferramenta: string;
+  readonly origem: OrigemArquivo;
+  readonly criadoEm: string;
+  readonly tamanho: number;
+  /** Nome dado pelo joalheiro; nulo usa o padrão da ferramenta. */
+  readonly nome: string | null;
+  readonly arquivadoEm: string | null;
+}
+
+export interface ListaDeArquivosDto {
+  readonly lista: readonly ArquivoDaVersaoDto[];
+  readonly pagina: number;
+  readonly tamanhoPagina: number;
+  readonly totalRegistros: number;
+  readonly totalPaginas: number;
 }

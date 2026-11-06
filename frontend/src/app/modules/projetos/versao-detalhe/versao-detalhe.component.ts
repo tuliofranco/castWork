@@ -18,7 +18,7 @@ import { SeloComponent } from '@shared/ui/selo.component';
 import { type Observable, debounceTime, distinctUntilChanged, finalize, of } from 'rxjs';
 
 import { STATUS_VERSAO } from '../status-versao';
-import { PreviaDesenhoComponent } from './previa-desenho.component';
+import { ArquivosVersaoComponent } from './arquivos-versao.component';
 import { EtapasVersaoComponent } from './etapas-versao.component';
 
 /**
@@ -27,7 +27,7 @@ import { EtapasVersaoComponent } from './etapas-versao.component';
  */
 @Component({
   selector: 'cw-versao-detalhe',
-  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, PreviaDesenhoComponent],
+  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent],
   templateUrl: './versao-detalhe.component.html',
   styleUrl: './versao-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

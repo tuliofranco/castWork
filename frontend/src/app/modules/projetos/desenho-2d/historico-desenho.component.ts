@@ -136,6 +136,6 @@ export class HistoricoDesenhoComponent {
   }
 
   protected rotulo(versao: VersaoDoArquivoDto): string {
-    return versao.tamanho === 0 ? 'Desenho em branco' : ROTULOS[versao.origem];
+    return versao.tamanho === 0 ? 'Desenho em branco' : (versao.nome ?? ROTULOS[versao.origem]);
   }
 }

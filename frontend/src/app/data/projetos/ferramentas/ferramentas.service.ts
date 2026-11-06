@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import type { IdCriadoDto } from '@data/common/http/id-criado.dto';
 import { type Observable, map } from 'rxjs';
 
-import type { ConversaFerramentaDto, VersaoDoArquivoDto } from './dto/ferramenta.dto';
+import type { ConversaFerramentaDto, ListaDeArquivosDto, VersaoDoArquivoDto } from './dto/ferramenta.dto';
 
 /** Arquivo de trabalho da ferramenta: conteúdo e a versão (Id) dele. */
 export interface ArquivoFerramenta {
@@ -47,10 +47,10 @@ export class FerramentasService {
     return this.http.put<IdCriadoDto>(`${this.base(projetoId, versaoId, ferramenta)}/arquivo`, { conteudo }).pipe(map((r) => r.id));
   }
 
-  /** Prévia (SVG) do arquivo atual; nula se ainda não há desenho (204). */
-  getPrevia(projetoId: number, versaoId: number, ferramenta: string): Observable<Blob | null> {
+  /** Prévia (SVG) de um arquivo do histórico; nula se não há prévia (204). */
+  getPrevia(projetoId: number, versaoId: number, ferramenta: string, arquivoId: number): Observable<Blob | null> {
     return this.http
-      .get(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/previa`, { observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}/previa`, { observe: 'response', responseType: 'blob' })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 
@@ -71,6 +71,29 @@ export class FerramentasService {
     return this.http
       .post<{ arquivoId: number | null }>(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}/restaurar`, null)
       .pipe(map((r) => r.arquivoId));
+  }
+
+  /** Os arquivos da versão, de todas as ferramentas, do mais recente para o mais antigo. */
+  getArquivosDaVersao(projetoId: number, versaoId: number, arquivados: boolean, pagina: number, tamanhoPagina: number): Observable<ListaDeArquivosDto> {
+    return this.http.get<ListaDeArquivosDto>(`projetos/${projetoId}/versoes/${versaoId}/ferramentas/arquivos`, { params: { arquivados, pagina, tamanhoPagina } });
+  }
+
+  /** Nome vazio volta ao padrão da ferramenta. */
+  putNomeDoArquivo(projetoId: number, versaoId: number, ferramenta: string, arquivoId: number, nome: string | null): Observable<void> {
+    return this.http.put(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}/nome`, { nome }).pipe(map(() => undefined));
+  }
+
+  postArquivar(projetoId: number, versaoId: number, ferramenta: string, arquivoId: number): Observable<void> {
+    return this.http.post(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}/arquivar`, null).pipe(map(() => undefined));
+  }
+
+  postDesarquivar(projetoId: number, versaoId: number, ferramenta: string, arquivoId: number): Observable<void> {
+    return this.http.post(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}/desarquivar`, null).pipe(map(() => undefined));
+  }
+
+  /** Definitivo; só para arquivado. */
+  deleteArquivo(projetoId: number, versaoId: number, ferramenta: string, arquivoId: number): Observable<void> {
+    return this.http.delete(`${this.base(projetoId, versaoId, ferramenta)}/arquivo/historico/${arquivoId}`).pipe(map(() => undefined));
   }
 
   /** Caminho da API de uma imagem das conversas da versão (para `cw-imagem-protegida`). */
