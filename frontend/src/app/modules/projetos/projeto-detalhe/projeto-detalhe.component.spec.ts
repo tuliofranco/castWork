@@ -55,19 +55,19 @@ describe('ProjetoDetalheComponent', () => {
   it('deve listar só as versões não arquivadas e mostrá-las sob demanda', async () => {
     const { el, estabilizar } = await abrir();
 
-    expect(versoes(el)).toEqual(['v2 | Com pedra | Em desenvolvimento', 'v1 | Versão 1 | Publicada']);
+    expect(versoes(el)).toEqual(['1 | Versão 1 | Publicada', '2 | Com pedra | Em desenvolvimento']);
 
     botao(el, 'Mostrar arquivadas (1)')!.click();
     await estabilizar();
 
-    expect(versoes(el)[0]).toBe('v3 | Rascunho | Arquivada');
+    expect(versoes(el)[2]).toBe('3 | Rascunho | Arquivada');
   });
 
   it('deve oferecer publicar e arquivar só na versão em desenvolvimento, e desarquivar na arquivada', async () => {
     const { el, estabilizar } = await abrir();
     botao(el, 'Mostrar arquivadas')!.click();
     await estabilizar();
-    const [arquivada, emDesenvolvimento, publicada] = [...el.querySelectorAll('.versao .acoes')].map((a) => a.textContent?.replace(/\s+/g, ' ').trim());
+    const [publicada, emDesenvolvimento, arquivada] = [...el.querySelectorAll('.versao .acoes')].map((a) => a.textContent?.replace(/\s+/g, ' ').trim());
 
     el.querySelector<HTMLButtonElement>('[aria-label="Arquivar versão 2"]')!.click();
     botao(el, 'Desarquivar')!.click();
@@ -79,13 +79,19 @@ describe('ProjetoDetalheComponent', () => {
     expect(servico.postDesarquivarVersao).toHaveBeenCalledWith(1, 23);
   });
 
-  it('deve criar uma versão e abrir a página dela', async () => {
+  it('deve criar uma versão com o nome dado e abrir a página dela', async () => {
     const { el, estabilizar } = await abrir();
 
     botao(el, 'Nova versão')!.click();
     await estabilizar();
+    const nome = el.querySelector<HTMLInputElement>('#nome-versao')!;
+    nome.value = 'Com safira';
+    nome.dispatchEvent(new Event('input'));
+    await estabilizar();
+    botao(el, 'Criar')!.click();
+    await estabilizar();
 
-    expect(servico.postVersao).toHaveBeenCalledWith(1, { nome: 'Versão 4' });
+    expect(servico.postVersao).toHaveBeenCalledWith(1, { nome: 'Com safira' });
     expect(TestBed.inject(Router).url).toBe('/projetos/1/versoes/24');
   });
 
