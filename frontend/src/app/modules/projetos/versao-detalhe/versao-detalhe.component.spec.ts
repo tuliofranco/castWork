@@ -73,11 +73,11 @@ describe('VersaoDetalheComponent', () => {
   it('deve mostrar a versão em desenvolvimento com a biblioteca e voltar para o projeto', async () => {
     const { el } = await abrir('21');
 
-    expect(el.querySelector('h1')!.textContent).toBe('v2 · Com pedra');
+    expect(el.querySelector('h1')!.textContent).toBe('2. Com pedra');
     expect(el.querySelector('.voltar')!.textContent).toContain('Colar Raízes');
     expect(el.querySelector('.voltar')!.getAttribute('href')).toBe('/projetos/1');
     expect(el.querySelector('.area')!.classList).toContain('com-biblioteca');
-    expect(botao(el, 'Publicar versão')!.disabled).toBe(true);
+    expect(botao(el, 'Publicar versão')!.disabled).toBe(false);
   });
 
   it('deve adicionar a peça com a quantidade escolhida no stepper', async () => {
