@@ -7,6 +7,7 @@ com a IA pelo [Assistente](../Assistente/README.md).
 |---|---|---|---|
 | [Briefing](Briefings/README.md) | `briefing` | Projeto | Ferramentas locais (`atualizar_briefing`, `gerar_pdf`) |
 | [Desenho 2D](Desenho2d/README.md) | `desenho-2d` | Versão | MCP do CADCraft (`cadcraft-cli mcp`) |
+| [Modelo 3D](Modelo3d/README.md) | `modelo-3d` | Versão | MCP do SolidCraft (`solidcraft-cli mcp`) |
 
 ## Como adicionar uma ferramenta
 1. **Domain** (se tiver estado próprio): `Domain/Entities/Ferramentas/<Nome>`.

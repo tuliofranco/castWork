@@ -27,3 +27,10 @@ O escopo vem da rota. A validação recusa uma ferramenta do projeto chamada pel
 ## Regra
 O Assistente nunca depende de `Ferramentas.*`. Isso é garantido por
 `test/ArchTests/ContextosDasFerramentasTests.cs`.
+
+## Anexos "Do projeto"
+Além das imagens, a fala pode levar até 3 arquivos do projeto (`ConversarFerramentaCommand.Anexos`). Quem
+oferece arquivos implementa `IFonteDeAnexos` (registrada por varredura): o Assistente traz os arquivos atuais
+das ferramentas (`arquivo`) e o Briefing, o último PDF (`briefing`). A mensagem guarda só a referência
+(`AnexoDaMensagem`); a Infra grava o arquivo na pasta do turno (ferramentas com MCP) ou manda o PDF como
+documento, só naquele turno.

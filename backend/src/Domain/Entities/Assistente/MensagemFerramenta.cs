@@ -44,6 +44,11 @@ public sealed class MensagemFerramenta : BaseEntity<long>
     public IReadOnlyList<Guid> Imagens { get; private set; } = [];
 
     /// <summary>
+    /// Arquivos do projeto anexados à fala (o DXF do desenho 2D, o PDF do briefing).
+    /// </summary>
+    public IReadOnlyList<AnexoDaMensagem> Anexos { get; private set; } = [];
+
+    /// <summary>
     /// O que a IA mudou no arquivo neste turno; nulo quando ela só conversou.
     /// </summary>
     public AcaoDaIa? Acao { get; private set; }
@@ -73,6 +78,8 @@ public sealed class MensagemFerramenta : BaseEntity<long>
         Passos = detalhes.Passos.ToList();
         Tokens = detalhes.Tokens;
     }
+
+    internal void DefinirAnexos(IReadOnlyList<AnexoDaMensagem> anexos) => Anexos = anexos.ToList();
 
     internal void MarcarDesfeita() => AcaoDesfeita = true;
 

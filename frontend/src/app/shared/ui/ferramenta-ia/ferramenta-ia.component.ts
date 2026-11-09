@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, ElementRef, afterRenderEffect, effect, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterRenderEffect, effect, input, output, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { AnexosImagemComponent } from '../anexos-imagem/anexos-imagem.component';
 import { ImagemProtegidaComponent } from '../imagem-protegida.component';
 import { type AndamentoDoTurno, AndamentoIaComponent } from './andamento-ia.component';
+import { ESCOLHA_PADRAO, ESFORCOS, escolhaPadrao, type EscolhaDaIa, EscolhaIaComponent, type EsforcoIa, MODELOS, type ModeloIa } from './escolha-ia.component';
+import { type ArquivoDoProjeto, ArquivosDoProjetoComponent, chaveDoArquivo } from './arquivos-do-projeto.component';
 import type { ImagemAnexada } from '../anexos-imagem/preparar-imagem';
 
 /** Uma fala do chat. `acao` é o que a IA executou pelo MCP, mostrado como cartão com desfazer. */
@@ -19,6 +21,8 @@ export interface MensagemFerramenta {
   readonly pensamento?: string | null;
   readonly passos?: readonly string[] | null;
   readonly tokens?: number | null;
+  /** Nomes dos arquivos do projeto anexados à fala. */
+  readonly anexos?: readonly string[];
 }
 
 /** Um chat da conversa, na lista de conversas anteriores. */
@@ -34,11 +38,21 @@ export interface ChatDaConversa {
 export interface FalaFerramenta {
   readonly texto: string;
   readonly imagens: readonly ImagemAnexada[];
+  /** Arquivos do projeto anexados ("Do projeto"). */
+  readonly arquivos: readonly ArquivoDoProjeto[];
+  /** Escolha do joalheiro no chat; a abertura vai sem (o padrão do servidor). */
+  readonly modelo?: ModeloIa;
+  readonly esforco?: EsforcoIa;
 }
+
+
+/** Até quantos arquivos do projeto por mensagem (o mesmo limite da API). */
+const ARQUIVOS_POR_MENSAGEM = 3;
 
 const LARGURA_PADRAO = 416;
 const LARGURA_MINIMA = 288;
 const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
+const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
 
 /**
  * Tela padrão das ferramentas com IA: barra fina no topo (voltar, nome, ações e ⋯ com o histórico),
@@ -48,7 +62,7 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
  */
 @Component({
   selector: 'cw-ferramenta-ia',
-  imports: [FormsModule, RouterLink, AnexosImagemComponent, ImagemProtegidaComponent, AndamentoIaComponent],
+  imports: [FormsModule, RouterLink, AnexosImagemComponent, ArquivosDoProjetoComponent, ImagemProtegidaComponent, AndamentoIaComponent, EscolhaIaComponent],
   template: `
     <header class="barra">
       <a class="voltar" [routerLink]="voltarPara()" [attr.aria-label]="'Voltar para ' + voltarRotulo()">
@@ -131,6 +145,9 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
           </div>
         }
         <ol class="conversa" aria-live="polite">
+          @if (mensagens().length === 0 && boasVindas()) {
+            <li class="fala fala-assistente"><p>{{ boasVindas() }}</p></li>
+          }
           @for (m of mensagens(); track m.id) {
             <li class="fala" [class]="'fala-' + m.papel">
               @if (m.imagens?.length) {
@@ -139,6 +156,13 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
                     <cw-imagem-protegida [src]="src" [rotulo]="m.papel === 'joalheiro' ? 'Imagem enviada' : 'O desenho como a IA viu'" />
                   }
                 </div>
+              }
+              @if (m.anexos?.length) {
+                <ul class="arquivos-anexados">
+                  @for (nome of m.anexos; track $index) {
+                    <li><i class="bi bi-paperclip" aria-hidden="true"></i> {{ nome }}</li>
+                  }
+                </ul>
               }
               @if (m.texto) {
                 <p>{{ m.texto }}</p>
@@ -182,9 +206,40 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
         </ol>
         <form class="entrada" (ngSubmit)="enviarFala()" (dragover)="$event.preventDefault()" (drop)="soltar($event, anexador)">
           <cw-anexos-imagem #anexador class="anexos" [(imagens)]="anexos" />
-          <button type="button" class="btn btn-sutil btn-icone" aria-label="Anexar imagem" title="Anexar imagem" [disabled]="pensando()" (click)="anexador.escolher()">
-            <i class="bi bi-paperclip" aria-hidden="true"></i>
-          </button>
+          @if (arquivos().length > 0) {
+            <ul class="anexos arquivos-anexados">
+              @for (a of arquivos(); track chaveDoArquivo(a)) {
+                <li>
+                  <i class="bi bi-paperclip" aria-hidden="true"></i> {{ a.nome }}
+                  <button type="button" class="remover" [attr.aria-label]="'Remover ' + a.nome" (click)="removerArquivo(a)"><i class="bi bi-x" aria-hidden="true"></i></button>
+                </li>
+              }
+            </ul>
+          }
+          <div class="anexar">
+            <button
+              type="button"
+              class="btn btn-sutil btn-icone"
+              aria-label="Anexar"
+              title="Anexar"
+              aria-haspopup="menu"
+              [attr.aria-expanded]="menuAnexoAberto()"
+              [disabled]="pensando()"
+              (click)="anexar(anexador)"
+            >
+              <i class="bi bi-paperclip" aria-hidden="true"></i>
+            </button>
+            @if (menuAnexoAberto()) {
+              <div class="menu-painel" role="menu">
+                <button type="button" role="menuitem" (click)="menuAnexoAberto.set(false); anexador.escolher()">
+                  <i class="bi bi-laptop" aria-hidden="true"></i> Do computador
+                </button>
+                <button type="button" role="menuitem" (click)="abrirArquivosDoProjeto()">
+                  <i class="bi bi-folder2-open" aria-hidden="true"></i> Do projeto
+                </button>
+              </div>
+            }
+          </div>
           <label class="visually-hidden" for="fala-ferramenta">Mensagem para o assistente</label>
           <textarea
             id="fala-ferramenta"
@@ -196,12 +251,21 @@ const CHAVE_LARGURA = 'castwork.ferramenta-ia.largura-chat';
             (keydown)="tecla($event)"
             (paste)="anexador.colar($event)"
           ></textarea>
-          <button type="submit" class="btn btn-primary btn-icone" aria-label="Enviar" [disabled]="(!fala.trim() && anexos().length === 0) || pensando()">
+          <button type="submit" class="btn btn-primary btn-icone" aria-label="Enviar" [disabled]="(!fala.trim() && anexos().length === 0 && arquivos().length === 0) || pensando()">
             <i class="bi bi-arrow-up" aria-hidden="true"></i>
           </button>
+          <cw-escolha-ia [desabilitado]="pensando()" [escolha]="escolha()" (escolhaChange)="escolher($event)" />
         </form>
       </aside>
     </div>
+
+    <cw-arquivos-do-projeto
+      [arquivos]="arquivosDisponiveis()"
+      [anexados]="arquivos()"
+      [maximo]="arquivosPorMensagem"
+      (escolher)="adicionarArquivos($event)"
+      (fechado)="arquivosDisponiveis.set(null)"
+    />
 
     <dialog #historico class="historico" aria-labelledby="titulo-historico" (close)="fecharChats.emit()">
       <header>
@@ -248,6 +312,12 @@ export class FerramentaIaComponent {
 
   /** Lista de conversas anteriores; com valor, o modal fica aberto. */
   readonly chats = input<readonly ChatDaConversa[] | null>(null);
+  /** Lista os arquivos do projeto para anexar ("Do projeto"); sem ela, anexar só abre o seletor de imagens. */
+  readonly listarArquivosDoProjeto = input<(() => Promise<readonly ArquivoDoProjeto[]>) | null>(null);
+  /** Mensagem fixa do assistente enquanto o chat está vazio (não vai para a IA nem para o banco). */
+  readonly boasVindas = input<string | null>(null);
+  /** Código da ferramenta: o modelo e o esforço escolhidos ficam lembrados por ferramenta neste navegador. */
+  readonly ferramenta = input('');
 
   protected readonly menuAberto = signal(false);
   /** No tablet em pé o assistente vira gaveta; deitado ou no computador fica sempre aberto. */
@@ -260,12 +330,25 @@ export class FerramentaIaComponent {
   /** Largura do assistente em px, arrastando a borda esquerda; lembrada neste navegador. */
   protected readonly largura = signal(lerLarguraSalva());
   protected readonly anexos = signal<readonly ImagemAnexada[]>([]);
+  protected readonly arquivos = signal<readonly ArquivoDoProjeto[]>([]);
+  /** Lista do "Do projeto"; com valor, o modal fica aberto. */
+  protected readonly arquivosDisponiveis = signal<readonly ArquivoDoProjeto[] | null>(null);
+  protected readonly menuAnexoAberto = signal(false);
+  protected readonly arquivosPorMensagem = ARQUIVOS_POR_MENSAGEM;
+  protected readonly escolha = signal<EscolhaDaIa>(ESCOLHA_PADRAO);
+  protected readonly chaveDoArquivo = chaveDoArquivo;
   protected fala = '';
 
   private readonly historico = viewChild.required<ElementRef<HTMLDialogElement>>('historico');
   private readonly fim = viewChild.required<ElementRef<HTMLElement>>('fim');
 
   constructor() {
+    // Cada ferramenta lembra o próprio modelo e esforço.
+    effect(() => {
+      const ferramenta = this.ferramenta();
+      untracked(() => this.escolha.set(lerEscolhaSalva(ferramenta)));
+    });
+
     // O modal das conversas abre quando a lista chega e fecha quando ela some.
     effect(() => {
       const dialogo = this.historico().nativeElement;
@@ -353,15 +436,43 @@ export class FerramentaIaComponent {
 
   protected enviarFala(): void {
     const texto = this.fala.trim();
-    if ((!texto && this.anexos().length === 0) || this.pensando()) return;
-    this.enviar.emit({ texto, imagens: this.anexos() });
+    if ((!texto && this.anexos().length === 0 && this.arquivos().length === 0) || this.pensando()) return;
+    this.enviar.emit({ texto, imagens: this.anexos(), arquivos: this.arquivos(), ...this.escolha() });
     this.fala = '';
     this.anexos.set([]);
+    this.arquivos.set([]);
+  }
+
+  /** Com "Do projeto" disponível, o clipe abre o menu; sem, vai direto ao seletor de imagens. */
+  protected anexar(anexador: AnexosImagemComponent): void {
+    if (this.listarArquivosDoProjeto()) this.menuAnexoAberto.update((aberto) => !aberto);
+    else anexador.escolher();
+  }
+
+  protected async abrirArquivosDoProjeto(): Promise<void> {
+    this.menuAnexoAberto.set(false);
+    const listar = this.listarArquivosDoProjeto();
+    if (!listar) return;
+    const anexados = new Set(this.arquivos().map(chaveDoArquivo));
+    this.arquivosDisponiveis.set((await listar()).filter((a) => !anexados.has(chaveDoArquivo(a))));
+  }
+
+  protected adicionarArquivos(escolhidos: readonly ArquivoDoProjeto[]): void {
+    this.arquivos.update((lista) => [...lista, ...escolhidos].slice(0, ARQUIVOS_POR_MENSAGEM));
+  }
+
+  protected removerArquivo(arquivo: ArquivoDoProjeto): void {
+    this.arquivos.update((lista) => lista.filter((a) => chaveDoArquivo(a) !== chaveDoArquivo(arquivo)));
   }
 
   /** Entre o mínimo útil para ler o chat e 70% da tela, para a área de trabalho não sumir. */
   private definirLargura(px: number): void {
     this.largura.set(Math.round(Math.min(Math.max(px, LARGURA_MINIMA), window.innerWidth * 0.7)));
+  }
+
+  protected escolher(escolha: EscolhaDaIa): void {
+    this.escolha.set(escolha);
+    salvarEscolha(this.ferramenta(), this.escolha());
   }
 
   protected tecla(evento: KeyboardEvent): void {
@@ -384,6 +495,27 @@ function lerLarguraSalva(): number {
 function salvarLargura(px: number): void {
   try {
     localStorage.setItem(CHAVE_LARGURA, String(px));
+  } catch {
+    // Sem armazenamento (aba privada): vale só nesta visita.
+  }
+}
+
+function lerEscolhaSalva(ferramenta: string): EscolhaDaIa {
+  const padrao = escolhaPadrao(ferramenta);
+  try {
+    const salva = JSON.parse(localStorage.getItem(CHAVE_ESCOLHA + ferramenta) ?? 'null') as Partial<EscolhaDaIa> | null;
+    return {
+      modelo: MODELOS.find((m) => m.valor === salva?.modelo)?.valor ?? padrao.modelo,
+      esforco: ESFORCOS.find((e) => e.valor === salva?.esforco)?.valor ?? padrao.esforco,
+    };
+  } catch {
+    return padrao;
+  }
+}
+
+function salvarEscolha(ferramenta: string, escolha: EscolhaDaIa): void {
+  try {
+    localStorage.setItem(CHAVE_ESCOLHA + ferramenta, JSON.stringify(escolha));
   } catch {
     // Sem armazenamento (aba privada): vale só nesta visita.
   }

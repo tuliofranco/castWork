@@ -1,0 +1,61 @@
+:host {
+  display: block;
+}
+
+.prancheta {
+  position: absolute;
+  inset: 0;
+  background: #22282f;
+
+  // Os dois ficam montados (o de trás precisa rodar para abrir o projeto); só o ativo aparece e recebe toque.
+  iframe {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+
+    &.ativo {
+      z-index: 1;
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+// Aviso discreto no topo do modelo: o SolidCraft continua livre para zoom e navegação.
+.aviso-ia {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100% - 2rem);
+  margin: 0;
+  padding: 0.375rem 0.875rem;
+  border-radius: 999px;
+  background: rgb(20 24 28 / 0.88);
+  color: #e6e6e6;
+  font-size: 0.8125rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+// Aviso por cima do SolidCraft enquanto o projeto é trocado: o joalheiro não modela num arquivo que vai sumir.
+.sincronizando {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0;
+  background: rgb(34 40 47 / 0.72);
+  color: #e6e6e6;
+}

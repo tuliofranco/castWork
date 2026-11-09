@@ -59,5 +59,8 @@ internal sealed class BriefingNaIa : IFerramentaNaIa
         NovoArquivo: (string.Empty, "{}"),
         SalvarArquivo: _ => (string.Empty, "{}"),
         SemMcp: true,
-        Abertura: Abertura);
+        Abertura: Abertura,
+
+        // Só conversa e formulário: o Haiku dá conta e custa bem menos. O joalheiro pode trocar no chat.
+        ModeloPadrao: "haiku");
 }

@@ -13,6 +13,9 @@ internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerrame
 {
     public const string Codigo = "desenho-2d";
 
+    public const int LarguraMaxima = 768;
+    public const int AlturaMaxima = 480;
+
     /// <summary>
     /// Fixas (para o cache do prompt); o contexto da versão vai num segundo bloco.
     /// </summary>
@@ -28,8 +31,12 @@ internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerrame
         Eixos, Textos). Cote as medidas que importam para a bancada. Para várias vistas da peça (frontal,
         lateral, superior), alinhe as vistas como num desenho técnico e identifique cada uma com um texto.
 
-        Antes de responder, confira o resultado com `inspect_drawing` ou `query_entities` e olhe o desenho
-        com `render`. Se algo ficou errado, corrija antes de responder.
+        Depois de cada alteração, o resultado já traz "Desenho agora:" com as entidades, a extensão e as camadas:
+        confira por ele. Para coordenadas e medidas exatas use `query_entities` ou `inspect_drawing`. O
+        joalheiro recebe uma imagem do desenho com a sua resposta, então não use `render` só para mostrar. Use
+        `render` apenas quando precisar julgar o desenho visualmente (proporção, alinhamento das vistas, cotas
+        sobrepostas), de preferência com `window` na região que importa. Se algo ficou errado, corrija antes de
+        responder. Agrupe o trabalho em poucas chamadas.
 
         O joalheiro pode anexar fotos e croquis: use como referência de forma e proporção, e pergunte as
         medidas que a imagem não dá (não invente medidas). Use o contexto da versão (briefing e composição)
@@ -64,5 +71,39 @@ internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerrame
 
         // Salvar com extensão .svg exporta o desenho (ajustado à extensão dele) sem mudar o arquivo.
         ExportarPrevia: caminho => ("save", JsonSerializer.Serialize(new { path = caminho })),
-        DescreverPasso: PassosDoDesenho.Descrever);
+        DescreverPasso: PassosDoDesenho.Descrever,
+        AjustarEntrada: LimitarRender,
+
+        // A linha de comando devolve o histórico inteiro a cada chamada; a saída da última já basta.
+        CamposInternos: new HashSet<string> { "history", "historyExpanded", "buffer", "dirty" },
+        ResumoDoArquivo: (("inspect_drawing", "{}"), ResumoDoDesenho.Resumir),
+
+        // A imagem da resposta, só para o joalheiro: maior que a da IA, porque não custa tokens.
+        VistaParaOJoalheiro: ("render", JsonSerializer.Serialize(new { width = 960, height = 600 })));
+
+    /// <summary>
+    /// A imagem custa tokens pela área: o render da IA sai com no máximo 768 px de largura e 480 de altura (o
+    /// padrão do CADCraft é 1600 x 1000). Com `window` e sem altura, o CADCraft mantém a forma da janela.
+    /// </summary>
+    private static Dictionary<string, JsonElement> LimitarRender(string ferramenta, Dictionary<string, JsonElement> entrada)
+    {
+        if (ferramenta != "render")
+        {
+            return entrada;
+        }
+
+        var ajustada = new Dictionary<string, JsonElement>(entrada)
+        {
+            ["width"] = JsonSerializer.SerializeToElement(Math.Min(Inteiro(entrada, "width") ?? LarguraMaxima, LarguraMaxima)),
+        };
+        if (Inteiro(entrada, "height") is { } altura || !entrada.ContainsKey("window"))
+        {
+            ajustada["height"] = JsonSerializer.SerializeToElement(Math.Min(Inteiro(entrada, "height") ?? AlturaMaxima, AlturaMaxima));
+        }
+
+        return ajustada;
+
+        static int? Inteiro(Dictionary<string, JsonElement> valores, string campo)
+            => valores.TryGetValue(campo, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var n) && n > 0 ? n : null;
+    }
 }

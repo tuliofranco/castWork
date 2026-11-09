@@ -4,6 +4,7 @@ import type { ChatDaConversaDto, ConversaFerramentaDto, MensagemFerramentaDto } 
 import { FerramentasService } from '@data/assistente/ferramentas.service';
 import { ToastService } from '@shared/services/toast.service';
 import { ANDAMENTO_VAZIO, type AndamentoDoTurno, aplicarEvento } from '@shared/ui/ferramenta-ia/andamento-ia.component';
+import type { ArquivoDoProjeto } from '@shared/ui/ferramenta-ia/arquivos-do-projeto.component';
 import { type FalaFerramenta, FerramentaIaComponent, type MensagemFerramenta } from '@shared/ui/ferramenta-ia/ferramenta-ia.component';
 import { type Subscription, firstValueFrom } from 'rxjs';
 
@@ -12,7 +13,7 @@ const INTERVALO_DE_CONSULTA_MS = 4000;
 
 /**
  * Tela padrão de toda ferramenta com IA (da versão, como o desenho 2D, ou do projeto, como o briefing): a moldura (`cw-ferramenta-ia`) com a conversa já ligada à API.
- * Carrega o chat, envia (com imagens), acompanha o turno ao vivo, retoma o turno ao voltar para a tela,
+ * Carrega o chat, envia (com imagens e arquivos do projeto), acompanha o turno ao vivo, retoma o turno ao voltar para a tela,
  * novo chat, conversas anteriores, desfazer e apagar. A ferramenta só preenche a área de trabalho
  * (`[area]`) e as ações (`[acoes]`), e reage a `arquivoMudou` (a IA mudou ou desfez o arquivo).
  */
@@ -28,6 +29,9 @@ const INTERVALO_DE_CONSULTA_MS = 4000;
       [pensando]="pensando()"
       [andamento]="andamento()"
       [chats]="chats()"
+      [listarArquivosDoProjeto]="listarArquivosDoProjeto"
+      [boasVindas]="boasVindas()"
+      [ferramenta]="ferramenta()"
       (enviar)="enviar($event)"
       (desfazer)="desfazer($event)"
       (apagarConversa)="apagar()"
@@ -64,8 +68,8 @@ export class ConversaIaComponent {
    * arquivo atual. Um erro aqui cancela o envio (e vira aviso).
    */
   readonly antesDeEnviar = input<(() => Promise<void>) | null>(null);
-  /** Com o chat vazio, a IA abre a conversa sozinha (o briefing resume o formulário e pergunta o que falta). */
-  readonly abrirSozinha = input(false);
+  /** Mensagem fixa no chat vazio, no lugar de a IA abrir a conversa (que custa uma chamada). */
+  readonly boasVindas = input<string | null>(null);
 
   /** O arquivo da ferramenta mudou pela IA (ou por um Desfazer): a área de trabalho deve recarregá-lo. */
   readonly arquivoMudou = output();
@@ -102,17 +106,33 @@ export class ConversaIaComponent {
     this.conversa.update((c) => ({ ...c, arquivoId }));
   }
 
-  protected async enviar({ texto, imagens }: FalaFerramenta): Promise<void> {
+  /** "Do projeto": o atual de cada ferramenta (de todas as versões) e o último PDF do briefing. */
+  protected readonly listarArquivosDoProjeto = (): Promise<readonly ArquivoDoProjeto[]> =>
+    firstValueFrom(this.ferramentas.getAnexosDoProjeto(this.projetoId()));
+
+  protected async enviar({ texto, imagens, arquivos, modelo, esforco }: FalaFerramenta): Promise<void> {
     this.pensando.set(true);
     let aoVivo: Subscription | undefined;
     // A abertura (sem texto nem imagem) não aparece como fala no chat.
-    this.pendente.set(texto || imagens.length > 0 ? { id: -1, papel: 'joalheiro', texto, imagens: imagens.map((i) => i.url) } : null);
+    this.pendente.set(
+      texto || imagens.length > 0 || arquivos.length > 0
+        ? { id: -1, papel: 'joalheiro', texto, imagens: imagens.map((i) => i.url), anexos: arquivos.map((a) => a.nome) }
+        : null,
+    );
     try {
       await this.antesDeEnviar()?.();
       const anterior = this.conversa().arquivoId;
       aoVivo = this.acompanhar(true);
       const conversa = await firstValueFrom(
-        this.ferramentas.postConversa(this.projetoId(), this.versaoId(), this.ferramenta(), texto || null, imagens.map((i) => i.base64)),
+        this.ferramentas.postConversa(
+          this.projetoId(),
+          this.versaoId(),
+          this.ferramenta(),
+          texto || null,
+          imagens.map((i) => i.base64),
+          arquivos.map((a) => ({ origem: a.origem, id: a.id })),
+          { modelo, esforco },
+        ),
       );
       if (this.destruido) return;
       this.conversa.set(conversa);
@@ -133,7 +153,6 @@ export class ConversaIaComponent {
 
   protected async novoChat(): Promise<void> {
     this.conversa.set(await firstValueFrom(this.ferramentas.postNovoChat(this.projetoId(), this.versaoId(), this.ferramenta())));
-    if (this.abrirSozinha()) await this.abrir();
   }
 
   protected async verChats(): Promise<void> {
@@ -163,12 +182,7 @@ export class ConversaIaComponent {
     const conversa = await firstValueFrom(this.ferramentas.getConversa(projetoId, versaoId, ferramenta));
     this.conversa.set(conversa);
     if (conversa.processando) await this.aguardarIa();
-    else if (conversa.mensagens.length === 0 && this.abrirSozinha()) await this.enviar({ texto: '', imagens: [] });
-  }
 
-  /** Abre a conversa pela IA quando o chat está vazio (depois do formulário, ou num chat novo). */
-  async abrir(): Promise<void> {
-    if (!this.pensando() && this.conversa().mensagens.length === 0) await this.enviar({ texto: '', imagens: [] });
   }
 
   /**
@@ -218,6 +232,7 @@ export class ConversaIaComponent {
       pensamento: m.pensamento,
       passos: m.passos,
       tokens: m.tokens,
+      anexos: m.anexos?.map((a) => a.nome),
     };
   }
 }

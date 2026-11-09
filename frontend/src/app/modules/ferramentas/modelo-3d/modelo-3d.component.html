@@ -1,0 +1,59 @@
+<cw-conversa-ia
+  ferramenta="modelo-3d"
+  titulo="Modelo 3D"
+  [projetoId]="projeto()"
+  [versaoId]="versao()"
+  [voltarPara]="voltarPara()"
+  voltarRotulo="Versão"
+  [antesDeEnviar]="antesDeEnviar"
+  (arquivoMudou)="arquivoMudou()"
+>
+  <ng-container acoes>
+    <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
+      <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
+    </button>
+    <button type="button" class="btn btn-secundario" [disabled]="!!sincronizando() || pensando()" (click)="salvar()">
+      <i class="bi bi-cloud-check" aria-hidden="true"></i> Salvar
+    </button>
+  </ng-container>
+
+  <div area class="prancheta">
+    @if (sincronizando(); as aviso) {
+      <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
+    }
+    @if (pensando() && !sincronizando()) {
+      <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o modelo. O que você mudar agora será substituído.</p>
+    } @else if (trocando()) {
+      <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o modelo…</p>
+    }
+    <!-- Dois SolidCrafts (WebAssembly, servido pelo próprio front em /solidcraft): um à vista, o outro abre o próximo projeto por trás. -->
+    <iframe
+      #solidcraftA
+      src="about:blank"
+      title="SolidCraft"
+      [class.ativo]="ativo() === 0"
+      [attr.aria-hidden]="ativo() !== 0"
+      [attr.tabindex]="ativo() === 0 ? null : -1"
+      allow="fullscreen; clipboard-read; clipboard-write"
+      allowfullscreen
+    ></iframe>
+    <iframe
+      #solidcraftB
+      src="about:blank"
+      title="SolidCraft"
+      [class.ativo]="ativo() === 1"
+      [attr.aria-hidden]="ativo() !== 1"
+      [attr.tabindex]="ativo() === 1 ? null : -1"
+      allow="fullscreen; clipboard-read; clipboard-write"
+      allowfullscreen
+    ></iframe>
+  </div>
+</cw-conversa-ia>
+
+<cw-historico-modelo
+  [versoes]="historico()"
+  [ocupado]="!!sincronizando() || pensando()"
+  (restaurar)="restaurar($event)"
+  (baixar)="baixar($event)"
+  (fechado)="historico.set(null)"
+/>

@@ -2,6 +2,7 @@ using Castwork.Application.Abstractions;
 using Castwork.Infra.IA.Assistente;
 using Castwork.Infra.IA.Assistente.Conversa;
 using Castwork.Infra.IA.Ferramentas.Desenho2d;
+using Castwork.Infra.IA.Ferramentas.Modelo3d;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +13,8 @@ public static class DependencyInjection
 {
     /// <summary>
     /// O Assistente (a conversa com a IA) e o lado da IA de cada ferramenta. Sem chave configurada a API sobe
-    /// normalmente; só as ferramentas respondem 503 até a chave existir. Sem o CADCraft, só o desenho 2D fica
-    /// indisponível.
+    /// normalmente; só as ferramentas respondem 503 até a chave existir. Sem o CADCraft ou o
+    /// SolidCraft, só a ferramenta que depende dele fica indisponível.
     /// </summary>
     public static IServiceCollection AddIa(this IServiceCollection services, IConfiguration configuration)
     {
@@ -30,6 +31,7 @@ public static class DependencyInjection
         }
 
         services.AddDesenho2d(configuration);
+        services.AddModelo3d(configuration);
         services.AddSingleton<IPainelDoTurno, PainelDoTurnoEmMemoria>();
         services.AddMemoryCache();
         services.AddSingleton<IPreviaFerramenta, PreviaFerramentaMcp>();

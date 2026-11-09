@@ -60,6 +60,31 @@ public class FerramentaCommandsTests : TesteDeIntegracao
     }
 
     [Test]
+    public async Task DeveLevarAIaOModeloEOEsforcoEscolhidosAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        var comando = Conversar(projetoId, versaoId, "Desenhe o anel");
+        (comando.Modelo, comando.Esforco) = ("haiku", "low");
+
+        await AmbienteDeTeste.SendAsync(comando);
+
+        var pedido = AssistenteFerramentaDeTeste.UltimoPedido!;
+        (pedido.Modelo, pedido.Esforco).Should().Be(("haiku", "low"));
+    }
+
+    [Test]
+    public async Task DeveRecusarModeloOuEsforcoDesconhecidoAsync()
+    {
+        var (projetoId, versaoId) = await VersaoAsync();
+        var comando = Conversar(projetoId, versaoId, "Desenhe o anel");
+        (comando.Modelo, comando.Esforco) = ("gpt", "max");
+
+        var conversar = () => AmbienteDeTeste.SendAsync(comando);
+
+        await conversar.Should().ThrowAsync<ValidationException>();
+    }
+
+    [Test]
     public async Task DeveGuardarOPensamentoOsPassosEOConsumoDoTurnoAsync()
     {
         var (projetoId, versaoId) = await VersaoAsync();

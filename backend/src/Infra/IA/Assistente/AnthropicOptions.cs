@@ -9,7 +9,10 @@ public sealed class AnthropicOptions
 
     public string? ApiKey { get; set; }
 
-    public string Modelo { get; set; } = "claude-opus-5-5";
+    /// <summary>
+    /// Sonnet por padrão: dá conta das ferramentas e do briefing custando bem menos que o Opus.
+    /// </summary>
+    public string Modelo { get; set; } = "claude-sonnet-5-5";
 
     /// <summary>
     /// Limite de idas e vindas com ferramentas num único turno, para a conversa nunca entrar em laço.
@@ -19,5 +22,5 @@ public sealed class AnthropicOptions
     /// <summary>
     /// Nas ferramentas a IA trabalha mais por turno (desenha, confere, olha o render, corrige).
     /// </summary>
-    public int MaximoDeChamadasPorTurnoNasFerramentas { get; set; } = 24;
+    public int MaximoDeChamadasPorTurnoNasFerramentas { get; set; } = 12;
 }

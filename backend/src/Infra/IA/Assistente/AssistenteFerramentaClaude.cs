@@ -29,7 +29,7 @@ internal sealed partial class AssistenteFerramentaClaude(
     /// <summary>
     /// Retorno de ferramenta longo (a lista de entidades de um desenho grande) é cortado: a IA pede por partes.
     /// </summary>
-    private const int TextoMaximoDoResultado = 20_000;
+    private const int TextoMaximoDoResultado = 8_000;
 
     /// <summary>
     /// Ferramenta do próprio Castwork (não vai ao MCP): a IA resume o que mudou, para o cartão do chat.
@@ -67,7 +67,7 @@ internal sealed partial class AssistenteFerramentaClaude(
         // Sem programa externo (o briefing): só as ferramentas locais, e nenhum arquivo para salvar.
         if (definicao.SemMcp)
         {
-            var semMcp = await ConduzirAsync(pedido, definicao, null, [.. Locais(pedido)], cancellationToken);
+            var semMcp = await ConduzirAsync(pedido, definicao, null, null, [.. Locais(pedido)], cancellationToken);
             return new TurnoDaFerramenta(semMcp.Mensagens, semMcp.Imagens, null, semMcp.Consumo);
         }
 
@@ -88,7 +88,7 @@ internal sealed partial class AssistenteFerramentaClaude(
                 .. Locais(pedido),
             ];
 
-            var turno = await ConduzirAsync(pedido, definicao, mcp, ferramentas, cancellationToken);
+            var turno = await ConduzirAsync(pedido, definicao, mcp, pasta.FullName, ferramentas, cancellationToken);
             if (!turno.Alterou)
             {
                 return new TurnoDaFerramenta(turno.Mensagens, turno.Imagens, null, turno.Consumo);
@@ -207,18 +207,36 @@ internal sealed partial class AssistenteFerramentaClaude(
         PedidoAFerramenta pedido,
         DefinicaoDeFerramenta definicao,
         ClienteMcp? mcp,
+        string? pasta,
         BetaToolUnion[] ferramentas,
         CancellationToken cancellationToken)
     {
         var cliente = new AnthropicClient { ApiKey = _opcoes.ApiKey };
         var imagens = new Dictionary<Guid, ImagemDaConversa>(pedido.Imagens);
         var geradas = new List<ImagemDaConversa>();
-        var andamento = new Andamento(pedido.Observar ?? (_ => { }), _opcoes.Modelo);
+        var modelo = (pedido.Modelo ?? definicao.ModeloPadrao) switch
+        {
+            "haiku" => "claude-haiku-5-5",
+            "sonnet" => "claude-sonnet-5-5",
+            "opus" => "claude-opus-5-5",
+            _ => _opcoes.Modelo,
+        };
+        var esforco = pedido.Esforco switch
+        {
+            "low" => Effort.Low,
+            "high" => Effort.High,
+            _ => Effort.Medium,
+        };
+        var andamento = new Andamento(pedido.Observar ?? (_ => { }), modelo);
         var alterou = false;
         string? resumo = null;
 
         // As imagens vêm antes do texto, como a documentação da API recomenda.
         var blocosDaFala = pedido.ImagensDaFala.Select(c => new BlocoGuardado("imagem", Id: c.ToString())).ToList();
+
+        // Os arquivos do projeto anexados vêm logo depois das imagens; os PDFs só vão à IA neste turno.
+        var documentos = new Dictionary<Guid, byte[]>();
+        blocosDaFala.AddRange(await AnexosDaFala.PrepararAsync(pedido.Anexos ?? [], _definicoes, pasta, documentos, cancellationToken));
         if (pedido.Fala is not null)
         {
             blocosDaFala.Add(new BlocoGuardado("texto", pedido.Fala));
@@ -235,7 +253,7 @@ internal sealed partial class AssistenteFerramentaClaude(
 
         for (var chamada = 0; chamada < _opcoes.MaximoDeChamadasPorTurnoNasFerramentas; chamada++)
         {
-            var resposta = await ChamarAsync(cliente, definicao, pedido.Contexto, [.. pedido.Historico, .. novas], imagens, ferramentas, andamento, cancellationToken);
+            var resposta = await ChamarAsync(cliente, modelo, esforco, definicao, pedido.Contexto, [.. BlocosDaConversa.Enxuto(pedido.Historico), .. novas], imagens, documentos, ferramentas, andamento, cancellationToken);
             var blocos = BlocosDaConversa.Guardar(resposta);
             andamento.Pensou(blocos.Where(b => b.Tipo == "pensamento").Select(b => b.Texto));
             var texto = string.Join("\n\n", blocos.Where(b => b.Tipo == "texto").Select(b => b.Texto));
@@ -249,8 +267,7 @@ internal sealed partial class AssistenteFerramentaClaude(
                     blocos = [.. blocos, new BlocoGuardado("texto", texto)];
                 }
 
-                // A última imagem que a IA olhou (o render) aparece com a resposta: o joalheiro vê o que ela viu.
-                var vista = geradas.Count > 0 ? new[] { geradas[^1].Chave } : null;
+                var vista = await VistaAsync(definicao, mcp, alterou, geradas, cancellationToken);
                 var acao = alterou ? resumo ?? ResumoDaAcao(texto) : null;
                 doTurno.Add(Mensagem(PapelMensagem.Assistente, texto, blocos, vista, acao, andamento));
                 return (doTurno, geradas, alterou, andamento.Consumo);
@@ -261,6 +278,7 @@ internal sealed partial class AssistenteFerramentaClaude(
             novas.Add(new MensagemDaConversa(PapelMensagem.Assistente, assistente.Texto, assistente.Conteudo));
 
             var resultados = new List<BlocoGuardado>();
+            int? ultimaAlteracao = null;
             foreach (var uso in pedidos)
             {
                 if (uso.Nome == ResumirAlteracao)
@@ -286,9 +304,14 @@ internal sealed partial class AssistenteFerramentaClaude(
                 }
 
                 var passo = andamento.Comecar(definicao.DescreverPasso is { } descrever ? descrever(uso.Nome!, uso.Entrada) : "Trabalhando");
-                var argumentos = JsonSerializer.SerializeToElement(uso.Entrada ?? []);
+                var entrada = uso.Entrada ?? [];
+                var argumentos = JsonSerializer.SerializeToElement(definicao.AjustarEntrada is { } ajustar ? ajustar(uso.Nome!, entrada) : entrada);
                 var resultado = await mcp.ChamarFerramentaAsync(uso.Nome!, argumentos, cancellationToken);
-                alterou |= !resultado.Erro && definicao.FerramentasQueAlteram.Contains(uso.Nome!);
+                if (!resultado.Erro && definicao.FerramentasQueAlteram.Contains(uso.Nome!))
+                {
+                    alterou = true;
+                    ultimaAlteracao = resultados.Count;
+                }
 
                 var chaves = new List<string>();
                 ImagemDaConversa? vista = null;
@@ -302,8 +325,15 @@ internal sealed partial class AssistenteFerramentaClaude(
                 }
 
                 andamento.Terminar(passo, resultado.Erro, vista);
-                var saida = resultado.Texto.Length > TextoMaximoDoResultado ? resultado.Texto[..TextoMaximoDoResultado] + "\n[cortado]" : resultado.Texto;
+                var compacto = ResultadoCompacto.Compactar(resultado.Texto, definicao.CamposInternos);
+                var saida = compacto.Length > TextoMaximoDoResultado ? compacto[..TextoMaximoDoResultado] + "\n[cortado]" : compacto;
                 resultados.Add(new BlocoGuardado("resultado", saida, Id: uso.Id, Erro: resultado.Erro ? true : null, Imagens: chaves.Count > 0 ? chaves : null));
+            }
+
+            // O arquivo mudou nesta rodada: o resumo dele vai junto do último resultado que o alterou.
+            if (ultimaAlteracao is { } indice && mcp is not null && await ResumoDoArquivoAsync(definicao, mcp, cancellationToken) is { } resumoDoArquivo)
+            {
+                resultados[indice] = resultados[indice] with { Texto = $"{resultados[indice].Texto}\n\n{resumoDoArquivo}" };
             }
 
             var retorno = Mensagem(PapelMensagem.Ferramenta, null, resultados);
@@ -313,8 +343,60 @@ internal sealed partial class AssistenteFerramentaClaude(
 
         LogLimiteDeChamadas(logger, _opcoes.MaximoDeChamadasPorTurnoNasFerramentas);
         const string Parou = "Parei aqui para você conferir o desenho. Quer que eu continue?";
-        doTurno.Add(Mensagem(PapelMensagem.Assistente, Parou, [new BlocoGuardado("texto", Parou)], acao: alterou ? resumo ?? "alterou o desenho" : null, andamento: andamento));
+        var vistaDoLimite = await VistaAsync(definicao, mcp, alterou, geradas, cancellationToken);
+        doTurno.Add(Mensagem(PapelMensagem.Assistente, Parou, [new BlocoGuardado("texto", Parou)], vistaDoLimite, alterou ? resumo ?? "alterou o desenho" : null, andamento));
         return (doTurno, geradas, alterou, andamento.Consumo);
+    }
+
+    /// <summary>
+    /// Resumo do arquivo depois de uma alteração (ex.: medidas e volume dos corpos); nulo se a ferramenta não tem ou falhou.
+    /// </summary>
+    private async Task<string?> ResumoDoArquivoAsync(DefinicaoDeFerramenta definicao, ClienteMcp mcp, CancellationToken cancellationToken)
+    {
+        if (definicao.ResumoDoArquivo is not { } resumo)
+        {
+            return null;
+        }
+
+        try
+        {
+            var resultado = await mcp.ChamarFerramentaAsync(resumo.Chamada.Nome, JsonDocument.Parse(resumo.Chamada.Argumentos).RootElement, cancellationToken);
+            return resultado.Erro ? null : resumo.Resumir(resultado.Texto);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Sem o resumo a IA ainda pode conferir com as próprias ferramentas.
+            LogFalhaDoMcp(logger, ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A imagem que aparece com a resposta. Se o arquivo mudou e a ferramenta sabe, o sistema tira uma vista só para
+    /// o joalheiro (não vai para a IA); senão, a última imagem que a IA olhou.
+    /// </summary>
+    private async Task<Guid[]?> VistaAsync(DefinicaoDeFerramenta definicao, ClienteMcp? mcp, bool alterou, List<ImagemDaConversa> geradas, CancellationToken cancellationToken)
+    {
+        if (alterou && mcp is not null && definicao.VistaParaOJoalheiro is { } chamada)
+        {
+            try
+            {
+                var resultado = await mcp.ChamarFerramentaAsync(chamada.Nome, JsonDocument.Parse(chamada.Argumentos).RootElement, cancellationToken);
+                if (!resultado.Erro && resultado.Conteudo.FirstOrDefault(c => c.Imagem is not null) is { } imagem)
+                {
+                    var vista = new ImagemDaConversa(Guid.CreateVersion7(), imagem.TipoDaImagem ?? "image/png", imagem.Imagem!);
+                    geradas.Add(vista);
+                    return [vista.Chave];
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Sem a vista a resposta continua valendo.
+                LogFalhaDoMcp(logger, ex);
+            }
+        }
+
+        return geradas.Count > 0 ? [geradas[^1].Chave] : null;
     }
 
     /// <summary>
@@ -323,33 +405,43 @@ internal sealed partial class AssistenteFerramentaClaude(
     /// </summary>
     private async Task<BetaMessage> ChamarAsync(
         AnthropicClient cliente,
+        string modelo,
+        Effort esforco,
         DefinicaoDeFerramenta definicao,
         string contexto,
         IReadOnlyList<MensagemDaConversa> conversa,
         IReadOnlyDictionary<Guid, ImagemDaConversa> imagens,
+        IReadOnlyDictionary<Guid, byte[]> documentos,
         BetaToolUnion[] ferramentas,
         Andamento andamento,
         CancellationToken cancellationToken)
     {
         var parametros = new MessageCreateParams
         {
-            Model = _opcoes.Modelo,
+            Model = modelo,
             MaxTokens = 16000,
 
-            // O Opus 5.5 sempre pensa; "resumido" faz a API devolver o resumo desse pensamento para mostrar.
+            // Pensa só o necessário; "resumido" faz a API devolver o resumo desse pensamento para mostrar.
             Thinking = new BetaThinkingConfigAdaptive { Display = Display.Summarized },
+            OutputConfig = new BetaOutputConfig { Effort = esforco },
 
-            // Se a IA recusar por um classificador de segurança, a API tenta outro modelo sozinha.
-            Betas = ["server-side-fallback-2026-07-01"],
-            Fallbacks = new Default(),
+            // Cache em dois pontos: ferramentas + instruções + contexto (iguais em toda fala da conversa) e,
+            // pelo marcador automático, a conversa até o último bloco (as rodadas seguintes do turno leem do cache).
+            CacheControl = new BetaCacheControlEphemeral(),
             System = new List<BetaTextBlockParam>
             {
                 new() { Text = definicao.Instrucoes },
-                new() { Text = "Contexto desta versão da peça (JSON):\n" + contexto },
+                new() { Text = "Contexto desta versão da peça (JSON):\n" + contexto, CacheControl = new BetaCacheControlEphemeral() },
             },
             Tools = ferramentas,
-            Messages = [.. conversa.Select(m => BlocosDaConversa.Reconstruir(m, imagens))],
+            Messages = [.. conversa.Select(m => BlocosDaConversa.Reconstruir(m, imagens, documentos))],
         };
+
+        // Se a IA recusar por um classificador de segurança, a API tenta outro modelo sozinha (o Haiku não tem esse recurso).
+        if (!modelo.StartsWith("claude-haiku", StringComparison.Ordinal))
+        {
+            parametros = parametros with { Betas = ["server-side-fallback-2026-07-01"], Fallbacks = new Default() };
+        }
 
         try
         {

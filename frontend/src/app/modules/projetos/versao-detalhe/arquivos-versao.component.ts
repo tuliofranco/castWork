@@ -16,6 +16,7 @@ const POR_PAGINA = 10;
 /** Nome, selo e extensão de cada ferramenta com arquivo. */
 const FERRAMENTAS: Record<string, { readonly nome: string; readonly selo: string; readonly extensao: string }> = {
   'desenho-2d': { nome: 'Desenho 2D', selo: '2D', extensao: 'dxf' },
+  'modelo-3d': { nome: 'Modelo 3D', selo: '3D', extensao: 'json' },
 };
 
 const ORIGENS: Record<OrigemArquivo, string> = {

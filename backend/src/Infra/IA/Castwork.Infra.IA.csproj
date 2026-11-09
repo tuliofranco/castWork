@@ -13,4 +13,8 @@
     <ProjectReference Include="../../Application/Castwork.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Castwork.UnitTests" />
+  </ItemGroup>
+
 </Project>

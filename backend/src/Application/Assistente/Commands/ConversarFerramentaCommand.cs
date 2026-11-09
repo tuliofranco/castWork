@@ -20,6 +20,7 @@ public sealed class ConversarFerramentaCommand : ComandoDeFerramenta, IRequest<C
 {
     public const int TextoMaxLength = 4000;
     public const int ImagensPorMensagem = 4;
+    public const int AnexosPorMensagem = 3;
 
     public string? Texto { get; set; }
 
@@ -27,13 +28,31 @@ public sealed class ConversarFerramentaCommand : ComandoDeFerramenta, IRequest<C
     /// Imagens anexadas, em base64 (PNG, JPEG ou WebP, até 5 MB cada).
     /// </summary>
     public IReadOnlyList<string> Imagens { get; set; } = [];
+
+    /// <summary>
+    /// Arquivos do projeto anexados ("Do projeto"): a origem (<c>arquivo</c>, <c>briefing</c>) e o id nela.
+    /// </summary>
+    public IReadOnlyList<AnexoPedido> Anexos { get; set; } = [];
+
+    /// <summary>
+    /// Modelo escolhido pelo joalheiro (<c>haiku</c>, <c>sonnet</c> ou <c>opus</c>); nulo usa o padrão.
+    /// </summary>
+    public string? Modelo { get; set; }
+
+    /// <summary>
+    /// Esforço do raciocínio (<c>low</c>, <c>medium</c> ou <c>high</c>); nulo usa o padrão.
+    /// </summary>
+    public string? Esforco { get; set; }
 }
+
+public sealed record AnexoPedido(string Origem, long Id);
 
 public sealed class ConversarFerramentaCommandHandler(
     IUnitOfWork unitOfWork,
     IAssistenteFerramenta assistente,
     IPainelDoTurno painel,
     CatalogoDeFerramentas catalogo,
+    IEnumerable<IFonteDeAnexos> fontes,
     TimeProvider relogio)
     : IRequestHandler<ConversarFerramentaCommand, ConversaFerramentaDto>
 {
@@ -47,11 +66,12 @@ public sealed class ConversarFerramentaCommandHandler(
         // Sem fala nem imagem, só a abertura: a IA da ferramenta começa o chat novo, se a ferramenta abre sozinha
         // (o briefing resume o formulário e pergunta o que falta).
         var ferramenta = catalogo.Obter(request.Ferramenta);
-        if (texto is null && request.Imagens.Count == 0 && !(ferramenta.AbreSozinha && !conversa.MensagensDoChat.Any()))
+        if (texto is null && request.Imagens.Count == 0 && request.Anexos.Count == 0 && !(ferramenta.AbreSozinha && !conversa.MensagensDoChat.Any()))
         {
-            throw new RegraDeNegocioException("Escreva uma mensagem ou anexe uma imagem.");
+            throw new RegraDeNegocioException("Escreva uma mensagem ou anexe uma imagem ou um arquivo.");
         }
 
+        var anexos = await CarregarAnexosAsync(request, cancellationToken);
         var arquivo = await ConversaDaVersao.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
         var (contexto, locais) = await ferramenta.PrepararAsync(request.ProjetoId, request.VersaoId, cancellationToken);
 
@@ -67,7 +87,7 @@ public sealed class ConversarFerramentaCommandHandler(
             .ToDictionary(i => i.Chave);
 
         // A fala (e as imagens dela) vai para o banco já: quem sai da tela e volta vê a mensagem e a IA trabalhando.
-        var fala = conversa.RegistrarFala(texto, [.. novas.Select(i => i.Chave)], agora);
+        var fala = conversa.RegistrarFala(texto, [.. novas.Select(i => i.Chave)], agora, [.. anexos.Select(a => a.Referencia)]);
         novas.ForEach(repositorioDeImagens.Adicionar);
         await unitOfWork.SalvarAsync(cancellationToken);
 
@@ -90,7 +110,10 @@ public sealed class ConversarFerramentaCommandHandler(
                     imagens,
                     arquivo is { EmBranco: false } ? arquivo.Conteudo : null,
                     evento => painel.Publicar(conversa.Id, evento),
-                    locais),
+                    locais,
+                    [.. anexos.Select(a => a.Conteudo)],
+                    request.Modelo,
+                    request.Esforco),
                 CancellationToken.None);
         }
         catch
@@ -137,6 +160,29 @@ public sealed class ConversarFerramentaCommandHandler(
         painel.Terminar(conversa.Id);
         return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivoId, processando: false);
     }
+
+    /// <summary>
+    /// Cada anexo precisa ser do projeto da rota; o que não for (ou foi arquivado) não vai para a IA.
+    /// </summary>
+    private async Task<List<(AnexoDaMensagem Referencia, AnexoDoTurno Conteudo)>> CarregarAnexosAsync(ConversarFerramentaCommand request, CancellationToken cancellationToken)
+    {
+        var anexos = new List<(AnexoDaMensagem, AnexoDoTurno)>();
+        foreach (var pedido in request.Anexos.Distinct())
+        {
+            var fonte = fontes.FirstOrDefault(f => f.Origem == pedido.Origem);
+            var carregado = fonte is null ? null : await fonte.CarregarAsync(request.ProjetoId, pedido.Id, cancellationToken);
+            if (carregado is null)
+            {
+                throw new EntidadeNaoEncontradaException("Arquivo do projeto", pedido.Id);
+            }
+
+            anexos.Add((
+                new AnexoDaMensagem(pedido.Origem, pedido.Id, carregado.Nome),
+                new AnexoDoTurno(carregado.Nome, carregado.Descricao, carregado.Ferramenta, carregado.Extensao, carregado.Conteudo)));
+        }
+
+        return anexos;
+    }
 }
 
 public sealed class ConversarFerramentaCommandValidator : ValidatorBase<ConversarFerramentaCommand>
@@ -149,6 +195,10 @@ public sealed class ConversarFerramentaCommandValidator : ValidatorBase<Conversa
         RuleFor(c => c.Imagens).Must(i => i.Count <= ConversarFerramentaCommand.ImagensPorMensagem)
             .WithMessage($"Anexe até {ConversarFerramentaCommand.ImagensPorMensagem} imagens por mensagem.");
         RuleForEach(c => c.Imagens).Must(EhBase64).WithMessage("Imagem inválida.");
+        RuleFor(c => c.Modelo).Must(m => m is null || PedidoAFerramenta.Modelos.Contains(m)).WithMessage("Modelo inválido.");
+        RuleFor(c => c.Esforco).Must(e => e is null || PedidoAFerramenta.Esforcos.Contains(e)).WithMessage("Esforço inválido.");
+        RuleFor(c => c.Anexos).Must(a => a.Count <= ConversarFerramentaCommand.AnexosPorMensagem)
+            .WithMessage($"Anexe até {ConversarFerramentaCommand.AnexosPorMensagem} arquivos do projeto por mensagem.");
     }
 
     private static bool EhBase64(string valor) => !string.IsNullOrEmpty(valor) && Convert.TryFromBase64String(valor, new byte[valor.Length], out _);
