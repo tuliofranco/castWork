@@ -19,6 +19,29 @@ export interface MensagemFerramentaDto {
   readonly passos?: readonly string[] | null;
   /** Resposta final da IA: tokens que o turno consumiu. */
   readonly tokens?: number | null;
+  /** Arquivos do projeto anexados à fala. */
+  readonly anexos?: readonly AnexoDaMensagemDto[] | null;
+}
+
+/** Um arquivo do projeto anexado à fala: a origem (`arquivo` de ferramenta ou `briefing`), o id e o nome. */
+export interface AnexoDaMensagemDto {
+  readonly origem: string;
+  readonly id: number;
+  readonly nome: string;
+}
+
+/**
+ * Um arquivo que pode ser anexado "Do projeto": o atual de cada ferramenta (de todas as versões) e o último
+ * PDF do briefing. `versao` é o número da versão; nulo no que é do projeto.
+ */
+export interface AnexoDoProjetoDto {
+  readonly origem: string;
+  readonly id: number;
+  readonly nome: string;
+  readonly ferramenta: string;
+  readonly versao: number | null;
+  readonly criadoEm: string;
+  readonly tamanho: number;
 }
 
 /**

@@ -28,7 +28,13 @@ public sealed record MensagemFerramentaDto(
     DateTimeOffset CriadaEm,
     string? Pensamento = null,
     IReadOnlyList<string>? Passos = null,
-    int? Tokens = null);
+    int? Tokens = null,
+    IReadOnlyList<AnexoDaMensagemDto>? Anexos = null);
+
+/// <summary>
+/// Um arquivo do projeto anexado à fala, como o chat mostra.
+/// </summary>
+public sealed record AnexoDaMensagemDto(string Origem, long Id, string Nome);
 
 public sealed record AcaoDaIaDto(string Descricao, bool Desfeita);
 

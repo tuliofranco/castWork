@@ -1,12 +1,17 @@
+using System.Text.Json;
+
 using Castwork.Domain.Entities.Assistente;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Castwork.Infra.Data.Configurations.Ferramentas;
 
 internal sealed class MensagemFerramentaConfiguration : IEntityTypeConfiguration<MensagemFerramenta>
 {
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
     public void Configure(EntityTypeBuilder<MensagemFerramenta> builder)
     {
         builder.ToTable("ferramenta_mensagens");
@@ -23,6 +28,19 @@ internal sealed class MensagemFerramentaConfiguration : IEntityTypeConfiguration
         builder.Property(m => m.Pensamento);
         builder.Property(m => m.Passos).IsRequired();
         builder.Property(m => m.Tokens);
+
+        // Só referências (origem, id, nome), lidas sempre com a mensagem: uma coluna jsonb basta.
+        builder.Property(m => m.Anexos)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                anexos => JsonSerializer.Serialize(anexos, Json),
+                json => JsonSerializer.Deserialize<List<AnexoDaMensagem>>(json, Json) ?? new List<AnexoDaMensagem>(),
+                new ValueComparer<IReadOnlyList<AnexoDaMensagem>>(
+                    (a, b) => a!.SequenceEqual(b!),
+                    anexos => anexos.Aggregate(0, (hash, anexo) => HashCode.Combine(hash, anexo)),
+                    anexos => anexos.ToList()))
+            .HasDefaultValueSql("'[]'::jsonb")
+            .IsRequired();
 
         builder.OwnsOne(m => m.Acao, acao =>
         {

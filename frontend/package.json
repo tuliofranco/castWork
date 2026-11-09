@@ -9,7 +9,8 @@
     "test": "ng test",
     "lint": "ng lint",
     "test:ci": "ng test --watch=false",
-    "cadcraft:instalar": "bash scripts/instalar-cadcraft.sh"
+    "cadcraft:instalar": "bash scripts/instalar-cadcraft.sh",
+    "solidcraft:instalar": "bash scripts/instalar-solidcraft.sh"
   },
   "private": true,
   "dependencies": {

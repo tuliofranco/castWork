@@ -44,7 +44,7 @@ public sealed partial class ConversaFerramenta
     /// A fala do joalheiro vai para o banco antes da IA começar: quem sai da tela e volta vê a mensagem e
     /// que a IA ainda está trabalhando. O conteúdo completo chega em <see cref="ConfirmarFala"/>.
     /// </summary>
-    public MensagemFerramenta RegistrarFala(string? texto, IReadOnlyList<Guid> imagens, DateTimeOffset em)
+    public MensagemFerramenta RegistrarFala(string? texto, IReadOnlyList<Guid> imagens, DateTimeOffset em, IReadOnlyList<AnexoDaMensagem>? anexos = null)
     {
         if (AguardandoIa(em))
         {
@@ -52,7 +52,9 @@ public sealed partial class ConversaFerramenta
         }
 
         DescartarFalaSemResposta();
-        return RegistrarMensagem(PapelMensagem.Joalheiro, texto, ConteudoProvisorio, em, imagens);
+        var fala = RegistrarMensagem(PapelMensagem.Joalheiro, texto, ConteudoProvisorio, em, imagens);
+        fala.DefinirAnexos(anexos ?? []);
+        return fala;
     }
 
     /// <summary>

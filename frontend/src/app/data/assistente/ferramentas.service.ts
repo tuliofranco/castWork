@@ -4,7 +4,7 @@ import type { IdCriadoDto } from '@data/common/http/id-criado.dto';
 import { semLoading } from '@shared/injection-tokens/http-context.tokens';
 import { Observable, map } from 'rxjs';
 
-import type { ChatDaConversaDto, ConversaFerramentaDto, EventoDoTurnoDto, ListaDeArquivosDto, VersaoDoArquivoDto } from './dto/ferramenta.dto';
+import type { AnexoDoProjetoDto, ChatDaConversaDto, ConversaFerramentaDto, EventoDoTurnoDto, ListaDeArquivosDto, VersaoDoArquivoDto } from './dto/ferramenta.dto';
 
 /** Arquivo de trabalho da ferramenta: conteúdo, a versão (Id) dele e o nome dado pelo joalheiro. */
 export interface ArquivoFerramenta {
@@ -29,8 +29,16 @@ export class FerramentasService {
    * `imagens` em base64, já reduzidas no tablet (ver `prepararImagem`). Pode levar minutos: o andamento vem
    * por `acompanhar`, não pela barra de carregamento global.
    */
-  postConversa(projetoId: number, versaoId: number | null, ferramenta: string, texto: string | null, imagens: readonly string[]): Observable<ConversaFerramentaDto> {
-    return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa`, { texto, imagens }, { context: semLoading() });
+  postConversa(
+    projetoId: number,
+    versaoId: number | null,
+    ferramenta: string,
+    texto: string | null,
+    imagens: readonly string[],
+    anexos: readonly { readonly origem: string; readonly id: number }[] = [],
+    ia: { readonly modelo?: string; readonly esforco?: string } = {},
+  ): Observable<ConversaFerramentaDto> {
+    return this.http.post<ConversaFerramentaDto>(`${this.base(projetoId, versaoId, ferramenta)}/conversa`, { texto, imagens, anexos, ...ia }, { context: semLoading() });
   }
 
   /**
@@ -140,6 +148,11 @@ export class FerramentasService {
   }
 
   /** Os arquivos da versão, de todas as ferramentas, do mais recente para o mais antigo. */
+  /** O que pode ser anexado "Do projeto" numa conversa (arquivos das ferramentas e o PDF do briefing). */
+  getAnexosDoProjeto(projetoId: number): Observable<readonly AnexoDoProjetoDto[]> {
+    return this.http.get<readonly AnexoDoProjetoDto[]>(`projetos/${projetoId}/anexos`);
+  }
+
   getArquivosDaVersao(projetoId: number, versaoId: number, arquivados: boolean, pagina: number, tamanhoPagina: number): Observable<ListaDeArquivosDto> {
     return this.http.get<ListaDeArquivosDto>(`projetos/${projetoId}/versoes/${versaoId}/ferramentas/arquivos`, { params: { arquivados, pagina, tamanhoPagina } });
   }

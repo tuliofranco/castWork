@@ -19,10 +19,11 @@ public interface IAssistenteFerramenta
 
 /// <summary>
 /// Um turno da conversa: o contexto montado pela Application (projeto, versão, briefing), o histórico,
-/// a fala do joalheiro com as imagens anexadas, e o arquivo atual da ferramenta (nulo se ainda não existe).
+/// a fala do joalheiro com as imagens e os arquivos do projeto anexados, e o arquivo atual da ferramenta (nulo se ainda não existe).
 /// <see cref="Observar"/> recebe os eventos do turno ao vivo (pensamento, passos e texto). <see cref="Locais"/>:
 /// ferramentas do próprio Castwork que a IA também pode usar (as do briefing). Sem fala nem imagem, a IA abre a
-/// conversa (a mensagem de abertura fica oculta no chat).
+/// conversa (a mensagem de abertura fica oculta no chat). <see cref="Modelo"/> e <see cref="Esforco"/>: a escolha
+/// do joalheiro no chat (nulos usam o padrão da configuração).
 /// </summary>
 public sealed record PedidoAFerramenta(
     string Ferramenta,
@@ -33,7 +34,21 @@ public sealed record PedidoAFerramenta(
     IReadOnlyDictionary<Guid, ImagemDaConversa> Imagens,
     byte[]? Arquivo,
     Action<EventoDoTurno>? Observar = null,
-    IFerramentasLocais? Locais = null);
+    IFerramentasLocais? Locais = null,
+    IReadOnlyList<AnexoDoTurno>? Anexos = null,
+    string? Modelo = null,
+    string? Esforco = null)
+{
+    public static readonly IReadOnlyList<string> Modelos = ["haiku", "sonnet", "opus"];
+
+    public static readonly IReadOnlyList<string> Esforcos = ["low", "medium", "high"];
+}
+
+/// <summary>
+/// Um arquivo do projeto anexado à fala, com o conteúdo. <see cref="Extensao"/> nula: a da ferramenta que o
+/// gravou (<see cref="Ferramenta"/>).
+/// </summary>
+public sealed record AnexoDoTurno(string Nome, string Descricao, string Ferramenta, string? Extensao, byte[] Conteudo);
 
 /// <summary>
 /// O que o turno produziu. <see cref="ArquivoNovo"/> só vem quando a IA mudou o arquivo.

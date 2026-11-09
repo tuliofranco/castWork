@@ -48,6 +48,14 @@ public static class DependencyInjection
             services.AddScoped(typeof(IFerramentaComIa), ferramenta);
         }
 
+        // As fontes do "Do projeto" no anexo da conversa: a do Assistente e as das ferramentas que têm arquivos próprios.
+        var fontes = typeof(Application.AssemblyReference).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IFonteDeAnexos).IsAssignableFrom(t));
+        foreach (var fonte in fontes)
+        {
+            services.AddScoped(typeof(IFonteDeAnexos), fonte);
+        }
+
         services.AddScoped<CatalogoDeFerramentas>();
         return services;
     }

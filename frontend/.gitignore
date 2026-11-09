@@ -45,3 +45,6 @@ Thumbs.db
 
 # CADCraft web (≈29 MB de wasm): baixado por scripts/instalar-cadcraft.sh, não versionado
 /public/cadcraft/
+
+# SolidCraft web (≈100 MB de wasm): baixado por scripts/instalar-solidcraft.sh, não versionado.
+/public/solidcraft/

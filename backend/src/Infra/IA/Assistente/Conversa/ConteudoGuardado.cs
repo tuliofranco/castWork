@@ -20,7 +20,7 @@ internal sealed record ConteudoGuardado(IReadOnlyList<BlocoGuardado> Blocos)
 }
 
 /// <summary>
-/// Um bloco da mensagem. <see cref="Tipo"/>: texto, imagem (<see cref="Id"/> é a chave), pensamento,
+/// Um bloco da mensagem. <see cref="Tipo"/>: texto, imagem ou documento (PDF anexado; <see cref="Id"/> é a chave), pensamento,
 /// pensamentoOculto, ferramenta (pedido da IA) ou resultado (resposta do sistema, com
 /// <see cref="Imagens"/> quando a ferramenta devolveu imagens, como o render do desenho).
 /// </summary>

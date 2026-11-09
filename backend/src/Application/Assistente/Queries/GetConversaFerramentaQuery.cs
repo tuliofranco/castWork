@@ -44,7 +44,7 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, Ti
     internal static ConversaFerramentaDto Mapear(ConversaFerramenta conversa, long? arquivoId, bool processando, int? chat = null) => new(
         conversa.Mensagens
             .Where(m => m.Chat == (chat ?? conversa.ChatAtual))
-            .Where(m => m.Papel != PapelMensagem.Ferramenta && (m.Texto is not null || m.Imagens.Count > 0))
+            .Where(m => m.Papel != PapelMensagem.Ferramenta && (m.Texto is not null || m.Imagens.Count > 0 || m.Anexos.Count > 0))
             .OrderBy(m => m.Ordem)
             .Select(m => new MensagemFerramentaDto(
                 m.Ordem,
@@ -55,7 +55,8 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, Ti
                 m.CriadaEm,
                 m.Pensamento,
                 m.Passos.Count > 0 ? m.Passos : null,
-                m.Tokens))
+                m.Tokens,
+                m.Anexos.Count > 0 ? m.Anexos.Select(a => new AnexoDaMensagemDto(a.Origem, a.Id, a.Nome)).ToList() : null))
             .ToList(),
         arquivoId,
         processando,
