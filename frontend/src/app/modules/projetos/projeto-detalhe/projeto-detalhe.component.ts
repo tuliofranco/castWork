@@ -14,14 +14,15 @@ import { SeloComponent } from '@shared/ui/selo.component';
 import { type Observable, finalize } from 'rxjs';
 
 import { STATUS_VERSAO } from '../status-versao';
+import { PrecosProjetoComponent } from './precos-projeto.component';
 
 /**
- * Página do projeto: as versões (criar, publicar, arquivar). Cliente e briefing ficam nas configurações;
- * aqui só a etiqueta do cliente e um lembrete enquanto o briefing não existe.
+ * Página do projeto: as versões (criar, publicar, arquivar) e os preços do projeto (só com `precificacao.ler`).
+ * Cliente e briefing ficam nas configurações; aqui só a etiqueta do cliente e um lembrete enquanto o briefing não existe.
  */
 @Component({
   selector: 'cw-projeto-detalhe',
-  imports: [DatePipe, FormsModule, RouterLink, CabecalhoPaginaComponent, EstadoListaComponent, SeloComponent],
+  imports: [DatePipe, FormsModule, RouterLink, CabecalhoPaginaComponent, EstadoListaComponent, PrecosProjetoComponent, SeloComponent],
   templateUrl: './projeto-detalhe.component.html',
   styleUrl: './projeto-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,7 +36,11 @@ export class ProjetoDetalheComponent {
   /** `:id` da rota (withComponentInputBinding). */
   readonly id = input.required<string>();
 
-  protected readonly podeEditar = inject(PermissaoService).temAlguma(['projetos.editar']);
+  private readonly permissao = inject(PermissaoService);
+  protected readonly podeEditar = this.permissao.temAlguma(['projetos.editar']);
+  /** Sem `precificacao.ler` o bloco de preços nem entra na página (os valores não são pedidos ao servidor). */
+  protected readonly podeVerPrecos = this.permissao.temAlguma(['precificacao.ler']);
+  protected readonly podeEditarPrecos = this.permissao.temAlguma(['precificacao.editar']);
   protected readonly status = STATUS_VERSAO;
   protected readonly salvando = signal(false);
   protected readonly mostrarArquivadas = signal(false);

@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { ProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
+import { PrecosService } from '@data/precificacao/precos/precos.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
 import { of } from 'rxjs';
@@ -22,8 +23,15 @@ describe('ProjetoDetalheComponent', () => {
       { id: 21, numero: 1, nome: 'Versão 1', observacoes: null, status: 'PUBLICADA', publicadaEm: '2026-11-05T13:00:00Z', itens: [{ id: 2, quantidade: 1, observacao: null, peca }] },
     ],
   };
+  const precos = {
+    herdadosEm: '2026-11-09T12:00:00Z',
+    alteradosEm: null,
+    cotacoes: [{ metal: 'OURO' as const, valor: 640, cotadaEm: '2026-11-08T12:00:00Z' }],
+    parametros: { perdaPercentual: 8, valorHora: 90, markup: 1.8, taxasPercentual: 0, arredondarPara: 10 },
+  };
   const servico = {
     getProjeto: vi.fn(() => of(projeto)),
+    getPrecosDoProjeto: vi.fn(() => of(precos)),
     postArquivarVersao: vi.fn(() => of(undefined)),
     postDesarquivarVersao: vi.fn(() => of(undefined)),
     postPublicarVersao: vi.fn(() => of(undefined)),
@@ -38,6 +46,7 @@ describe('ProjetoDetalheComponent', () => {
         provideRouter([{ path: '**', children: [] }]),
         { provide: ProjetosService, useValue: servico },
         { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
+        { provide: PrecosService, useValue: { getPrecos: () => of({ cotacoes: [], ligas: [], parametros: precos.parametros }) } },
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
         { provide: ToastService, useValue: { sucesso: vi.fn() } },
       ],
@@ -102,5 +111,16 @@ describe('ProjetoDetalheComponent', () => {
     expect(el.textContent).toContain('Maria Silva');
     expect(el.querySelectorAll('.versao .acoes')).toHaveLength(0);
     expect(botao(el, 'Nova versão')).toBeUndefined();
+  });
+
+  it('deve mostrar os preços do projeto só para quem tem precificacao.ler', async () => {
+    const comRegra = await abrir();
+    expect(comRegra.el.querySelector('cw-precos-projeto')?.textContent).toMatch(/Ouro R\$\s640,00\/g/);
+    TestBed.resetTestingModule();
+
+    const semRegra = await abrir(false);
+
+    expect(semRegra.el.querySelector('cw-precos-projeto')).toBeNull();
+    expect(servico.getPrecosDoProjeto).not.toHaveBeenCalled();
   });
 });

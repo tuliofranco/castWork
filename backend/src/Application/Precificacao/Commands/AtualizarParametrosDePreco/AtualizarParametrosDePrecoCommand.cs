@@ -1,7 +1,6 @@
 using Castwork.Application.Abstractions;
 using Castwork.Application.Common.Security;
 using Castwork.Domain.Entities.Atelie;
-using Castwork.Domain.ValueObjects;
 
 using MediatR;
 
@@ -11,7 +10,7 @@ namespace Castwork.Application.Precificacao.Commands.AtualizarParametrosDePreco;
 /// Padrões de preço do ateliê: perda de fundição e acabamento, valor da hora, markup, taxas e arredondamento.
 /// </summary>
 [Permissao(Regras.Precificacao.Editar)]
-public sealed class AtualizarParametrosDePrecoCommand : IRequest
+public sealed class AtualizarParametrosDePrecoCommand : IParametrosDePrecoInformados, IRequest
 {
     /// <summary>
     /// % (8 = 8%).
@@ -43,12 +42,7 @@ public sealed class AtualizarParametrosDePrecoCommandHandler(IUnitOfWork unitOfW
         var configuracao = await unitOfWork.GetRepository<ConfiguracaoAtelie>()
             .ObterPorIdOuFalharAsync(ConfiguracaoAtelie.IdUnico, cancellationToken);
 
-        configuracao.AtualizarParametrosDePreco(ParametrosDePreco.Criar(
-            request.PerdaPercentual,
-            Dinheiro.Criar(request.ValorHora),
-            request.Markup,
-            request.TaxasPercentual,
-            Dinheiro.Criar(request.ArredondarPara)));
+        configuracao.AtualizarParametrosDePreco(request.ParaParametrosDePreco());
 
         await unitOfWork.SalvarAsync(cancellationToken);
     }

@@ -40,6 +40,10 @@
     </div>
   </section>
 
+  @if (podeVerPrecos) {
+    <cw-precos-projeto [projetoId]="p.id" [podeEditar]="podeEditarPrecos" />
+  }
+
   <section class="secao" aria-labelledby="titulo-versoes">
     <div class="cabecalho-secao">
       <h2 id="titulo-versoes">Versões</h2>

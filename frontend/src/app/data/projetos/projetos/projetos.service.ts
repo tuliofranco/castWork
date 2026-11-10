@@ -6,8 +6,8 @@ import { dadosGql } from '@shared/operators/dados-gql.operator';
 import { Apollo, gql } from 'apollo-angular';
 import { type Observable, map } from 'rxjs';
 
-import type { PostItemDto, PostProjetoDto, PostVersaoDto, PutItemDto } from './dto/projeto-comandos.dto';
-import type { ProjetoDto, ProjetoResumoDto } from './dto/projeto.dto';
+import type { PostItemDto, PostProjetoDto, PostVersaoDto, PutItemDto, PutPrecosDoProjetoDto } from './dto/projeto-comandos.dto';
+import type { PrecosDoProjetoDto, ProjetoDto, ProjetoResumoDto } from './dto/projeto.dto';
 
 export const GET_PROJETOS = gql`
   query GetProjetos($termo: String, $primeiros: Int, $apos: String) {
@@ -69,12 +69,41 @@ export const GET_PROJETO = gql`
   }
 `;
 
+/** Separada do GET_PROJETO: cotações e parâmetros exigem `precificacao.ler` e só são pedidos por quem tem a regra. */
+export const GET_PRECOS_DO_PROJETO = gql`
+  query GetPrecosDoProjeto($id: Long!) {
+    projeto(id: $id) {
+      id
+      precos {
+        herdadosEm
+        alteradosEm
+        cotacoes {
+          metal
+          valor
+          cotadaEm
+        }
+        parametros {
+          perdaPercentual
+          valorHora
+          markup
+          taxasPercentual
+          arredondarPara
+        }
+      }
+    }
+  }
+`;
+
 interface GetProjetosResposta {
   readonly projetos: PaginaDto<ProjetoResumoDto>;
 }
 
 interface GetProjetoResposta {
   readonly projeto: ProjetoDto | null;
+}
+
+interface GetPrecosDoProjetoResposta {
+  readonly projeto: { readonly id: number; readonly precos: PrecosDoProjetoDto } | null;
 }
 
 /**
@@ -100,6 +129,25 @@ export class ProjetosService {
       dadosGql(),
       map((dados) => dados.projeto),
     );
+  }
+
+  getPrecosDoProjeto(id: number): Observable<PrecosDoProjetoDto | null> {
+    // Sempre do servidor: a tela edita e relê, e o cache do Apollo mostraria o valor antigo.
+    return this.apollo
+      .query<GetPrecosDoProjetoResposta>({ query: GET_PRECOS_DO_PROJETO, variables: { id }, fetchPolicy: 'network-only' })
+      .pipe(
+        dadosGql(),
+        map((dados) => dados.projeto?.precos ?? null),
+      );
+  }
+
+  putPrecos(projetoId: number, dto: PutPrecosDoProjetoDto): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/precos`, dto).pipe(map(() => undefined));
+  }
+
+  /** "Atualizar para os valores atuais": cotações e parâmetros de hoje do ateliê. */
+  postAtualizarPrecos(projetoId: number): Observable<void> {
+    return this.http.post(`projetos/${projetoId}/precos/atualizar`, {}).pipe(map(() => undefined));
   }
 
   postProjeto(dto: PostProjetoDto): Observable<IdCriadoDto> {

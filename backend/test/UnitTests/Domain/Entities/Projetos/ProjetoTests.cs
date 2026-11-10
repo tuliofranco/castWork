@@ -1,19 +1,23 @@
 using System.Reflection;
 
 using Castwork.Domain.Common;
+using Castwork.Domain.Entities.Precificacao;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.Exceptions;
+using Castwork.Domain.ValueObjects;
 
 namespace Castwork.UnitTests.Domain.Entities.Projetos;
 
 public class ProjetoTests
 {
     private static readonly DateTimeOffset Agora = new(2026, 11, 5, 13, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset CotadoEm = new(2026, 11, 1, 9, 0, 0, TimeSpan.Zero);
+    private static readonly PrecosDoAtelie Atelie = PrecosDoAtelieCom(640m, 6.8m, perda: 8m);
 
     [Test]
     public void DeveCriarProjetoSemVersoes()
     {
-        var projeto = Projeto.Criar(" Colar Raízes ", "Inspirado em raízes", clienteId: 3);
+        var projeto = Projeto.Criar(" Colar Raízes ", "Inspirado em raízes", clienteId: 3, Atelie, Agora);
 
         projeto.Should().BeEquivalentTo(new { Nome = "Colar Raízes", Descricao = "Inspirado em raízes", ClienteId = 3L });
         projeto.Versoes.Should().BeEmpty();
@@ -22,7 +26,7 @@ public class ProjetoTests
     [Test]
     public void DeveNumerarAPrimeiraVersaoComo1EmDesenvolvimento()
     {
-        var projeto = Projeto.Criar("Colar", null, null);
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
 
         var versao = projeto.CriarVersao("Com safira", null);
 
@@ -32,7 +36,7 @@ public class ProjetoTests
     [Test]
     public void DeveAceitarProjetoSemCliente()
     {
-        var projeto = Projeto.Criar("Pulseira autoral", null, clienteId: null);
+        var projeto = Projeto.Criar("Pulseira autoral", null, clienteId: null, Atelie, Agora);
 
         projeto.ClienteId.Should().BeNull();
     }
@@ -40,7 +44,7 @@ public class ProjetoTests
     [Test]
     public void DeveNumerarVersoesEmSequencia()
     {
-        var projeto = Projeto.Criar("Colar", null, null);
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
 
         projeto.CriarVersao("Base", null);
         var v2 = projeto.CriarVersao("Com pedra", null);
@@ -181,7 +185,7 @@ public class ProjetoTests
     [Test]
     public void DeveVincularEDesvincularCliente()
     {
-        var projeto = Projeto.Criar("Colar", null, clienteId: null);
+        var projeto = Projeto.Criar("Colar", null, clienteId: null, Atelie, Agora);
 
         projeto.VincularCliente(7);
         var vinculado = projeto.ClienteId;
@@ -203,12 +207,94 @@ public class ProjetoTests
         itemInexistente.Should().Throw<EntidadeNaoEncontradaException>().Which.Entidade.Should().Be("Item da composição");
     }
 
+    [Test]
+    public void DeveNascerComOsPrecosDoAtelieEAData()
+    {
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
+
+        projeto.Cotacoes.Select(c => (c.Metal, c.Valor.Valor, c.CotadaEm)).Should().Equal((Metal.Ouro, 640m, CotadoEm), (Metal.Prata, 6.8m, CotadoEm));
+        projeto.ParametrosDePreco.Should().Be(Atelie.Parametros);
+        projeto.ParametrosDePreco.Should().NotBeSameAs(Atelie.Parametros, "o projeto tem a sua cópia");
+        (projeto.PrecosHerdadosEm, projeto.PrecosAlteradosEm).Should().Be((Agora, (DateTimeOffset?)null));
+    }
+
+    [Test]
+    public void DeveHerdarSoOsMetaisQueOAtelieJaCotou()
+    {
+        var semPrata = new PrecosDoAtelie([CotacaoMetal.Registrar(Metal.Ouro, Dinheiro.Criar(640m), CotadoEm, null)], Atelie.Parametros);
+
+        var projeto = Projeto.Criar("Colar", null, null, semPrata, Agora);
+
+        projeto.Cotacoes.Select(c => c.Metal).Should().Equal(Metal.Ouro);
+    }
+
+    [Test]
+    public void DeveAlterarPrecosSoNoProjetoMantendoADataDaCotacaoQueNaoMudou()
+    {
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
+        var depois = Agora.AddDays(2);
+        var novosParametros = ParametrosDePreco.Criar(10m, Dinheiro.Criar(120m), 2.2m, 5m, Dinheiro.Criar(50m));
+
+        projeto.AlterarPrecos(new Dictionary<Metal, Dinheiro> { [Metal.Ouro] = Dinheiro.Criar(655m), [Metal.Prata] = Dinheiro.Criar(6.8m) }, novosParametros, depois);
+
+        projeto.Cotacoes.Select(c => (c.Metal, c.Valor.Valor, c.CotadaEm)).Should().Equal((Metal.Ouro, 655m, depois), (Metal.Prata, 6.8m, CotadoEm));
+        projeto.ParametrosDePreco.Should().Be(novosParametros);
+        (projeto.PrecosHerdadosEm, projeto.PrecosAlteradosEm).Should().Be((Agora, (DateTimeOffset?)depois));
+        Atelie.Parametros.PerdaPercentual.Should().Be(8m, "editar o projeto não altera o ateliê");
+    }
+
+    [Test]
+    public void DeveRemoverACotacaoDoMetalQueNaoFoiInformado()
+    {
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
+
+        projeto.AlterarPrecos(new Dictionary<Metal, Dinheiro> { [Metal.Ouro] = Dinheiro.Criar(640m) }, Atelie.Parametros, Agora.AddDays(1));
+
+        projeto.Cotacoes.Select(c => c.Metal).Should().Equal(Metal.Ouro);
+    }
+
+    [Test]
+    public void DeveRecusarCotacaoZeroNoProjeto()
+    {
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
+
+        var alterar = () => projeto.AlterarPrecos(new Dictionary<Metal, Dinheiro> { [Metal.Ouro] = Dinheiro.Zero }, Atelie.Parametros, Agora);
+
+        alterar.Should().Throw<ValorInvalidoException>().Which.Campo.Should().Be("Valor");
+    }
+
+    [Test]
+    public void DeveAtualizarParaOsValoresAtuaisDoAtelieDesfazendoAEdicao()
+    {
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
+        projeto.AlterarPrecos(new Dictionary<Metal, Dinheiro> { [Metal.Ouro] = Dinheiro.Criar(700m) }, ParametrosDePreco.Criar(12m, Dinheiro.Criar(80m), 3m, 0m, Dinheiro.Zero), Agora.AddDays(1));
+        var hoje = Agora.AddDays(10);
+        var atelieHoje = PrecosDoAtelieCom(660m, 7.1m, perda: 9m, registradaEm: hoje.AddHours(-1));
+
+        projeto.AtualizarPrecosDoAtelie(atelieHoje, hoje);
+
+        projeto.Cotacoes.Select(c => (c.Metal, c.Valor.Valor, c.CotadaEm)).Should().Equal((Metal.Ouro, 660m, hoje.AddHours(-1)), (Metal.Prata, 7.1m, hoje.AddHours(-1)));
+        projeto.ParametrosDePreco.Should().Be(atelieHoje.Parametros);
+        (projeto.PrecosHerdadosEm, projeto.PrecosAlteradosEm).Should().Be((hoje, (DateTimeOffset?)null));
+    }
+
+    [Test]
+    public void DeveHerdarValorDaHoraADefinirSemRecusar()
+    {
+        // O ateliê começa com a hora "a definir" (zero): o projeto copia como está, sem passar pela validação.
+        var aDefinir = new PrecosDoAtelie([], ParametrosComHoraZero());
+
+        var projeto = Projeto.Criar("Colar", null, null, aDefinir, Agora);
+
+        (projeto.ParametrosDePreco.ValorHora, projeto.Cotacoes.Count).Should().Be((Dinheiro.Zero, 0));
+    }
+
     /// <summary>
     /// Fora do banco os Ids são 0; os testes atribuem Ids como o EF faria ao salvar.
     /// </summary>
     private static (Projeto Projeto, long V1) ProjetoComIds()
     {
-        var projeto = Projeto.Criar("Colar", null, null);
+        var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
         return (projeto, DefinirId(projeto.CriarVersao("Base", null), 100));
     }
 
@@ -217,6 +303,24 @@ public class ProjetoTests
     {
         typeof(BaseEntity<long>).GetProperty(nameof(BaseEntity<long>.Id))!.SetValue(entidade, id, BindingFlags.NonPublic | BindingFlags.Instance, null, null, null);
         return id;
+    }
+
+    private static PrecosDoAtelie PrecosDoAtelieCom(decimal ouro, decimal prata, decimal perda, DateTimeOffset? registradaEm = null)
+        => new(
+            [
+                CotacaoMetal.Registrar(Metal.Ouro, Dinheiro.Criar(ouro), registradaEm ?? CotadoEm, null),
+                CotacaoMetal.Registrar(Metal.Prata, Dinheiro.Criar(prata), registradaEm ?? CotadoEm, null),
+            ],
+            ParametrosDePreco.Criar(perda, Dinheiro.Criar(90m), 1.8m, 0m, Dinheiro.Criar(10m)));
+
+    /// <summary>
+    /// Como o EF lê a linha do ateliê recém-instalado: valor da hora zero, que a fábrica recusa.
+    /// </summary>
+    private static ParametrosDePreco ParametrosComHoraZero()
+    {
+        var parametros = ParametrosDePreco.Criar(8m, Dinheiro.Criar(1m), 1.8m, 0m, Dinheiro.Criar(10m));
+        typeof(ParametrosDePreco).GetProperty(nameof(ParametrosDePreco.ValorHora))!.SetValue(parametros, Dinheiro.Zero);
+        return parametros;
     }
 
     private static VersaoProjeto Versao(Projeto projeto, long id) => projeto.Versoes.Single(v => v.Id == id);

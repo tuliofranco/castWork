@@ -1284,6 +1284,44 @@ namespace Castwork.Infra.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.CotacaoDoProjeto", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CotadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cotada_em");
+
+                    b.Property<string>("Metal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metal");
+
+                    b.Property<long>("ProjetoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("projeto_id");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_projeto_cotacoes");
+
+                    b.HasIndex("ProjetoId", "Metal")
+                        .IsUnique()
+                        .HasDatabaseName("ix_projeto_cotacoes_projeto_id_metal");
+
+                    b.ToTable("projeto_cotacoes", (string)null);
+                });
+
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>
                 {
                     b.Property<long>("Id")
@@ -1363,11 +1401,49 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("nome");
 
+                    b.Property<DateTimeOffset?>("PrecosAlteradosEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("precos_alterados_em");
+
+                    b.Property<DateTimeOffset>("PrecosHerdadosEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("precos_herdados_em");
+
                     b.Property<uint>("Versao")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "ParametrosDePreco", "Castwork.Domain.Entities.Projetos.Projeto.ParametrosDePreco#ParametrosDePreco", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("ArredondarPara")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("arredondar_para");
+
+                            b1.Property<decimal>("Markup")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("markup");
+
+                            b1.Property<decimal>("PerdaPercentual")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("perda_percentual");
+
+                            b1.Property<decimal>("TaxasPercentual")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("taxas_percentual");
+
+                            b1.Property<decimal>("ValorHora")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("valor_hora");
+                        });
 
                     b.HasKey("Id")
                         .HasName("pk_projetos");
@@ -1558,6 +1634,16 @@ namespace Castwork.Infra.Migrations
                         .HasConstraintName("fk_briefing_documentos_briefings_briefing_id");
                 });
 
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.CotacaoDoProjeto", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Projetos.Projeto", null)
+                        .WithMany("Cotacoes")
+                        .HasForeignKey("ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_projeto_cotacoes_projetos_projeto_id");
+                });
+
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>
                 {
                     b.HasOne("Castwork.Domain.Entities.Pecas.Peca", null)
@@ -1606,6 +1692,8 @@ namespace Castwork.Infra.Migrations
 
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.Projeto", b =>
                 {
+                    b.Navigation("Cotacoes");
+
                     b.Navigation("Versoes");
                 });
 
