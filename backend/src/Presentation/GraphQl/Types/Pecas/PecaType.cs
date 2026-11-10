@@ -1,5 +1,7 @@
 using Castwork.Domain.Entities.Pecas;
 
+using HotChocolate.Authorization;
+
 namespace Castwork.GraphQl.Types.Pecas;
 
 /// <summary>
@@ -28,5 +30,12 @@ public sealed class PecaType : ObjectType<Peca>
         descriptor.Field("pesoGramas")
             .Type<DecimalType>()
             .Resolve(ctx => ctx.Parent<Peca>().Peso?.Gramas);
+
+        // Custo é dado de precificação: quem só consulta a biblioteca não o vê (o campo responde erro de autorização).
+        descriptor.Field("custo")
+            .Type<DecimalType>()
+            .Description("Custo de compra ou produção de uma unidade (R$), não o preço de venda. Null quando a peça ainda não tem custo.")
+            .Authorize(Politicas.PrecificacaoLer)
+            .Resolve(ctx => ctx.Parent<Peca>().Custo?.Valor);
     }
 }

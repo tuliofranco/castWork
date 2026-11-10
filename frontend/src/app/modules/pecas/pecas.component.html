@@ -26,27 +26,15 @@
     <ul class="cw-lista">
       @for (peca of pagina.nodes; track peca.id) {
         <li>
-          <div class="cw-linha" [class.inativa]="!peca.ativo">
-            <span class="cw-icone-linha"><i class="bi" [class]="'bi-' + iconeTipo(peca.tipo)" aria-hidden="true"></i></span>
-            <span class="principal">
-              <span class="nome">{{ peca.nome }}</span>
-              <span class="meta">
-                {{ rotuloTipo(peca.tipo) }}
-                @if (peca.material) {
-                  · {{ peca.material }}
-                }
-                @if (peca.teor) {
-                  · {{ formatarTeor(peca.teor) }}
-                }
-              </span>
-            </span>
-            @if (!peca.ativo) {
-              <cw-selo icone="pause-circle">Inativa</cw-selo>
-            }
-            @if (peca.pesoGramas !== null) {
-              <span class="peso">{{ peca.pesoGramas | number: '1.3-3' }} g</span>
-            }
-          </div>
+          @if (podeEditar && peca.ativo) {
+            <a class="cw-linha" [routerLink]="[peca.id, 'editar']">
+              <ng-container *ngTemplateOutlet="conteudo; context: { $implicit: peca }" />
+            </a>
+          } @else {
+            <div class="cw-linha" [class.inativa]="!peca.ativo">
+              <ng-container *ngTemplateOutlet="conteudo; context: { $implicit: peca }" />
+            </div>
+          }
         </li>
       }
     </ul>
@@ -62,3 +50,35 @@
     />
   }
 </cw-estado-lista>
+
+<ng-template #conteudo let-peca>
+  <span class="cw-icone-linha"><i class="bi" [class]="'bi-' + iconeTipo(peca.tipo)" aria-hidden="true"></i></span>
+  <span class="principal">
+    <span class="nome">{{ peca.nome }}</span>
+    <span class="meta">
+      {{ rotuloTipo(peca.tipo) }}
+      @if (peca.material) {
+        · {{ peca.material }}
+      }
+      @if (peca.teor) {
+        · {{ formatarTeor(peca.teor) }}
+      }
+    </span>
+  </span>
+  @if (!peca.ativo) {
+    <cw-selo icone="pause-circle">Inativa</cw-selo>
+  }
+  @if (peca.pesoGramas !== null) {
+    <span class="peso">{{ peca.pesoGramas | number: '1.3-3' }} g</span>
+  }
+  @if (podeVerCusto) {
+    @if (peca.custo !== null && peca.custo !== undefined) {
+      <span class="custo" title="Custo por unidade">{{ peca.custo | currency: 'BRL' }}</span>
+    } @else if (peca.ativo) {
+      <cw-selo tom="aviso" icone="exclamation-circle">Sem custo</cw-selo>
+    }
+  }
+  @if (podeEditar && peca.ativo) {
+    <i class="bi bi-chevron-right seta" aria-hidden="true"></i>
+  }
+</ng-template>

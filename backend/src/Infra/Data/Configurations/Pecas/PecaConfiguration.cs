@@ -19,6 +19,7 @@ internal sealed class PecaConfiguration : IEntityTypeConfiguration<Peca>
         builder.Property(p => p.Teor);
         builder.Property(p => p.Peso);
         builder.Property(p => p.Descricao).HasMaxLength(Peca.DescricaoMaxLength);
+        builder.Property(p => p.Custo);
         builder.Property(p => p.Ativo).IsRequired();
 
         builder.HasIndex(p => p.Nome);

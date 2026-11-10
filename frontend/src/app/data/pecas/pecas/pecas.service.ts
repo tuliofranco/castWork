@@ -6,11 +6,18 @@ import { dadosGql } from '@shared/operators/dados-gql.operator';
 import { Apollo, gql } from 'apollo-angular';
 import { type Observable, map } from 'rxjs';
 
-import type { PecaDto } from './dto/peca.dto';
+import type { PecaDetalheDto, PecaDto } from './dto/peca.dto';
 import type { PostPecaDto } from './dto/post-peca.dto';
+import type { PutPecaDto } from './dto/put-peca.dto';
 
 export const GET_PECAS = gql`
-  query GetPecas($termo: String, $primeiros: Int, $apos: String, $filtro: PecaFiltro) {
+  query GetPecas(
+    $termo: String
+    $primeiros: Int
+    $apos: String
+    $filtro: PecaFiltro
+    $comCusto: Boolean! = false
+  ) {
     pecas(termo: $termo, first: $primeiros, after: $apos, where: $filtro) {
       totalCount
       pageInfo {
@@ -25,10 +32,32 @@ export const GET_PECAS = gql`
         teor
         pesoGramas
         ativo
+        custo @include(if: $comCusto)
       }
     }
   }
 `;
+
+/** O custo só é pedido por quem tem `precificacao.ler`: para os demais o campo responde erro de autorização. */
+export const GET_PECA = gql`
+  query GetPeca($id: Long!, $comCusto: Boolean! = false) {
+    peca(id: $id) {
+      id
+      nome
+      tipo
+      material
+      teor
+      pesoGramas
+      descricao
+      ativo
+      custo @include(if: $comCusto)
+    }
+  }
+`;
+
+interface GetPecaResposta {
+  readonly peca: PecaDetalheDto | null;
+}
 
 interface GetPecasResposta {
   readonly pecas: PaginaDto<PecaDto>;
@@ -37,9 +66,11 @@ interface GetPecasResposta {
 export interface ConsultaPecasDto extends ConsultaPaginadaDto {
   /** true para o seletor da composição (peça inativa não entra em versão nova). */
   readonly somenteAtivas?: boolean | null;
+  /** true só para quem tem `precificacao.ler`. */
+  readonly comCusto?: boolean | null;
 }
 
-/** Biblioteca de peças: leitura pelo GraphQL, cadastro pelo REST. */
+/** Biblioteca de peças: leitura pelo GraphQL, cadastro e alteração pelo REST. */
 @Injectable({ providedIn: 'root' })
 export class PecasService {
   private readonly apollo = inject(Apollo);
@@ -55,6 +86,7 @@ export class PecasService {
           primeiros: consulta.primeiros,
           apos: consulta.apos ?? null,
           filtro: consulta.somenteAtivas ? { ativo: { eq: true } } : null,
+          comCusto: consulta.comCusto ?? false,
         },
       })
       .pipe(
@@ -63,7 +95,20 @@ export class PecasService {
       );
   }
 
+  getPeca(id: number, comCusto = false): Observable<PecaDetalheDto | null> {
+    return this.apollo
+      .query<GetPecaResposta>({ query: GET_PECA, variables: { id, comCusto } })
+      .pipe(
+        dadosGql(),
+        map((dados) => dados.peca),
+      );
+  }
+
   postPeca(dto: PostPecaDto): Observable<IdCriadoDto> {
     return this.http.post<IdCriadoDto>('pecas', dto);
+  }
+
+  putPeca(id: number, dto: PutPecaDto): Observable<void> {
+    return this.http.put(`pecas/${id}`, dto).pipe(map(() => undefined));
   }
 }

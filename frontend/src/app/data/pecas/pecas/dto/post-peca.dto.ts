@@ -8,4 +8,6 @@ export interface PostPecaDto {
   readonly teor?: string | null;
   readonly pesoGramas?: number | null;
   readonly descricao?: string | null;
+  /** R$ por unidade. Ignorado pelo servidor para quem não tem `precificacao.ler`. */
+  readonly custo?: number | null;
 }

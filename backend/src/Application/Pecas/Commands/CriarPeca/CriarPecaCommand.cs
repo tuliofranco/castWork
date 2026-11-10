@@ -1,45 +1,33 @@
 using Castwork.Application.Abstractions;
 using Castwork.Application.Common.Security;
 using Castwork.Domain.Entities.Pecas;
-using Castwork.Domain.ValueObjects;
 
 using MediatR;
 
 namespace Castwork.Application.Pecas.Commands.CriarPeca;
 
 /// <summary>
-/// Cadastra uma peça na biblioteca. Retorna o Id.
+/// Cadastra uma peça na biblioteca. Retorna o Id. O custo só é gravado para quem tem <c>precificacao.ler</c>.
 /// </summary>
 [Permissao(Regras.Pecas.Criar)]
-public sealed class CriarPecaCommand : IRequest<long>
+public sealed class CriarPecaCommand : DadosDaPeca, IRequest<long>
 {
-    public string Nome { get; set; } = string.Empty;
-
-    public TipoPeca Tipo { get; set; }
-
-    public string? Material { get; set; }
-
-    /// <summary>
-    /// Teor do metal: "18k" ou "750". Opcional.
-    /// </summary>
-    public string? Teor { get; set; }
-
-    public decimal? PesoGramas { get; set; }
-
-    public string? Descricao { get; set; }
 }
 
-public sealed class CriarPecaCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<CriarPecaCommand, long>
+public sealed class CriarPecaCommandHandler(IUnitOfWork unitOfWork, ISessaoService sessao, IPermissaoService permissaoService)
+    : IRequestHandler<CriarPecaCommand, long>
 {
     public async Task<long> Handle(CriarPecaCommand request, CancellationToken cancellationToken)
     {
+        var podeVerCusto = await permissaoService.SessaoPossuiRegraAsync(sessao, Regras.Precificacao.Consultar, cancellationToken);
         var peca = Peca.Criar(
             request.Nome,
             request.Tipo,
             request.Material,
-            string.IsNullOrWhiteSpace(request.Teor) ? null : TeorMetal.Parse(request.Teor),
-            request.PesoGramas is null ? null : Peso.EmGramas(request.PesoGramas.Value),
-            request.Descricao);
+            request.TeorDominio(),
+            request.PesoDominio(),
+            request.Descricao,
+            podeVerCusto ? request.CustoDominio() : null);
 
         unitOfWork.GetRepository<Peca>().Adicionar(peca);
         await unitOfWork.SalvarAsync(cancellationToken);

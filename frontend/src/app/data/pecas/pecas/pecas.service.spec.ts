@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloTestingController, ApolloTestingModule } from 'apollo-angular/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { GET_PECAS, PecasService } from './pecas.service';
+import { GET_PECA, GET_PECAS, PecasService } from './pecas.service';
 
 describe('PecasService', () => {
   function configurar() {
@@ -26,8 +26,8 @@ describe('PecasService', () => {
     ativasOp.flush({ data: { pecas: vazia } });
     await ativas;
 
-    expect(todasOp.operation.variables).toEqual({ termo: 'elo', primeiros: 20, apos: null, filtro: null });
-    expect(ativasOp.operation.variables).toEqual({ termo: null, primeiros: 10, apos: null, filtro: { ativo: { eq: true } } });
+    expect(todasOp.operation.variables).toEqual({ termo: 'elo', primeiros: 20, apos: null, filtro: null, comCusto: false });
+    expect(ativasOp.operation.variables).toEqual({ termo: null, primeiros: 10, apos: null, filtro: { ativo: { eq: true } }, comCusto: false });
   });
 
   it('deve cadastrar a peça pelo REST', async () => {
@@ -39,5 +39,33 @@ describe('PecasService', () => {
     req.flush({ id: 5 }, { status: 201, statusText: 'Created' });
 
     expect(await promessa).toEqual({ id: 5 });
+  });
+
+  it('deve pedir o custo só quando informado', async () => {
+    const { service, apollo } = configurar();
+
+    const lista = firstValueFrom(service.getPecas({ primeiros: 20, comCusto: true }));
+    const listaOp = apollo.expectOne(GET_PECAS);
+    listaOp.flush({ data: { pecas: vazia } });
+    await lista;
+    const peca = firstValueFrom(service.getPeca(7));
+    const pecaOp = apollo.expectOne(GET_PECA);
+    pecaOp.flush({ data: { peca: null } });
+
+    expect(await peca).toBeNull();
+    expect(listaOp.operation.variables['comCusto']).toBe(true);
+    expect(pecaOp.operation.variables).toEqual({ id: 7, comCusto: false });
+  });
+
+  it('deve alterar a peça pelo REST', async () => {
+    const { service, http } = configurar();
+    const promessa = firstValueFrom(service.putPeca(7, { nome: 'Turmalina', tipo: 'PEDRA', custo: 85.5 }));
+
+    const req = http.expectOne('pecas/7');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ nome: 'Turmalina', tipo: 'PEDRA', custo: 85.5 });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(await promessa).toBeUndefined();
   });
 });

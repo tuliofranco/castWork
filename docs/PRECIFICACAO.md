@@ -50,6 +50,13 @@ O teor dá a fração de metal puro (preço); a densidade converte o volume do m
   Instalação nova começa com R$ 0,00 ("a definir"); a tela pede o valor e só salva com valor positivo.
 - Os padrões são o default das colunas no banco: valem para a linha que já existe.
 
+## Custo das peças (etapa 2)
+
+As peças da biblioteca (pedras, fechos, correntes compradas prontas) têm **custo por unidade** (R$), opcional. É o
+custo de **compra ou produção**, não o preço de venda; peça sem custo deixa o preço da versão incompleto (etapa 4) e
+aparece com o selo "Sem custo" na lista. Pedra não é precificada pelo volume do 3D: o custo dela vem daqui. Só quem tem
+`precificacao.ler` vê (e grava) o custo. Custo por quilate ou tamanho e histórico de custos ficam para depois.
+
 ## Regras
 
 - Valores negativos ou zero são recusados: cotação, densidade, valor da hora e markup.
@@ -59,7 +66,7 @@ O teor dá a fração de metal puro (preço); a densidade converte o volume do m
 
 ## Próximas etapas (issue #10)
 
-1. Preços do ateliê (esta).
+1. Preços do ateliê.
 2. Custo unitário nas peças da biblioteca.
 3. Projeto herda e edita os preços do ateliê.
 4. Preço da versão com peso manual.
