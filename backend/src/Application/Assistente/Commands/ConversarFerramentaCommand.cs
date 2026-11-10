@@ -73,7 +73,7 @@ public sealed class ConversarFerramentaCommandHandler(
 
         var anexos = await CarregarAnexosAsync(request, cancellationToken);
         var arquivo = await ConversaDaVersao.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
-        var (contexto, locais) = await ferramenta.PrepararAsync(request.ProjetoId, request.VersaoId, cancellationToken);
+        var (contexto, locais, preparoDoArquivo) = await ferramenta.PrepararAsync(request.ProjetoId, request.VersaoId, cancellationToken);
 
         var repositorioDeImagens = unitOfWork.GetRepository<ImagemConversa>();
         var novas = request.Imagens.Select(i => ImagemConversa.Criar(conversa.Id, Convert.FromBase64String(i), agora)).ToList();
@@ -113,7 +113,8 @@ public sealed class ConversarFerramentaCommandHandler(
                     locais,
                     [.. anexos.Select(a => a.Conteudo)],
                     request.Modelo,
-                    request.Esforco),
+                    request.Esforco,
+                    preparoDoArquivo),
                 CancellationToken.None);
         }
         catch

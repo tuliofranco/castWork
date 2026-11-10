@@ -81,6 +81,13 @@ internal sealed partial class AssistenteFerramentaClaude(
         {
             await using var mcp = await IniciarAsync(definicao, pasta.FullName, cancellationToken);
             await PrepararArquivoAsync(mcp, definicao, pasta.FullName, pedido.Arquivo, cancellationToken);
+
+            // O que a ferramenta pede que o arquivo tenha (ex.: os materiais do ateliê). Se falhar, a IA modela assim mesmo.
+            if (await PreparoDoArquivo.AplicarAsync(mcp, definicao, pedido.PreparoDoArquivo, cancellationToken) is { } falhaNoPreparo)
+            {
+                LogFalhaNoPreparo(logger, falhaNoPreparo);
+            }
+
             BetaToolUnion[] ferramentas =
             [
                 .. (await mcp.ListarFerramentasAsync(cancellationToken)).Where(f => !definicao.FerramentasOcultas.Contains(f.Nome)).Select(ParaClaude),
@@ -202,6 +209,9 @@ internal sealed partial class AssistenteFerramentaClaude(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "O servidor MCP não salvou o arquivo: {Detalhe}")]
     private static partial void LogFalhaAoSalvar(ILogger logger, string detalhe);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Não foi possível preparar o arquivo da ferramenta: {Detalhe}")]
+    private static partial void LogFalhaNoPreparo(ILogger logger, string detalhe);
 
     private async Task<(List<MensagemDoTurno> Mensagens, List<ImagemDaConversa> Imagens, bool Alterou, ConsumoDoTurno Consumo)> ConduzirAsync(
         PedidoAFerramenta pedido,

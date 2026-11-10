@@ -8,14 +8,20 @@ using Castwork.Domain.Entities.Projetos;
 namespace Castwork.Application.Ferramentas.Modelo3d;
 
 /// <summary>
-/// O que o modelo 3D conta para a IA sobre o trabalho: o projeto, a versão com a composição e o briefing
-/// (o que será feito). As instruções da IA ficam na Infra (Ferramentas/Modelo3d).
+/// O que o modelo 3D conta para a IA sobre o trabalho: o projeto, a versão com a composição, o briefing
+/// (o que será feito) e os materiais do ateliê que o arquivo tem (<see cref="MateriaisDoModelo"/>). As instruções da IA
+/// ficam na Infra (Ferramentas/Modelo3d).
 /// </summary>
 internal static class ContextoDoModelo3d
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = false };
 
-    public static async Task<string> MontarAsync(IUnitOfWork unitOfWork, long projetoId, long versaoId, CancellationToken cancellationToken)
+    public static async Task<string> MontarAsync(
+        IUnitOfWork unitOfWork,
+        long projetoId,
+        long versaoId,
+        IReadOnlyList<MaterialDoModelo> materiais,
+        CancellationToken cancellationToken)
     {
         var projeto = await unitOfWork.GetRepository<Projeto>()
             .FindBy(p => p.Id == projetoId)
@@ -61,6 +67,7 @@ internal static class ContextoDoModelo3d
                     i.Observacao,
                 }),
                 briefing,
+                materiais = materiais.Select(m => new { nome = m.Nome, m.Uso, densidade = m.Densidade }),
             },
             Json);
     }

@@ -9,6 +9,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
 
+import { avisoDeCorposSemMaterial } from './corpos-sem-material';
 import { HistoricoModeloComponent } from './historico-modelo.component';
 import { PonteSolidCraft } from './ponte-solidcraft';
 
@@ -47,6 +48,9 @@ export class Modelo3dComponent {
   protected readonly ativo = signal<0 | 1>(0);
   /** Trocando o projeto por trás (aviso discreto, sem bloquear). */
   protected readonly trocando = signal(false);
+  /** Corpos do modelo sem material (o "Default" do SolidCraft): aviso discreto, sem bloquear a modelagem. */
+  protected readonly semMaterial = signal<readonly string[]>([]);
+  protected readonly avisoSemMaterial = computed(() => avisoDeCorposSemMaterial(this.semMaterial().length));
 
   private readonly solidcraftA = viewChild.required<ElementRef<HTMLIFrameElement>>('solidcraftA');
   private readonly solidcraftB = viewChild.required<ElementRef<HTMLIFrameElement>>('solidcraftB');
@@ -78,6 +82,7 @@ export class Modelo3dComponent {
     try {
       const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA));
       await this.ponte.carregar(arquivo?.conteudo ?? null, nomeDeArquivo(arquivo?.nome, 'json', 'modelo').replace(/\.json$/, ''));
+      void this.conferirMateriais();
     } catch {
       this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
     } finally {
@@ -95,6 +100,7 @@ export class Modelo3dComponent {
     try {
       this.sincronizando.set('Guardando o modelo...');
       await this.ponte.salvar((arquivo) => this.guardar(arquivo, 'Modelo salvo no Castwork.'));
+      void this.conferirMateriais();
     } catch {
       this.toast.erro('Não foi possível salvar o modelo.');
     } finally {
@@ -160,11 +166,21 @@ export class Modelo3dComponent {
       this.ponte = nova;
       this.ativo.set(atras);
       antiga?.descarregar();
+      void this.conferirMateriais();
     } catch {
       nova.descarregar();
       this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
     } finally {
       this.trocando.set(false);
+    }
+  }
+
+  /** Confere os materiais do modelo à vista; se o SolidCraft não responder, só não mostra o aviso. */
+  private async conferirMateriais(): Promise<void> {
+    try {
+      this.semMaterial.set((await this.ponte?.corposSemMaterial()) ?? []);
+    } catch {
+      this.semMaterial.set([]);
     }
   }
 

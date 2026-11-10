@@ -34,3 +34,9 @@ oferece arquivos implementa `IFonteDeAnexos` (registrada por varredura): o Assis
 das ferramentas (`arquivo`) e o Briefing, o último PDF (`briefing`). A mensagem guarda só a referência
 (`AnexoDaMensagem`); a Infra grava o arquivo na pasta do turno (ferramentas com MCP) ou manda o PDF como
 documento, só naquele turno.
+
+## Preparo do arquivo
+Uma ferramenta pode pedir que o arquivo de trabalho tenha algo ao ser aberto (`PreparoDoTurno.PreparoDoArquivo`, JSON que
+só ela entende). O Assistente leva o preparo no `PedidoAFerramenta`; a Infra, logo depois de abrir o arquivo, aplica o
+`DefinicaoDeFerramenta.PrepararArquivo` da ferramenta (lê o arquivo e monta só o que falta). Não conta como alteração da
+IA. Hoje: os materiais do ateliê no modelo 3D ([Modelo 3D](../Ferramentas/Modelo3d/README.md)).

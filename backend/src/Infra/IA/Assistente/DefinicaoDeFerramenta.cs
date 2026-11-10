@@ -13,7 +13,9 @@ namespace Castwork.Infra.IA.Assistente;
 /// resumo ao resultado (a IA confere sem pedir imagem). <see cref="VistaParaOJoalheiro"/>: no fim de um turno que
 /// alterou o arquivo, a imagem que aparece com a resposta; só o joalheiro a vê, ela não vai para a IA.
 /// <see cref="ModeloPadrao"/>: o modelo quando o joalheiro não escolheu (<c>haiku</c>, <c>sonnet</c>, <c>opus</c>);
-/// nulo usa o da configuração.
+/// nulo usa o da configuração. <see cref="PrepararArquivo"/>: depois de abrir o arquivo, com o preparo que a Application
+/// mandou no pedido, a chamada que lê o arquivo e a que monta, a partir dessa leitura, o que falta nele (nula: nada
+/// falta); ex.: os materiais das ligas no modelo 3D (<see cref="PreparoDoArquivo"/>).
 /// </summary>
 internal sealed record DefinicaoDeFerramenta(
     string Codigo,
@@ -34,4 +36,5 @@ internal sealed record DefinicaoDeFerramenta(
     IReadOnlySet<string>? CamposInternos = null,
     ((string Nome, string Argumentos) Chamada, Func<string, string?> Resumir)? ResumoDoArquivo = null,
     (string Nome, string Argumentos)? VistaParaOJoalheiro = null,
-    string? ModeloPadrao = null);
+    string? ModeloPadrao = null,
+    ((string Nome, string Argumentos) Leitura, Func<string, string, (string Nome, string Argumentos)?> Ajustar)? PrepararArquivo = null);

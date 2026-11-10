@@ -42,7 +42,29 @@ public class ResultadoDaFerramentaTests
     [Test]
     public void DeveResumirCadaCorpoEmUmaLinha()
     {
-        ResumoDoModelo.Resumir(Medida).Should().Be("Modelo agora:\n- Aro (fechado): 20 × 20 × 3 mm · volume 261,54 mm³ · faces: 2 cylinder, 2 plane");
+        ResumoDoModelo.Resumir(Medida.Replace("\"closed\": true,", "\"closed\": true, \"material\": \"Castwork liga 2\",", StringComparison.Ordinal))
+            .Should().Be("Modelo agora:\n- Aro (fechado, Castwork liga 2): 20 × 20 × 3 mm · volume 261,54 mm³ · faces: 2 cylinder, 2 plane");
+    }
+
+    [Test]
+    public void DeveApontarOsCorposSemMaterialIncluindoODefaultDoSolidCraft()
+    {
+        const string Corpos = """
+            {"bodies":[
+              {"name":"Aro","closed":true,"material":"Castwork liga 2","volume_mm3":10},
+              {"name":"Garra","closed":true,"material":"Default","volume_mm3":1},
+              {"name":"Guia","closed":false,"volume_mm3":1},
+              {"name":"Brilhante","closed":true,"material":"Pedra","volume_mm3":2}
+            ]}
+            """;
+
+        ResumoDoModelo.Resumir(Corpos).Should().Be(
+            "Modelo agora:\n"
+            + "- Aro (fechado, Castwork liga 2): volume 10 mm³\n"
+            + "- Garra (fechado, SEM MATERIAL): volume 1 mm³\n"
+            + "- Guia (aberto, SEM MATERIAL): volume 1 mm³\n"
+            + "- Brilhante (fechado, Pedra): volume 2 mm³\n"
+            + "Sem material (atribua com material.assign): Garra, Guia.");
     }
 
     [Test]

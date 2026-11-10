@@ -40,6 +40,14 @@ internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerram
         errado, corrija antes de responder. Agrupe o trabalho em poucos `batch` em vez de muitos `execute`.
         Informe o volume quando for útil para estimar o peso do metal.
 
+        Materiais: o arquivo já tem os materiais do ateliê, listados em "materiais" no contexto da versão (não crie,
+        não edite nem apague materiais: eles vêm do ateliê). Todo corpo de metal que você criar recebe o material da
+        liga com `material.assign` (`bodies` e `material`, com o nome exato da lista), no mesmo `batch` que cria o
+        corpo. A liga vem do briefing ou da composição; se não souber qual é, pergunte ao joalheiro (pode modelar
+        antes e atribuir depois). Use "Pedra" nos corpos que representam pedras (não entram no peso do metal) e
+        "Apoio (não conta)" em rascunhos, guias e corpos auxiliares. O material "Default" do SolidCraft conta como
+        sem material: o "Modelo agora" aponta esses corpos; atribua o material antes de terminar quando souber qual é.
+
         O joalheiro pode anexar arquivos do projeto. Um DXF do desenho 2D chega com o caminho na pasta do turno:
         importe com `sketch.insert_dxf` (`path`, e `plane` conforme a vista: XY para a superior, XZ para a
         frontal, YZ para a lateral), confira os perfis com `inspect_design` e só então extrude ou revolucione.
@@ -92,7 +100,10 @@ internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerram
         ResumoDoArquivo: (("measure", "{}"), ResumoDoModelo.Resumir),
 
         // A imagem da resposta, só para o joalheiro: maior que a da IA, porque não custa tokens.
-        VistaParaOJoalheiro: ("screenshot", JsonSerializer.Serialize(new { view = "iso", width = 960, height = 600, grid = false, axes = false })));
+        VistaParaOJoalheiro: ("screenshot", JsonSerializer.Serialize(new { view = "iso", width = 960, height = 600, grid = false, axes = false })),
+
+        // Os materiais das ligas ativas, a pedra e o apoio, garantidos a cada abertura (sem duplicar).
+        PrepararArquivo: (MateriaisNoArquivo.Leitura, MateriaisNoArquivo.Garantir));
 
     /// <summary>
     /// A imagem custa tokens pela área: o screenshot sai no máximo em 768x480 (cerca de 490 tokens; o padrão do

@@ -1,3 +1,5 @@
+import { corposSemMaterial } from './corpos-sem-material';
+
 /** A API que o SolidCraft web expõe na própria janela (`window.solidcraft`), documentada em docs/browser-api.md. */
 interface ApiSolidCraft {
   request<T = unknown>(metodo: string, parametros?: Record<string, unknown>): Promise<T>;
@@ -17,7 +19,8 @@ type JanelaSolidCraft = Window & typeof globalThis & { solidcraft?: ApiSolidCraf
  * Ponte com o SolidCraft web dentro do iframe (mesma origem: servido pelo próprio front em /solidcraft, no
  * modo `?embed=editor`, que não guarda nada no navegador). O SolidCraft tem API para a página que o embute:
  * - abrir: `document.import` com o JSON do projeto;
- * - salvar: `document.export` devolve o JSON e, guardado no Castwork, `document.saved` marca o projeto salvo.
+ * - salvar: `document.export` devolve o JSON e, guardado no Castwork, `document.saved` marca o projeto salvo;
+ * - conferir: `command` roda um comando do SolidCraft (ex.: `inspect.measure`, que traz o material de cada corpo).
  * O ⌘S/Ctrl+S do joalheiro dentro do SolidCraft também vai para o Castwork.
  */
 export class PonteSolidCraft {
@@ -54,6 +57,14 @@ export class PonteSolidCraft {
     const projeto = await api.request<ProjetoExportado>('document.export');
     await guardar(new Blob([projeto.text], { type: 'application/json' }));
     await api.request('document.saved', { revision: projeto.revision }).catch(() => undefined);
+  }
+
+  /**
+   * Os corpos do projeto aberto que estão sem material (o "Default" do SolidCraft). Só leitura: não muda o projeto.
+   */
+  async corposSemMaterial(): Promise<string[]> {
+    const medida = await this.api().request('command', { command: 'inspect.measure' });
+    return corposSemMaterial(medida);
   }
 
   /** Libera o SolidCraft deste iframe (memória do WebAssembly) quando ele sai de cena. */
