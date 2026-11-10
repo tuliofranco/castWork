@@ -24,6 +24,12 @@ public sealed class ProjetoType : ObjectType<Projeto>
                 ? ctx.DataLoader<ClientePorIdDataLoader>().LoadAsync(id, ctx.RequestAborted)
                 : Task.FromResult<Domain.Entities.Clientes.Cliente?>(null));
 
+        // Preços por DataLoader (uma consulta para todos os projetos pedidos). Os valores ficam protegidos no tipo.
+        descriptor.Field("precos")
+            .Description("Preços deste projeto: cópia dos do ateliê, editável só aqui.")
+            .Type<NonNullType<PrecosDoProjetoType>>()
+            .Resolve(async ctx => await ctx.DataLoader<PrecosPorProjetoDataLoader>().LoadRequiredAsync(ctx.Parent<Projeto>().Id, ctx.RequestAborted));
+
         // Versões vêm por DataLoader: na lista de projetos, uma consulta para todas as versões de todos eles.
         descriptor.Field("versoes")
             .Description("Versões da arte, da mais recente para a mais antiga.")

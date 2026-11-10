@@ -1,4 +1,5 @@
 import type { PecaDto } from '@data/pecas/pecas/dto/peca.dto';
+import type { Metal, ParametrosDePrecoDto } from '@data/precificacao/precos/dto/precos.dto';
 
 export type StatusVersao = 'EM_DESENVOLVIMENTO' | 'PUBLICADA' | 'ARQUIVADA';
 
@@ -34,4 +35,22 @@ export interface ProjetoDto {
   readonly descricao: string | null;
   readonly cliente: { readonly id: number; readonly nome: string } | null;
   readonly versoes: readonly VersaoProjetoDto[];
+}
+
+/** R$/g do metal puro no projeto. */
+export interface CotacaoDoProjetoDto {
+  readonly metal: Metal;
+  readonly valor: number;
+  /** Data de origem: o registro no ateliê (herdada) ou a edição no projeto. */
+  readonly cotadaEm: string;
+}
+
+/** Preços do projeto: cópia dos do ateliê, editável só no projeto. Só pedido com `precificacao.ler`. */
+export interface PrecosDoProjetoDto {
+  readonly herdadosEm: string;
+  /** Nulo enquanto os preços estão como herdados. */
+  readonly alteradosEm: string | null;
+  /** Só os metais com cotação no projeto. */
+  readonly cotacoes: readonly CotacaoDoProjetoDto[];
+  readonly parametros: ParametrosDePrecoDto;
 }

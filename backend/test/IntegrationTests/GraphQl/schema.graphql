@@ -168,6 +168,12 @@ type Cotacao {
   registradaPor: String
 }
 
+type CotacaoDoProjeto {
+  metal: Metal!
+  valor: Decimal!
+  cotadaEm: DateTime!
+}
+
 type CotacaoVigente {
   metal: Metal!
   atual: Cotacao
@@ -280,6 +286,17 @@ type PrecosDoAtelie {
   parametros: ParametrosDePreco!
 }
 
+type PrecosDoProjeto {
+  "Quando os preços foram copiados do ateliê."
+  herdadosEm: DateTime!
+  "Quando foram editados no projeto; null enquanto estão como herdados."
+  alteradosEm: DateTime
+  "R$/g do metal puro no projeto, só os metais com cotação."
+  cotacoes: [CotacaoDoProjeto!] @authorize(policy: "precificacao.ler")
+  "Perda, valor da hora, markup, taxas e arredondamento do projeto."
+  parametros: ParametrosDePreco @authorize(policy: "precificacao.ler")
+}
+
 type Projeto {
   id: Long!
   nome: String!
@@ -288,6 +305,8 @@ type Projeto {
   criadoEm: DateTime!
   alteradoEm: DateTime
   cliente: Cliente @cost(weight: "10")
+  "Preços deste projeto: cópia dos do ateliê, editável só aqui."
+  precos: PrecosDoProjeto! @cost(weight: "10")
   "Versões da arte, da mais recente para a mais antiga."
   versoes: [VersaoProjeto!]! @cost(weight: "10")
 }

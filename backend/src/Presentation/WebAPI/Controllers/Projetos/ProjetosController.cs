@@ -1,6 +1,8 @@
 using Castwork.Application.Projetos.Commands.AdicionarItem;
 using Castwork.Application.Projetos.Commands.AlterarItem;
+using Castwork.Application.Projetos.Commands.AlterarPrecosDoProjeto;
 using Castwork.Application.Projetos.Commands.ArquivarVersao;
+using Castwork.Application.Projetos.Commands.AtualizarPrecosDoProjeto;
 using Castwork.Application.Projetos.Commands.CriarProjeto;
 using Castwork.Application.Projetos.Commands.CriarVersao;
 using Castwork.Application.Projetos.Commands.DesarquivarVersao;
@@ -35,6 +37,27 @@ public sealed class ProjetosController : ApiController
     {
         command.ProjetoId = projetoId;
         await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{projetoId:long}/precos")]
+    [EndpointSummary("Edita os preços só deste projeto (cotações e parâmetros). O ateliê não muda.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AlterarPrecos([FromRoute] long projetoId, [FromBody] AlterarPrecosDoProjetoCommand command, CancellationToken cancellationToken)
+    {
+        command.ProjetoId = projetoId;
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{projetoId:long}/precos/atualizar")]
+    [EndpointSummary("Substitui os preços do projeto pelos valores atuais do ateliê (cotações e parâmetros).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AtualizarPrecos([FromRoute] long projetoId, CancellationToken cancellationToken)
+    {
+        await Mediator.Send(new AtualizarPrecosDoProjetoCommand { ProjetoId = projetoId }, cancellationToken);
         return NoContent();
     }
 

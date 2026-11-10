@@ -57,6 +57,21 @@ custo de **compra ou produção**, não o preço de venda; peça sem custo deixa
 aparece com o selo "Sem custo" na lista. Pedra não é precificada pelo volume do 3D: o custo dela vem daqui. Só quem tem
 `precificacao.ler` vê (e grava) o custo. Custo por quilate ou tamanho e histórico de custos ficam para depois.
 
+## Preços do projeto (etapa 3)
+
+Cada projeto tem **os próprios preços**: ao ser criado, copia as cotações vigentes (valor e data de origem de cada metal
+já cotado) e os parâmetros do ateliê, com a data "herdado em". Assim o orçamento de um cliente não muda sozinho quando o
+ateliê atualiza o preço do ouro.
+
+- **Editar** muda só aquele projeto (nunca o ateliê nem os outros projetos) e marca "editado neste projeto em". Cotação
+  que mantém o valor mantém a data de origem; metal deixado em branco fica sem cotação.
+- **Atualizar para os valores atuais** substitui tudo (cotações e parâmetros) pelos de hoje do ateliê, com confirmação.
+- A página do projeto mostra a diferença para o ateliê de hoje ("ateliê hoje: Ouro R$ 655,00/g").
+- Projeto com o valor da hora "a definir" herda assim; ao editar, a tela pede o valor.
+- Projetos que já existiam receberam os preços atuais do ateliê na migration, com "herdado em" = data da migration.
+- Nada é congelado aqui: a proposta (item 2 do roadmap) é que congela o preço calculado.
+- Ver os valores exige `precificacao.ler` (sem a regra, o bloco nem aparece); editar e atualizar, `precificacao.editar`.
+
 ## Regras
 
 - Valores negativos ou zero são recusados: cotação, densidade, valor da hora e markup.
@@ -76,4 +91,5 @@ aparece com o selo "Sem custo" na lista. Pedra não é precificada pelo volume d
 
 ## Fora desta etapa
 
-Usar os valores em projetos e versões, cotação automática de mercado, platina e outros metais.
+Usar os valores no preço da versão (etapa 4), atualizar vários projetos de uma vez, cotação automática de mercado,
+platina e outros metais.

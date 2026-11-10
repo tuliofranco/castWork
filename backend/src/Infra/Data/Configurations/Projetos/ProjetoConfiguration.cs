@@ -20,6 +20,22 @@ internal sealed class ProjetoConfiguration : IEntityTypeConfiguration<Projeto>
         // Cliente com projetos não é excluído, é desativado.
         builder.HasOne<Cliente>().WithMany().HasForeignKey(p => p.ClienteId).OnDelete(DeleteBehavior.Restrict);
 
+        // Preços do projeto: cópia dos do ateliê, editável só aqui. Sem default nas colunas: o valor vem sempre do domínio
+        // (na criação) ou da migration (projetos que já existiam).
+        builder.ComplexProperty(p => p.ParametrosDePreco, p =>
+        {
+            p.Property(x => x.PerdaPercentual).HasColumnName("perda_percentual").HasPrecision(5, 2);
+            p.Property(x => x.ValorHora).HasColumnName("valor_hora");
+            p.Property(x => x.Markup).HasColumnName("markup").HasPrecision(5, 2);
+            p.Property(x => x.TaxasPercentual).HasColumnName("taxas_percentual").HasPrecision(5, 2);
+            p.Property(x => x.ArredondarPara).HasColumnName("arredondar_para");
+        });
+        builder.Property(p => p.PrecosHerdadosEm).IsRequired();
+        builder.Property(p => p.PrecosAlteradosEm);
+
+        builder.HasMany(p => p.Cotacoes).WithOne().HasForeignKey("ProjetoId").IsRequired().OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(p => p.Cotacoes).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasMany(p => p.Versoes).WithOne().HasForeignKey("ProjetoId").IsRequired().OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(p => p.Versoes).UsePropertyAccessMode(PropertyAccessMode.Field);
 

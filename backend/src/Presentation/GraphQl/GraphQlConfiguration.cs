@@ -2,6 +2,7 @@ using Castwork.Application.Atelie.Queries.GetConfiguracaoAtelie;
 using Castwork.Application.Common.Enderecos;
 using Castwork.Application.Precificacao.Queries;
 using Castwork.Application.Precificacao.Queries.GetPrecosDoAtelie;
+using Castwork.Application.Projetos.Queries;
 using Castwork.GraphQl.DataLoaders;
 using Castwork.GraphQl.Erros;
 using Castwork.GraphQl.Queries;
@@ -47,6 +48,7 @@ public static class GraphQlConfiguration
             .AddType(new ObjectType<CotacaoDto>(d => d.Name("Cotacao")))
             .AddType(new ObjectType<LigaDto>(d => d.Name("Liga")))
             .AddType(new ObjectType<ParametrosDePrecoDto>(d => d.Name("ParametrosDePreco")))
+            .AddType(new ObjectType<CotacaoDoProjetoDto>(d => d.Name("CotacaoDoProjeto")))
             .AddType(new ObjectType<EnderecoDto>(d =>
             {
                 d.Name("Endereco");
@@ -61,6 +63,7 @@ public static class GraphQlConfiguration
             .AddDataLoader<PecaPorIdDataLoader>()
             .AddDataLoader<VersoesPorProjetoDataLoader>()
             .AddDataLoader<ItensPorVersaoDataLoader>()
+            .AddDataLoader<PrecosPorProjetoDataLoader>()
             .AddDataLoader<ProjetosPorClienteDataLoader>()
             .AddErrorFilter<ErrorFilter>()
             .ModifyPagingOptions(o =>

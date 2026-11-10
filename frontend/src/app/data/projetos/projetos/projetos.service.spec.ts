@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloTestingController, ApolloTestingModule } from 'apollo-angular/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { GET_PROJETO, ProjetosService } from './projetos.service';
+import { GET_PRECOS_DO_PROJETO, GET_PROJETO, ProjetosService } from './projetos.service';
 
 describe('ProjetosService', () => {
   function configurar() {
@@ -41,6 +41,37 @@ describe('ProjetosService', () => {
     ];
     expect(chamadas[0].request.body).toEqual({ pecaId: 3, quantidade: 12 });
     chamadas.forEach((c) => c.flush(null));
+    http.verify();
+  });
+
+  it('deve buscar os preços do projeto sempre do servidor', async () => {
+    const { service, apollo } = configurar();
+    const precos = {
+      herdadosEm: '2026-11-09T12:00:00Z',
+      alteradosEm: null,
+      cotacoes: [{ metal: 'OURO', valor: 640, cotadaEm: '2026-11-08T12:00:00Z' }],
+      parametros: { perdaPercentual: 8, valorHora: 90, markup: 1.8, taxasPercentual: 0, arredondarPara: 10 },
+    };
+    const promessa = firstValueFrom(service.getPrecosDoProjeto(7));
+
+    const op = apollo.expectOne(GET_PRECOS_DO_PROJETO);
+    expect(op.operation.variables).toEqual({ id: 7 });
+    op.flush({ data: { projeto: { id: 7, precos } } });
+
+    expect(await promessa).toEqual(precos);
+  });
+
+  it('deve editar e atualizar os preços pelas rotas do projeto', () => {
+    const { service, http } = configurar();
+    const dto = { cotacoes: [{ metal: 'OURO' as const, valor: 655 }], perdaPercentual: 8, valorHora: 90, markup: 2, taxasPercentual: 0, arredondarPara: 10 };
+
+    service.putPrecos(1, dto).subscribe();
+    service.postAtualizarPrecos(1).subscribe();
+
+    const editar = http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/precos');
+    const atualizar = http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/precos/atualizar');
+    expect(editar.request.body).toEqual(dto);
+    [editar, atualizar].forEach((c) => c.flush(null));
     http.verify();
   });
 });
