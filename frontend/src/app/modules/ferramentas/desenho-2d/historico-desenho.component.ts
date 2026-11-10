@@ -7,6 +7,7 @@ const ROTULOS: Record<OrigemArquivo, string> = {
   Joalheiro: 'Salvo por você',
   Desfazer: 'Ação da IA desfeita',
   Restauracao: 'Restaurado do histórico',
+  Conferencia: 'Conferência de peso e materiais',
 };
 
 /**

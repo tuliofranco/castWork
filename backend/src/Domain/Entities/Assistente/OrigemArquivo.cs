@@ -16,4 +16,7 @@ public enum OrigemArquivo
 
     /// <summary>O joalheiro restaurou uma versão do histórico: cópia dela.</summary>
     Restauracao = 4,
+
+    /// <summary>A conferência de peso e materiais da versão: o joalheiro definiu o material ou uniu corpos, e o sistema aplicou no arquivo.</summary>
+    Conferencia = 5,
 }

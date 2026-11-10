@@ -79,3 +79,8 @@ avisos) e `UnitTests/Application/Ferramentas/Modelo3d/PesoDoModeloTests.cs` (cla
 `IntegrationTests/Projetos/PrecoPeloModelo3dTests.cs`, com o medidor de teste (`AmbienteDeTeste.Medidor`, sem SolidCraft).
 
 **Sem migration na etapa 6:** a medição não é gravada no banco (fica em memória no servidor).
+
+**Conferência de peso e materiais** (etapa 7): os corpos sem material e as sobreposições de metal se resolvem na tela
+"Peso e materiais" da versão (`DefinirMaterialDosCorpos`, `UnirCorposSobrepostos`; ver o
+[Modelo 3D](../Ferramentas/Modelo3d/README.md)). Cada correção grava um arquivo 3D novo, que é medido de novo: resolvidas
+as pendências, o preço fica Completo. Sem migration.

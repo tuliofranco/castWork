@@ -55,12 +55,19 @@
                     ></a>
                   }
                 }
-                @if (resolveNo3d(pendencia, c)) {
+                @if (pendencia.tipo === 'CORPOS_SEM_MATERIAL') {
+                  <!-- A conferência de peso e materiais abre por cima do Modelo 3D. -->
                   <a
                     class="atalho"
                     [routerLink]="['/projetos', projetoId(), 'versoes', versao().id, 'modelo-3d']"
-                    >{{ pendencia.tipo === 'CORPOS_SEM_MATERIAL' ? 'Conferir no 3D' : 'Abrir o 3D' }}
-                    <i class="bi bi-chevron-right" aria-hidden="true"></i
+                    [queryParams]="{ conferir: 1 }"
+                    >Conferir <i class="bi bi-chevron-right" aria-hidden="true"></i
+                  ></a>
+                } @else if (resolveNo3d(pendencia, c)) {
+                  <a
+                    class="atalho"
+                    [routerLink]="['/projetos', projetoId(), 'versoes', versao().id, 'modelo-3d']"
+                    >Abrir o 3D <i class="bi bi-chevron-right" aria-hidden="true"></i
                   ></a>
                 }
                 @if (resolveNosMetais(pendencia, c) && editavel()) {
@@ -80,6 +87,14 @@
         <p class="aviso-preco">
           <i [class]="'bi ' + iconeDoAviso(aviso.tipo)" aria-hidden="true"></i>
           {{ aviso.descricao }}
+          @if (aviso.tipo === 'CORPOS_SOBREPOSTOS') {
+            <a
+              class="atalho"
+              [routerLink]="['/projetos', projetoId(), 'versoes', versao().id, 'modelo-3d']"
+              [queryParams]="{ conferir: 1 }"
+              >Conferir <i class="bi bi-chevron-right" aria-hidden="true"></i
+            ></a>
+          }
         </p>
       }
 

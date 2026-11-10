@@ -253,6 +253,9 @@ describe('PrecoVersaoComponent', () => {
       'Peso manual guardado e não usado (vale o 3D): Ouro 18k amarelo 5,00 g.',
     );
     expect(texto(el.querySelector('.aviso-preco'))).toContain('se sobrepõem');
+    expect(el.querySelector('.aviso-preco a')!.getAttribute('href')).toBe(
+      '/projetos/1/versoes/20/modelo-3d?conferir=1',
+    );
     expect(el.querySelector('.aviso-preco i')!.className).toContain('bi-intersect');
     // Peso real: só das ligas com peso manual guardado (a do 3D sem peso manual não tem onde registrar).
     expect(botao(metais[0] as HTMLElement, 'Registrar peso real')).toBeDefined();
@@ -267,7 +270,7 @@ describe('PrecoVersaoComponent', () => {
     );
   });
 
-  it('deve deixar o preço incompleto com corpos sem material e atalho para o 3D', async () => {
+  it('deve deixar o preço incompleto com corpos sem material e atalho para a conferência', async () => {
     projetos.getPrecoDaVersao.mockReturnValueOnce(
       of({
         preco: 3000,
@@ -304,9 +307,9 @@ describe('PrecoVersaoComponent', () => {
     expect(texto(pendencias[0].querySelector('span'))).toBe(
       '2 corpos sem material no modelo 3D: Garra, Pino.',
     );
-    expect(texto(pendencias[0].querySelector('a'))).toBe('Conferir no 3D');
+    expect(texto(pendencias[0].querySelector('a'))).toBe('Conferir');
     expect(pendencias[0].querySelector('a')!.getAttribute('href')).toBe(
-      '/projetos/1/versoes/20/modelo-3d',
+      '/projetos/1/versoes/20/modelo-3d?conferir=1',
     );
     expect(texto(pendencias[1].querySelector('a'))).toBe('Abrir o 3D');
     expect(botao(pendencias[1], 'Informar os metais')).toBeUndefined();

@@ -44,6 +44,17 @@
   font-size: 0.8125rem;
   transform: translateX(-50%);
   pointer-events: none;
+
+  // O atalho para a conferência é a única parte clicável do aviso.
+  .conferir {
+    padding: 0 0.25rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    pointer-events: auto;
+  }
 }
 
 // Aviso por cima do SolidCraft enquanto o projeto é trocado: o joalheiro não modela num arquivo que vai sumir.

@@ -1,0 +1,132 @@
+<dialog #dialogo class="conferencia" aria-labelledby="titulo-conferencia" (close)="fechar()">
+  <header>
+    <h2 id="titulo-conferencia">Peso e materiais</h2>
+    @if (conferencia.value(); as c) {
+      @if (c.medido) {
+        <p class="peso-do-metal">Peso do metal: <strong>{{ gramas(c.pesoDoMetal) }}</strong></p>
+      }
+    }
+    <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="dialogo.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+  </header>
+
+  <div class="corpo">
+    @if (conferencia.isLoading()) {
+      <p class="estado" aria-busy="true"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Medindo o modelo...</p>
+    } @else if (conferencia.value(); as c) {
+      @if (c.arquivoId === null) {
+        <p class="estado">A versão ainda não tem modelo 3D salvo.</p>
+      } @else if (!c.medido) {
+        <p class="estado">Não foi possível medir o modelo 3D. Tente de novo em instantes.</p>
+      } @else if (c.corpos.length === 0) {
+        <p class="estado">O modelo ainda não tem corpos.</p>
+      } @else {
+        @if (!c.alteravel) {
+          <p class="dica"><i class="bi bi-lock" aria-hidden="true"></i> Versão publicada ou arquivada: só para conferir.</p>
+        } @else if (semMaterial() > 0) {
+          <p class="dica pendente">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            {{ semMaterial() === 1 ? '1 corpo sem material' : semMaterial() + ' corpos sem material' }}: o preço só fica completo com o material de cada corpo.
+          </p>
+        }
+
+        <table class="corpos">
+          <caption class="visually-hidden">Corpos do modelo com material, volume e peso</caption>
+          <thead>
+            <tr>
+              <th scope="col">Corpo</th>
+              <th scope="col">Material</th>
+              <th scope="col" class="numero">Volume</th>
+              <th scope="col" class="numero">Peso</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (corpo of c.corpos; track corpo.nome) {
+              <tr [class.sem-material]="corpo.uso === 'SEM_MATERIAL'" [class.escolhido]="!!escolhas()[corpo.nome]">
+                <th scope="row">{{ corpo.nome }}</th>
+                <td>
+                  @if (editavel()) {
+                    <select
+                      class="form-select form-select-sm"
+                      [attr.aria-label]="'Material de ' + corpo.nome"
+                      [value]="materialDe(corpo, c)"
+                      [disabled]="salvando() || ocupado()"
+                      (change)="escolher(corpo, $any($event.target).value, c)"
+                    >
+                      @if (!materialDe(corpo, c)) {
+                        <option value="" disabled selected>{{ rotuloDoMaterial(corpo, c) || '— sem material —' }}</option>
+                      }
+                      @for (material of c.materiais; track material.nome) {
+                        <option [value]="material.nome" [selected]="material.nome === materialDe(corpo, c)">{{ material.rotulo }}</option>
+                      }
+                    </select>
+                  } @else {
+                    {{ rotuloDoMaterial(corpo, c) }}
+                  }
+                </td>
+                <td class="numero">{{ corpo.volumeMm3 !== null ? milimetrosCubicos(corpo.volumeMm3) : '' }}</td>
+                <td class="numero">
+                  @if (corpo.uso === 'SEM_MATERIAL') {
+                    <i class="bi bi-exclamation-triangle-fill aviso" aria-hidden="true"></i><span class="visually-hidden">sem material</span>
+                  } @else {
+                    <span [class.fora]="!corpo.contaNoPeso">{{ pesoDe(corpo) }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        @for (item of sobreposicoes(); track item.sobreposicao.corpoA + item.sobreposicao.corpoB) {
+          <div class="sobreposicao">
+            <span>
+              <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+              {{ item.sobreposicao.corpoA }} e {{ item.sobreposicao.corpoB }} se sobrepõem ({{ milimetrosCubicos(item.sobreposicao.volumeMm3) }})
+            </span>
+            @if (item.impedimento) {
+              <small>{{ item.impedimento }}</small>
+            } @else if (editavel() && confirmandoUnir() !== item) {
+              <button type="button" class="btn btn-secundario" [disabled]="salvando() || ocupado()" (click)="confirmandoUnir.set(item)">Unir corpos</button>
+            }
+          </div>
+          @if (confirmandoUnir() === item) {
+            <div class="confirmar" role="alertdialog" aria-labelledby="texto-unir">
+              <span id="texto-unir">
+                Unir {{ item.corpos[0] }} e {{ item.corpos[1] }}? Viram um corpo só, "{{ item.corpos[0] }}", e a parte comum deixa de contar duas vezes no peso.
+                Dá para desfazer pelo histórico do modelo.
+              </span>
+              <span class="botoes">
+                <button type="button" class="btn btn-sutil" (click)="confirmandoUnir.set(null)">Cancelar</button>
+                <button type="button" class="btn btn-primary" [disabled]="salvando() || ocupado()" (click)="unir(item, c)">Unir</button>
+              </span>
+            </div>
+          }
+        }
+      }
+
+      @if (ultima(); as u) {
+        <p class="feito" role="status">
+          <i class="bi bi-check-circle" aria-hidden="true"></i> {{ u.descricao }}
+          <button type="button" class="btn btn-sutil" [disabled]="salvando() || ocupado()" (click)="desfazer()">Desfazer</button>
+        </p>
+      }
+    }
+  </div>
+
+  @if (editavel()) {
+    <footer>
+      @if (ocupado()) {
+        <small>A IA está editando o modelo: espere ela terminar.</small>
+      } @else {
+        <small>{{ pendentes() === 0 ? 'Escolha o material de um ou vários corpos.' : pendentes() === 1 ? '1 corpo para aplicar' : pendentes() + ' corpos para aplicar' }}</small>
+      }
+      @if (conferencia.value(); as c) {
+        <button type="button" class="btn btn-primary" [disabled]="pendentes() === 0 || salvando() || ocupado()" (click)="aplicar(c)">
+          @if (salvando()) {
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+          }
+          Aplicar
+        </button>
+      }
+    </footer>
+  }
+</dialog>

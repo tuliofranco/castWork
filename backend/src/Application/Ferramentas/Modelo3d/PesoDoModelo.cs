@@ -17,6 +17,16 @@ public static class PesoDoModelo
     /// </summary>
     public static async Task<ModeloMedido?> MedirAsync(IUnitOfWork unitOfWork, IMedidorDoModelo medidor, long versaoId, CancellationToken cancellationToken)
     {
+        var atual = await MedirArquivoAtualAsync(unitOfWork, medidor, versaoId, cancellationToken);
+        return atual is null ? null : atual.Medicao is null ? ModeloMedido.NaoMedido : Classificar(atual.Medicao);
+    }
+
+    /// <summary>
+    /// O arquivo atual do Modelo 3D da versão medido, com os materiais do ateliê usados na medição. Nulo quando a versão
+    /// não tem 3D; <see cref="ModeloAtual.Medicao"/> nula quando não foi possível medir.
+    /// </summary>
+    public static async Task<ModeloAtual?> MedirArquivoAtualAsync(IUnitOfWork unitOfWork, IMedidorDoModelo medidor, long versaoId, CancellationToken cancellationToken)
+    {
         var conversaId = await unitOfWork.GetRepository<ConversaFerramenta>()
             .FindBy(c => c.VersaoId == versaoId && c.Ferramenta == Modelo3dNoAssistente.Codigo)
             .Select(c => (long?)c.Id)
@@ -41,8 +51,7 @@ public static class PesoDoModelo
         var arquivo = new ArquivoParaMedir(
             atual.Id,
             ct => unitOfWork.GetRepository<ArquivoFerramenta>().FindBy(a => a.Id == atual.Id).Select(a => a.Conteudo).SingleAsync(ct));
-        var medicao = await medidor.MedirAsync(arquivo, materiais, cancellationToken);
-        return medicao is null ? ModeloMedido.NaoMedido : Classificar(medicao);
+        return new ModeloAtual(atual.Id, materiais, await medidor.MedirAsync(arquivo, materiais, cancellationToken));
     }
 
     public static ModeloMedido Classificar(MedicaoDoModelo medicao)
@@ -68,3 +77,9 @@ public static class PesoDoModelo
             : material == MateriaisDoModelo.Apoio ? UsoDoCorpo.Apoio
             : UsoDoCorpo.SemMaterial;
 }
+
+/// <summary>
+/// O arquivo 3D atual da versão (<see cref="ArquivoId"/>), os materiais do ateliê e a medição dele; nula quando não foi
+/// possível medir.
+/// </summary>
+public sealed record ModeloAtual(long ArquivoId, IReadOnlyList<MaterialDoModelo> Materiais, MedicaoDoModelo? Medicao);

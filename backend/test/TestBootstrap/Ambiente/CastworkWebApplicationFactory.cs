@@ -13,7 +13,7 @@ namespace Castwork.TestBootstrap.Ambiente;
 
 /// <summary>
 /// Sobe a API de verdade (o mesmo Program.cs), trocando só o banco (container), o relógio, o usuário logado
-/// e os serviços externos do briefing (IA e gerador de PDF), a prévia e o medidor do modelo 3D.
+/// e os serviços externos do briefing (IA e gerador de PDF), a prévia, o medidor e o editor do modelo 3D.
 /// As migrations rodam no startup, como em produção.
 /// </summary>
 public sealed class CastworkWebApplicationFactory(
@@ -21,6 +21,7 @@ public sealed class CastworkWebApplicationFactory(
     RelogioDeTeste relogio,
     SessaoDeTeste sessao,
     MedidorDoModeloDeTeste medidor,
+    EditorDoModeloDeTeste editor,
     IReadOnlyDictionary<string, string>? configuracaoExtra = null)
     : WebApplicationFactory<Program>
 {
@@ -57,6 +58,8 @@ public sealed class CastworkWebApplicationFactory(
             services.AddSingleton<IPreviaFerramenta, PreviaFerramentaDeTeste>();
             services.RemoveAll<IMedidorDoModelo>();
             services.AddSingleton<IMedidorDoModelo>(medidor);
+            services.RemoveAll<IEditorDoModelo>();
+            services.AddSingleton<IEditorDoModelo>(editor);
 
             // Requisição HTTP autenticada: sessão real, lida do JWT. Fora disso (SendAsync): sessão de teste.
             services.RemoveAll<ISessaoService>();
