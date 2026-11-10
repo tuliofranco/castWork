@@ -118,9 +118,12 @@ type AvisoDoPreco {
   tipo: TipoDeAviso!
   descricao: String!
   metal: Metal
+  corpos: [String!]!
 }
 
 type CalculoDoPreco {
+  origemDoPeso: OrigemDoPeso!
+  pesosManuaisGuardados: [PesoManual!]!
   metais: [CustoDoMetal!]!
   custoDosMetais: Decimal!
   composicao: [CustoDaPeca!]!
@@ -341,6 +344,13 @@ type PendenciaDoPreco {
   pecaId: Long
   ligaId: Long
   metal: Metal
+  corpos: [String!]!
+}
+
+type PesoManual {
+  ligaId: Long!
+  liga: String!
+  peso: Decimal!
 }
 
 type PrecoDaVersao {
@@ -536,6 +546,11 @@ enum Metal {
   PRATA
 }
 
+enum OrigemDoPeso {
+  MANUAL
+  MODELO
+}
+
 enum SortEnumType {
   ASC
   DESC
@@ -554,6 +569,8 @@ enum StatusVersao {
 
 enum TipoDeAviso {
   COTACAO_ANTIGA
+  CORPOS_SOBREPOSTOS
+  CORPO_ABERTO
 }
 
 enum TipoDePendencia {
@@ -562,6 +579,8 @@ enum TipoDePendencia {
   SEM_METAL_COM_PESO
   LIGA_DESATIVADA
   VALOR_HORA_A_DEFINIR
+  CORPOS_SEM_MATERIAL
+  MODELO_NAO_MEDIDO
 }
 
 enum TipoMaoDeObra {

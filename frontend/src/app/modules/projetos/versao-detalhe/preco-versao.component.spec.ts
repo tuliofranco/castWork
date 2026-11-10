@@ -30,6 +30,8 @@ describe('PrecoVersaoComponent', () => {
   };
   /** O exemplo da issue #14. */
   const calculo: CalculoDoPrecoDto = {
+    origemDoPeso: 'MANUAL',
+    pesosManuaisGuardados: [],
     metais: [ouro],
     custoDosMetais: 2592,
     composicao: [
@@ -137,7 +139,7 @@ describe('PrecoVersaoComponent', () => {
       linhas(el).map(([rotulo, valor]) => [rotulo?.replace(/ Registrar peso real$/, ''), valor]),
     ).toEqual([
       [
-        'Ouro 18k amarelo: 5,00 g + perda 8% = 5,40 g × R$ 480,00/g (R$ 640,00 × 0,750)',
+        'Ouro 18k amarelo: 5,00 g + perda 8% = 5,40 g × R$ 480,00/g (R$ 640,00 × 0,750) Peso estimado manualmente',
         'R$ 2.592,00',
       ],
       ['Composição: 3 unidades', 'R$ 800,00'],
@@ -162,6 +164,7 @@ describe('PrecoVersaoComponent', () => {
               pecaId: 10,
               ligaId: null,
               metal: null,
+              corpos: [],
             },
             {
               tipo: 'METAL_SEM_COTACAO',
@@ -169,6 +172,7 @@ describe('PrecoVersaoComponent', () => {
               pecaId: null,
               ligaId: null,
               metal: 'PRATA',
+              corpos: [],
             },
             {
               tipo: 'LIGA_DESATIVADA',
@@ -176,12 +180,14 @@ describe('PrecoVersaoComponent', () => {
               pecaId: null,
               ligaId: 1000,
               metal: null,
+              corpos: [],
             },
           ],
           avisos: [
             {
               tipo: 'COTACAO_ANTIGA',
               descricao: 'A cotação de ouro tem 20 dias: confira antes de orçar.',
+              corpos: [],
             },
           ],
         },
@@ -203,6 +209,108 @@ describe('PrecoVersaoComponent', () => {
     botao(pendencias[2] as HTMLElement, 'Trocar a liga')!.click();
     await estabilizar();
     expect(el.querySelector('form[aria-label="Metais e peso estimado"]')).not.toBeNull();
+  });
+
+  it('deve mostrar o peso da peça pelo 3D e avisar que o peso manual guardado não é usado', async () => {
+    projetos.getPrecoDaVersao.mockReturnValueOnce(
+      of({
+        ...completo,
+        calculo: {
+          ...calculo,
+          origemDoPeso: 'MODELO',
+          pesosManuaisGuardados: [{ ligaId: 2, liga: 'Ouro 18k amarelo', peso: 5 }],
+          metais: [
+            { ...ouro, pesoEstimado: 2.824, pesoAFundir: 3.05, custo: 1464 },
+            {
+              ...ouro,
+              ligaId: 3,
+              liga: 'Ouro 18k branco',
+              pesoEstimado: 0.5,
+              pesoAFundir: 0.54,
+              custo: 259.2,
+            },
+          ],
+          avisos: [
+            {
+              tipo: 'CORPOS_SOBREPOSTOS',
+              descricao:
+                'Aro e Garra se sobrepõem (19,4 mm³): a parte comum conta duas vezes no peso.',
+              corpos: ['Aro', 'Garra'],
+            },
+          ],
+        },
+      }),
+    );
+    const { el, estabilizar } = await abrir();
+
+    expect(texto(el.querySelector('.dica'))).toContain('medido no modelo 3D');
+    const metais = [...el.querySelectorAll('.calculo tr.metal')];
+    expect(texto(metais[0].querySelector('.origem-do-peso'))).toBe(
+      'Peso da peça (3D) · medido no modelo',
+    );
+    expect(texto(metais[0])).toContain('Ouro 18k amarelo: 2,824 g + perda 8% = 3,05 g');
+    expect(texto(el.querySelector('.manual-guardado'))).toBe(
+      'Peso manual guardado e não usado (vale o 3D): Ouro 18k amarelo 5,00 g.',
+    );
+    expect(texto(el.querySelector('.aviso-preco'))).toContain('se sobrepõem');
+    expect(el.querySelector('.aviso-preco i')!.className).toContain('bi-intersect');
+    // Peso real: só das ligas com peso manual guardado (a do 3D sem peso manual não tem onde registrar).
+    expect(botao(metais[0] as HTMLElement, 'Registrar peso real')).toBeDefined();
+    expect(botao(metais[1] as HTMLElement, 'Registrar peso real')).toBeUndefined();
+
+    botao(el, 'Metais e peso')!.click();
+    await estabilizar();
+    expect(el.querySelector<HTMLInputElement>('#metal-peso-0')!.value).toBe('5');
+    expect(el.querySelector('#metal-peso-1')).toBeNull();
+    expect(texto(el.querySelector('form[aria-label="Metais e peso estimado"] .dica'))).toContain(
+      'vale o peso medido nele',
+    );
+  });
+
+  it('deve deixar o preço incompleto com corpos sem material e atalho para o 3D', async () => {
+    projetos.getPrecoDaVersao.mockReturnValueOnce(
+      of({
+        preco: 3000,
+        status: 'INCOMPLETO',
+        calculo: {
+          ...calculo,
+          origemDoPeso: 'MODELO',
+          pendencias: [
+            {
+              tipo: 'CORPOS_SEM_MATERIAL',
+              descricao: '2 corpos sem material no modelo 3D: Garra, Pino.',
+              pecaId: null,
+              ligaId: null,
+              metal: null,
+              corpos: ['Garra', 'Pino'],
+            },
+            {
+              tipo: 'SEM_METAL_COM_PESO',
+              descricao: 'O modelo 3D não tem nenhum corpo de metal com peso.',
+              pecaId: null,
+              ligaId: null,
+              metal: null,
+              corpos: [],
+            },
+          ],
+          metais: [],
+        },
+      }),
+    );
+    const { el } = await abrir();
+
+    expect(texto(el.querySelector('cw-selo'))).toBe('Incompleto');
+    const pendencias = [...el.querySelectorAll<HTMLElement>('.pendencias li')];
+    expect(texto(pendencias[0].querySelector('span'))).toBe(
+      '2 corpos sem material no modelo 3D: Garra, Pino.',
+    );
+    expect(texto(pendencias[0].querySelector('a'))).toBe('Conferir no 3D');
+    expect(pendencias[0].querySelector('a')!.getAttribute('href')).toBe(
+      '/projetos/1/versoes/20/modelo-3d',
+    );
+    expect(texto(pendencias[1].querySelector('a'))).toBe('Abrir o 3D');
+    expect(botao(pendencias[1], 'Informar os metais')).toBeUndefined();
+    expect(texto(el.querySelector('.calculo tr th'))).toBe('Metal: nenhum medido no 3D');
   });
 
   it('deve mostrar só o preço e o status sem a regra de consultar precificação', async () => {

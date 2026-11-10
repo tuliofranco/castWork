@@ -10,7 +10,14 @@ export type TipoDePendencia =
   | 'METAL_SEM_COTACAO'
   | 'SEM_METAL_COM_PESO'
   | 'LIGA_DESATIVADA'
-  | 'VALOR_HORA_A_DEFINIR';
+  | 'VALOR_HORA_A_DEFINIR'
+  | 'CORPOS_SEM_MATERIAL'
+  | 'MODELO_NAO_MEDIDO';
+
+export type TipoDeAviso = 'COTACAO_ANTIGA' | 'CORPOS_SOBREPOSTOS' | 'CORPO_ABERTO';
+
+/** `MODELO`: peso medido no arquivo 3D atual da versão; `MANUAL`: estimado (versão sem 3D). */
+export type OrigemDoPeso = 'MANUAL' | 'MODELO';
 
 /** Uma liga: peso da peça → peso a fundir (com a perda) → custo = peso a fundir × cotação do puro × pureza. */
 export interface CustoDoMetalDto {
@@ -20,7 +27,7 @@ export interface CustoDoMetalDto {
   /** Milésimos (750 = 18k). */
   readonly teor: number;
   readonly ligaAtiva: boolean;
-  /** Peso estimado da peça pronta (g). */
+  /** Peso da peça pronta (g): o medido no 3D ou o estimado manualmente (ver `origemDoPeso`). */
   readonly pesoEstimado: number;
   readonly pesoAFundir: number;
   /** R$/g do metal puro; nulo sem cotação no projeto. */
@@ -61,15 +68,29 @@ export interface PendenciaDoPrecoDto {
   readonly pecaId: number | null;
   readonly ligaId: number | null;
   readonly metal: Metal | null;
+  /** Corpos do modelo 3D sem material. */
+  readonly corpos: readonly string[];
 }
 
 export interface AvisoDoPrecoDto {
-  readonly tipo: 'COTACAO_ANTIGA';
+  readonly tipo: TipoDeAviso;
   readonly descricao: string;
+  /** Corpos do modelo 3D sobrepostos ou aberto. */
+  readonly corpos: readonly string[];
+}
+
+/** Peso digitado para uma liga, guardado na versão. */
+export interface PesoManualDto {
+  readonly ligaId: number;
+  readonly liga: string;
+  readonly peso: number;
 }
 
 /** O cálculo linha a linha e os dados do orçamento. Só vem para quem tem `precificacao.ler`. */
 export interface CalculoDoPrecoDto {
+  readonly origemDoPeso: OrigemDoPeso;
+  /** Com 3D, o peso manual guardado e não usado (vale o 3D). Vazio sem 3D. */
+  readonly pesosManuaisGuardados: readonly PesoManualDto[];
   readonly metais: readonly CustoDoMetalDto[];
   readonly custoDosMetais: number;
   readonly composicao: readonly CustoDaPecaDto[];

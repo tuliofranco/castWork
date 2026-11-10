@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using Castwork.Domain.Entities.Precificacao;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.ValueObjects;
@@ -17,6 +19,8 @@ public static class CalculadoraDePreco
 
     public const int DiferencaDoPesoCasasDecimais = 1;
 
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
     public static PrecoCalculado Calcular(EntradaDoPreco entrada)
     {
         ArgumentNullException.ThrowIfNull(entrada);
@@ -26,6 +30,7 @@ public static class CalculadoraDePreco
 
         var metais = entrada.Metais.Select(m => CustoDoMetal(m, entrada.Cotacoes, parametros.PerdaPercentual)).ToList();
         AvaliarMetais(entrada, metais, pendencias, avisos);
+        AvaliarModelo(entrada.Modelo, pendencias, avisos);
 
         var composicao = entrada.Composicao
             .Select(p => new CustoDaPeca(p.PecaId, p.Nome, p.Quantidade, p.CustoUnitario, p.CustoUnitario is null ? Dinheiro.Zero : p.CustoUnitario * p.Quantidade))
@@ -49,6 +54,7 @@ public static class CalculadoraDePreco
         var semArredondar = custoTotal * (markup * (1 + (parametros.TaxasPercentual / 100m)));
 
         return new PrecoCalculado(
+            entrada.Modelo is null ? OrigemDoPeso.Manual : OrigemDoPeso.Modelo,
             metais,
             custoDosMetais,
             composicao,
@@ -98,9 +104,15 @@ public static class CalculadoraDePreco
 
     private static void AvaliarMetais(EntradaDoPreco entrada, List<CustoDoMetal> metais, List<PendenciaDoPreco> pendencias, List<AvisoDoPreco> avisos)
     {
-        if (!metais.Exists(m => m.PesoEstimado > Peso.Zero))
+        if (entrada.Modelo is { Medido: false })
         {
-            pendencias.Add(new PendenciaDoPreco(TipoDePendencia.SemMetalComPeso, "A versão não tem nenhum metal com peso."));
+            pendencias.Add(new PendenciaDoPreco(TipoDePendencia.ModeloNaoMedido, "Não foi possível medir o modelo 3D da versão: confira o arquivo e tente de novo."));
+        }
+        else if (!metais.Exists(m => m.PesoEstimado > Peso.Zero))
+        {
+            pendencias.Add(new PendenciaDoPreco(
+                TipoDePendencia.SemMetalComPeso,
+                entrada.Modelo is null ? "A versão não tem nenhum metal com peso." : "O modelo 3D não tem nenhum corpo de metal com peso."));
         }
 
         pendencias.AddRange(metais
@@ -123,6 +135,40 @@ public static class CalculadoraDePreco
                 avisos.Add(new AvisoDoPreco(TipoDeAviso.CotacaoAntiga, $"A cotação de {Nome(metal)} tem {dias} dias: confira antes de orçar.", metal));
             }
         }
+    }
+
+    /// <summary>
+    /// O material é obrigatório: corpo sem material deixa o preço incompleto. Corpos de metal sobrepostos e corpos abertos
+    /// (os que contariam no peso) são avisos.
+    /// </summary>
+    private static void AvaliarModelo(ModeloMedido? modelo, List<PendenciaDoPreco> pendencias, List<AvisoDoPreco> avisos)
+    {
+        if (modelo is not { Medido: true })
+        {
+            return;
+        }
+
+        var semMaterial = modelo.Corpos.Where(c => c.Uso == UsoDoCorpo.SemMaterial).Select(c => c.Nome).ToList();
+        if (semMaterial.Count > 0)
+        {
+            var quantos = semMaterial.Count == 1 ? "1 corpo" : $"{semMaterial.Count} corpos";
+            pendencias.Add(new PendenciaDoPreco(
+                TipoDePendencia.CorposSemMaterial,
+                $"{quantos} sem material no modelo 3D: {string.Join(", ", semMaterial)}.",
+                Corpos: semMaterial));
+        }
+
+        avisos.AddRange(modelo.SobreposicoesDeMetal().Select(s => new AvisoDoPreco(
+            TipoDeAviso.CorposSobrepostos,
+            $"{s.CorpoA} e {s.CorpoB} se sobrepõem ({s.VolumeMm3.ToString("0.##", PtBr)} mm³): a parte comum conta duas vezes no peso.",
+            Corpos: [s.CorpoA, s.CorpoB])));
+
+        avisos.AddRange(modelo.Corpos
+            .Where(c => !c.Fechado && c.Uso is UsoDoCorpo.Metal or UsoDoCorpo.SemMaterial)
+            .Select(c => new AvisoDoPreco(
+                TipoDeAviso.CorpoAberto,
+                $"O corpo {c.Nome} está aberto: o volume não é confiável e ele fica fora do peso.",
+                Corpos: [c.Nome])));
     }
 
     private static CustoDaMaoDeObra CustoDaMaoDeObra(MaoDeObra? maoDeObra, Dinheiro valorHora)

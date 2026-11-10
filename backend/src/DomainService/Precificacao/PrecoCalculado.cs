@@ -7,8 +7,10 @@ namespace Castwork.DomainService.Precificacao;
 /// <summary>
 /// O preço da versão linha a linha: metais, composição, mão de obra e serviços somam o custo; o preço é o custo ×
 /// markup × (1 + taxas), arredondado para cima. Incompleto enquanto houver pendência (o preço sai assim mesmo, parcial).
+/// <see cref="OrigemDoPeso"/>: o peso do metal veio do modelo 3D ou foi estimado manualmente.
 /// </summary>
 public sealed record PrecoCalculado(
+    OrigemDoPeso OrigemDoPeso,
     IReadOnlyList<CustoDoMetal> Metais,
     Dinheiro CustoDosMetais,
     IReadOnlyList<CustoDaPeca> Composicao,
@@ -57,11 +59,17 @@ public sealed record CustoDaPeca(long PecaId, string Nome, int Quantidade, Dinhe
 public sealed record CustoDaMaoDeObra(TipoMaoDeObra? Tipo, decimal? Horas, Dinheiro? ValorHora, Dinheiro Custo);
 
 /// <summary>
-/// O que deixa o preço incompleto, com a referência para resolver (a peça, a liga ou o metal).
+/// O que deixa o preço incompleto, com a referência para resolver (a peça, a liga, o metal ou os corpos do modelo 3D).
 /// </summary>
-public sealed record PendenciaDoPreco(TipoDePendencia Tipo, string Descricao, long? PecaId = null, long? LigaId = null, Metal? Metal = null);
+public sealed record PendenciaDoPreco(
+    TipoDePendencia Tipo,
+    string Descricao,
+    long? PecaId = null,
+    long? LigaId = null,
+    Metal? Metal = null,
+    IReadOnlyList<string>? Corpos = null);
 
 /// <summary>
-/// Atenção que não bloqueia o preço (ex.: cotação antiga).
+/// Atenção que não bloqueia o preço (ex.: cotação antiga, corpos sobrepostos), com o metal ou os corpos envolvidos.
 /// </summary>
-public sealed record AvisoDoPreco(TipoDeAviso Tipo, string Descricao, Metal? Metal = null);
+public sealed record AvisoDoPreco(TipoDeAviso Tipo, string Descricao, Metal? Metal = null, IReadOnlyList<string>? Corpos = null);

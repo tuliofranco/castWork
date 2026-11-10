@@ -11,8 +11,8 @@ Modelo 3D paramétrico da peça no SolidCraft. O joalheiro edita no SolidCraft e
 
 | Camada | Pasta |
 |---|---|
-| Application | `Application/Ferramentas/Modelo3d` (contexto do turno, `MateriaisDoModelo`) |
-| Infra | `Infra/IA/Ferramentas/Modelo3d` (instruções, MCP, texto dos passos, resumo do modelo, `MateriaisNoArquivo`) |
+| Application | `Application/Ferramentas/Modelo3d` (contexto do turno, `MateriaisDoModelo`, `IMedidorDoModelo`, `PesoDoModelo`) |
+| Infra | `Infra/IA/Ferramentas/Modelo3d` (instruções, MCP, texto dos passos, resumo do modelo, `MateriaisNoArquivo`, `MedidorDoModeloSolidCraft`) |
 | Front | `modules/ferramentas/modelo-3d` (`PonteSolidCraft` abre, salva e confere os materiais pelo iframe, com a API `window.solidcraft`) |
 
 Não tem estado de domínio próprio: usa o arquivo e a conversa do Assistente. Sem prévia em SVG na pasta da versão.
@@ -53,6 +53,36 @@ o `SolidCraft:Caminho` dos User Secrets da API (ou `SolidCraft__Caminho`) e fica
 
 O front serve o SolidCraft web em `/solidcraft` (`npm run solidcraft:instalar`); o servidor precisa do
 `solidcraft-cli` da mesma versão.
+
+## Peso do metal medido no modelo (etapa 6 da precificação)
+
+O preço da versão (`GetPrecoDaVersao`) usa o peso do metal **medido no arquivo 3D atual**, sem IA.
+
+- **Abstração:** `IMedidorDoModelo` (Application): recebe o arquivo (`ArquivoParaMedir`: id e como ler o conteúdo) e os
+  materiais do ateliê, e devolve os **corpos** (nome, material, volume em mm³, massa em g, fechado/aberto) e as
+  **sobreposições** (pares e volume em comum). Nulo: não foi possível medir.
+- **Classificação e soma:** `PesoDoModelo` acha o arquivo atual da conversa do Modelo 3D da versão (o mais recente não
+  arquivado; em branco é "sem 3D"), manda medir e classifica cada corpo pelo material (`UsoDoCorpo`: liga, "Pedra",
+  "Apoio (não conta)" ou sem material, que inclui o "Default"). O somatório por liga e as pendências/avisos ficam no
+  DomainService (`ModeloMedido`, `CalculadoraDePreco`); ver [Precificação](../../Precificacao/README.md).
+- **Infra:** `MedidorDoModeloSolidCraft` (`Infra/IA/Ferramentas/Modelo3d`): `solidcraft-cli mcp --headless` numa pasta
+  temporária; abre o arquivo, **garante os materiais** (o mesmo preparo do turno da IA, `PreparoDoArquivo`), roda
+  `measure` e `inspect.interference` (`budget_s` 20) e lê o resultado (`MedicaoNoArquivo`). Nada é gravado no arquivo.
+- **Cache:** em memória (`IMemoryCache`, 1 dia sem uso), pela chave **id do arquivo + materiais** (hash do preparo).
+  Cada alteração do arquivo é um id novo; mudar a densidade de uma liga muda o preparo. Abrir a tela de novo não mede de
+  novo (medir leva ~1 s). O conteúdo do arquivo só é lido do banco quando a medição não está guardada. Falha não é
+  guardada.
+- **Falha não derruba a tela:** SolidCraft não configurado, arquivo que não abre, recusa ou tempo esgotado (30 s) viram
+  log e o preço sai **Incompleto** com a pendência "Não foi possível medir o modelo 3D".
+
+Sem migration: nada muda no banco.
+
+**Testes:** unitários em `UnitTests/Infra/IA/MedicaoNoArquivoTests.cs` (leitura do `measure` e do
+`inspect.interference`, cache pelo arquivo e pelos materiais). Integração com o SolidCraft de teste em
+`IntegrationTests/Ferramentas/Modelo3d/MedidorDoModeloTests.cs`: um anel de ouro 18k com garra sobreposta, pedra e corpo
+sem material, medido sem IA (2,824 g na liga, sobreposição Aro/Garra), sem medir de novo o mesmo arquivo e medindo de
+novo quando a densidade muda (ignorado sem `SolidCraft:Caminho`). Nos outros testes de integração o medidor é o de
+teste (`AmbienteDeTeste.Medidor`).
 
 ## Instalação
 

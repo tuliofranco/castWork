@@ -8,6 +8,7 @@ import type {
   CalculoDoPrecoDto,
   CustoDoMetalDto,
   PendenciaDoPrecoDto,
+  TipoDeAviso,
   TipoMaoDeObra,
 } from '@data/projetos/projetos/dto/preco-da-versao.dto';
 import type { VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
@@ -19,6 +20,12 @@ import { type Observable, finalize } from 'rxjs';
 type Edicao = 'metais' | 'maoDeObra' | 'servicos' | 'markup' | null;
 
 const NOME_DO_METAL: Readonly<Record<Metal, string>> = { OURO: 'ouro', PRATA: 'prata' };
+
+const ICONE_DO_AVISO: Readonly<Record<TipoDeAviso, string>> = {
+  COTACAO_ANTIGA: 'bi-clock-history',
+  CORPOS_SOBREPOSTOS: 'bi-intersect',
+  CORPO_ABERTO: 'bi-exclamation-circle',
+};
 
 /** 7850 → "R$ 7.850,00". */
 function moeda(valor: number): string {
@@ -50,10 +57,11 @@ function linhaDoMetal(m: CustoDoMetalDto, perda: number): string {
 }
 
 /**
- * Card "Preço" da versão: o cálculo linha a linha (metais com o peso estimado, composição, mão de obra e serviços),
- * o preço em destaque, o selo Completo/Incompleto com as pendências e um atalho para cada uma, e a edição do orçamento.
- * O cálculo é refeito a cada leitura. Sem `precificacao.ler`, só o preço e o status; editar pede `precificacao.editar`
- * e versão em desenvolvimento (o peso real vale em qualquer status).
+ * Card "Preço" da versão: o cálculo linha a linha (metais, composição, mão de obra e serviços), o preço em destaque, o
+ * selo Completo/Incompleto com as pendências e um atalho para cada uma, e a edição do orçamento. O peso do metal vem do
+ * modelo 3D quando a versão tem um ("Peso da peça (3D)"); sem 3D, é o estimado manualmente. Com 3D, o peso manual fica
+ * guardado e a tela diz que não é usado. O cálculo é refeito a cada leitura. Sem `precificacao.ler`, só o preço e o
+ * status; editar pede `precificacao.editar` e versão em desenvolvimento (o peso real vale em qualquer status).
  */
 @Component({
   selector: 'cw-preco-versao',
@@ -159,19 +167,59 @@ export class PrecoVersaoComponent {
     return `${markup}${taxas}${c.arredondarPara > 0 ? ', arredondado' : ''}`;
   }
 
-  /** Pendência que se resolve aqui mesmo, no formulário de metais. */
-  protected resolveNosMetais(p: PendenciaDoPrecoDto): boolean {
-    return p.tipo === 'SEM_METAL_COM_PESO' || p.tipo === 'LIGA_DESATIVADA';
+  /** Pendência que se resolve aqui mesmo, no formulário de metais (só sem 3D: com 3D, vale o modelo). */
+  protected resolveNosMetais(p: PendenciaDoPrecoDto, c: CalculoDoPrecoDto): boolean {
+    return (
+      c.origemDoPeso === 'MANUAL' && (p.tipo === 'SEM_METAL_COM_PESO' || p.tipo === 'LIGA_DESATIVADA')
+    );
+  }
+
+  /** Pendência que se resolve no modelo 3D (material dos corpos, a medição, as ligas do modelo). */
+  protected resolveNo3d(p: PendenciaDoPrecoDto, c: CalculoDoPrecoDto): boolean {
+    return (
+      p.tipo === 'CORPOS_SEM_MATERIAL' ||
+      p.tipo === 'MODELO_NAO_MEDIDO' ||
+      (c.origemDoPeso === 'MODELO' && (p.tipo === 'SEM_METAL_COM_PESO' || p.tipo === 'LIGA_DESATIVADA'))
+    );
+  }
+
+  /** "Peso da peça (3D) · medido no modelo" ou "Peso estimado manualmente". */
+  protected origemDoPeso(c: CalculoDoPrecoDto): string {
+    return c.origemDoPeso === 'MODELO'
+      ? 'Peso da peça (3D) · medido no modelo'
+      : 'Peso estimado manualmente';
+  }
+
+  /** "Ouro 18k amarelo 5,00 g, Prata 925 1,20 g". */
+  protected pesosManuais(c: CalculoDoPrecoDto): string {
+    return c.pesosManuaisGuardados.map((p) => `${p.liga} ${gramas(p.peso)}`).join(', ');
+  }
+
+  /** O peso real é por liga da versão: com 3D, só das ligas que têm peso manual guardado. */
+  protected registraPesoReal(m: CustoDoMetalDto, c: CalculoDoPrecoDto): boolean {
+    return (
+      c.origemDoPeso === 'MANUAL' || c.pesosManuaisGuardados.some((p) => p.ligaId === m.ligaId)
+    );
+  }
+
+  protected iconeDoAviso(tipo: TipoDeAviso): string {
+    return ICONE_DO_AVISO[tipo];
   }
 
   protected abrir(edicao: Exclude<Edicao, null>, c: CalculoDoPrecoDto): void {
     this.pesoRealDe.set(null);
     switch (edicao) {
-      case 'metais':
+      case 'metais': {
+        // Com 3D, edita o peso manual guardado (não o medido).
+        const manuais =
+          c.origemDoPeso === 'MODELO'
+            ? c.pesosManuaisGuardados.map((p) => ({ ligaId: p.ligaId, peso: p.peso }))
+            : c.metais.map((m) => ({ ligaId: m.ligaAtiva ? m.ligaId : null, peso: m.pesoEstimado }));
         this.formMetais.controls.linhas.clear();
-        c.metais.forEach((m) => this.adicionarMetal(m.ligaAtiva ? m.ligaId : null, m.pesoEstimado));
-        if (c.metais.length === 0) this.adicionarMetal(null, null);
+        manuais.forEach((m) => this.adicionarMetal(m.ligaId, m.peso));
+        if (manuais.length === 0) this.adicionarMetal(null, null);
         break;
+      }
       case 'maoDeObra':
         this.formMaoDeObra.reset({
           tipo: c.maoDeObra.tipo ?? 'POR_HORAS',
