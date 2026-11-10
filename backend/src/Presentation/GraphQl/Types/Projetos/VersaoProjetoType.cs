@@ -1,3 +1,4 @@
+using Castwork.Application.Ferramentas.Modelo3d.Queries.GetConferenciaDoModelo;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.GraphQl.DataLoaders;
 
@@ -28,5 +29,11 @@ public sealed class VersaoProjetoType : ObjectType<VersaoProjeto>
             .Description("Preço da versão calculado agora com os preços do projeto. O cálculo detalhado exige precificacao.ler.")
             .Type<NonNullType<PrecoDaVersaoType>>()
             .Resolve(async ctx => await ctx.DataLoader<PrecoPorVersaoDataLoader>().LoadRequiredAsync(ctx.Parent<VersaoProjeto>().Id, ctx.RequestAborted));
+
+        // Mede o arquivo 3D atual (medição guardada pelo arquivo): pensado para a conferência de uma versão, não para listas.
+        descriptor.Field("conferenciaDoModelo")
+            .Description("Conferência de peso e materiais do modelo 3D: corpos com material, volume e peso, sobreposições e os materiais do ateliê.")
+            .Type<NonNullType<ObjectType<ConferenciaDoModeloDto>>>()
+            .Resolve(async ctx => await ctx.DataLoader<ConferenciaPorVersaoDataLoader>().LoadRequiredAsync(ctx.Parent<VersaoProjeto>().Id, ctx.RequestAborted));
     }
 }

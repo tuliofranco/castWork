@@ -109,7 +109,7 @@ O peso do metal da versão passa a vir **do modelo 3D**: o sistema mede o arquiv
 massa de cada corpo por liga e usa no cálculo da etapa 4.
 
 - **Material obrigatório:** com qualquer corpo sem material (inclui o "Default" do SolidCraft), o preço fica
-  **Incompleto** com a pendência "N corpos sem material", com atalho para o Modelo 3D (a conferência é a etapa 7).
+  **Incompleto** com a pendência "N corpos sem material", com atalho para a conferência (etapa 7).
 - **Fora do peso:** corpos "Pedra" (o custo da pedra vem da composição) e "Apoio (não conta)".
 - **Versão com 3D e peso manual:** vale o 3D; o manual fica guardado, não é usado, e a tela diz isso. Versão **sem 3D**
   continua com o peso manual, marcado como "estimado manualmente".
@@ -119,6 +119,22 @@ massa de cada corpo por liga e usa no cálculo da etapa 4.
 - **Falha** do SolidCraft não derruba a tela: o preço aparece Incompleto com a pendência "não foi possível medir o
   modelo".
 - Sem migration: a medição não é gravada no banco.
+
+## Conferência de peso e materiais (etapa 7)
+
+A tela **Peso e materiais** da versão (aberta por cima do Modelo 3D, pelo botão dele ou pelo "Conferir" do card Preço)
+fecha o modelo híbrido: a IA atribui o material, o Castwork confere e o joalheiro corrige.
+
+- Lista **todos os corpos** com material, volume e peso, e o **peso do metal** no topo. Corpo sem material fica em
+  destaque; Pedra e Apoio aparecem "fora do peso".
+- **Corrigir ali mesmo:** escolher o material de um ou vários corpos (liga ativa, Pedra ou Apoio) e **Aplicar**.
+- **Unir corpos** de metal da mesma liga que se sobrepõem: vira um corpo só (com o nome do maior) e a parte comum para de
+  contar em dobro. Pede confirmação. Ligas diferentes não se unem (ajuste a forma no Modelo 3D).
+- Cada correção grava **uma nova versão do arquivo 3D** (sem IA, pelo SolidCraft), com **Desfazer** logo depois e no
+  histórico do modelo. O Modelo 3D recarrega o arquivo novo, e o preço o mede de novo.
+- A tela não cria nem apaga corpos e não mexe na forma. Versão publicada ou arquivada: só para conferir. Alterar exige
+  `projetos.editar`; conferir, `projetos.ler`.
+- Sem migration.
 
 ## Regras
 
@@ -139,5 +155,5 @@ massa de cada corpo por liga e usa no cálculo da etapa 4.
 
 ## Fora desta etapa
 
-Conferência de peso e materiais (etapa 7), proposta, PDF e congelamento do preço, atualizar vários projetos de uma vez, cotação
+Proposta, PDF e congelamento do preço, atualizar vários projetos de uma vez, cotação
 automática de mercado, platina e outros metais.

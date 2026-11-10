@@ -39,6 +39,11 @@ public static class AmbienteDeTeste
     /// </summary>
     public static MedidorDoModeloDeTeste Medidor { get; } = new();
 
+    /// <summary>
+    /// O editor do modelo 3D da conferência de materiais (sem SolidCraft): devolve o arquivo com a alteração anotada.
+    /// </summary>
+    public static EditorDoModeloDeTeste Editor { get; } = new();
+
     private static string ConnectionString => _container?.GetConnectionString()
         ?? throw new InvalidOperationException("Ambiente de teste não iniciado.");
 
@@ -50,7 +55,7 @@ public static class AmbienteDeTeste
         _container = new PostgreSqlBuilder(ImagemPostgres).Build();
         await _container.StartAsync();
 
-        _factory = new CastworkWebApplicationFactory(ConnectionString, Relogio, Sessao, Medidor);
+        _factory = new CastworkWebApplicationFactory(ConnectionString, Relogio, Sessao, Medidor, Editor);
 
         // Acessar Services executa o Program.cs inteiro, inclusive as migrations.
         _ = _factory.Services;
@@ -94,6 +99,7 @@ public static class AmbienteDeTeste
         Relogio.Reiniciar();
         Sessao.Reiniciar();
         Medidor.Reiniciar();
+        Editor.Reiniciar();
     }
 
     /// <summary>
@@ -107,7 +113,7 @@ public static class AmbienteDeTeste
     /// Quem chama descarta a factory.
     /// </summary>
     public static CastworkWebApplicationFactory CriarFactory(IReadOnlyDictionary<string, string> configuracao)
-        => new(ConnectionString, Relogio, Sessao, Medidor, configuracao);
+        => new(ConnectionString, Relogio, Sessao, Medidor, Editor, configuracao);
 
     public static T Obter<T>()
         where T : notnull

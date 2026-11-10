@@ -135,10 +135,10 @@ public sealed partial class VersaoProjeto
         Markup = origem.Markup;
     }
 
-    private ItemComposicao ObterItem(long itemId)
-        => _itens.SingleOrDefault(i => i.Id == itemId) ?? throw new EntidadeNaoEncontradaException("Item da composição", itemId);
-
-    private void GarantirEmDesenvolvimento()
+    /// <summary>
+    /// Publicada é registro do que foi mostrado ao cliente; arquivada precisa ser desarquivada antes.
+    /// </summary>
+    internal void GarantirEmDesenvolvimento()
     {
         switch (Status)
         {
@@ -150,4 +150,7 @@ public sealed partial class VersaoProjeto
                 break;
         }
     }
+
+    private ItemComposicao ObterItem(long itemId)
+        => _itens.SingleOrDefault(i => i.Id == itemId) ?? throw new EntidadeNaoEncontradaException("Item da composição", itemId);
 }

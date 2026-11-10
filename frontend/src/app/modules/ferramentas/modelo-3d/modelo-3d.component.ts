@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
+import { PermissaoService } from '@core/services/permissao.service';
 import { FerramentasService } from '@data/assistente/ferramentas.service';
 import { nomeDeArquivo } from '@shared/arquivos/nome-de-arquivo';
 import { DownloadService } from '@shared/services/download.service';
@@ -9,6 +10,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
 
+import { ConferenciaModeloComponent } from './conferencia-modelo.component';
 import { avisoDeCorposSemMaterial } from './corpos-sem-material';
 import { HistoricoModeloComponent } from './historico-modelo.component';
 import { PonteSolidCraft } from './ponte-solidcraft';
@@ -24,7 +26,7 @@ const FERRAMENTA = 'modelo-3d';
  */
 @Component({
   selector: 'cw-modelo-3d',
-  imports: [ConversaIaComponent, HistoricoModeloComponent],
+  imports: [ConversaIaComponent, ConferenciaModeloComponent, HistoricoModeloComponent],
   templateUrl: './modelo-3d.component.html',
   styleUrl: './modelo-3d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,9 +35,12 @@ export class Modelo3dComponent {
   private readonly ferramentas = inject(FerramentasService);
   private readonly toast = inject(ToastService);
   private readonly download = inject(DownloadService);
+  private readonly permissao = inject(PermissaoService);
 
   readonly id = input.required<string>();
   readonly versaoId = input.required<string>();
+  /** `?conferir=1` (do card Preço): abre a conferência de peso e materiais assim que o modelo estiver aberto. */
+  readonly conferir = input<string>();
 
   protected readonly voltarPara = computed(() => `/projetos/${this.id()}/versoes/${this.versaoId()}`);
   protected readonly projeto = computed(() => Number(this.id()));
@@ -51,6 +56,9 @@ export class Modelo3dComponent {
   /** Corpos do modelo sem material (o "Default" do SolidCraft): aviso discreto, sem bloquear a modelagem. */
   protected readonly semMaterial = signal<readonly string[]>([]);
   protected readonly avisoSemMaterial = computed(() => avisoDeCorposSemMaterial(this.semMaterial().length));
+  /** A conferência de peso e materiais aberta por cima do modelo. */
+  protected readonly conferindo = signal(false);
+  protected readonly podeEditar = computed(() => this.permissao.temAlguma(['projetos.editar']));
 
   private readonly solidcraftA = viewChild.required<ElementRef<HTMLIFrameElement>>('solidcraftA');
   private readonly solidcraftB = viewChild.required<ElementRef<HTMLIFrameElement>>('solidcraftB');
@@ -88,6 +96,33 @@ export class Modelo3dComponent {
     } finally {
       this.sincronizando.set(null);
     }
+
+    if (this.conferir()) void this.abrirConferencia();
+  }
+
+  /**
+   * Abre a conferência de peso e materiais. O que foi modelado à mão vai antes para o Castwork: a conferência mede e
+   * altera o arquivo guardado.
+   */
+  protected async abrirConferencia(): Promise<void> {
+    if (this.sincronizando() || this.pensando()) return;
+    try {
+      if (await this.ponte?.temAlteracoes()) {
+        this.sincronizando.set('Guardando o seu modelo...');
+        await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
+      }
+      this.conferindo.set(true);
+    } catch {
+      this.toast.erro('Não foi possível guardar o modelo antes de conferir.');
+    } finally {
+      this.sincronizando.set(null);
+    }
+  }
+
+  /** A conferência gravou um arquivo novo (material, união ou desfazer): o SolidCraft à vista recarrega. */
+  protected modeloConferido(arquivoId: number): void {
+    this.conversa().registrarArquivo(arquivoId);
+    void this.trazerArquivo();
   }
 
   /** A IA mudou (ou desfez) o modelo: traz a versão nova sem recarregar à vista. */

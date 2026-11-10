@@ -9,6 +9,9 @@
   (arquivoMudou)="arquivoMudou()"
 >
   <ng-container acoes>
+    <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirConferencia()">
+      <i class="bi bi-rulers" aria-hidden="true"></i> Peso e materiais
+    </button>
     <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
       <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
     </button>
@@ -26,7 +29,10 @@
     } @else if (trocando()) {
       <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o modelo…</p>
     } @else if (semMaterial().length > 0) {
-      <p class="aviso-ia" role="status"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ avisoSemMaterial() }}</p>
+      <p class="aviso-ia" role="status">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ avisoSemMaterial() }}
+        <button type="button" class="conferir" (click)="abrirConferencia()">Conferir</button>
+      </p>
     }
     <!-- Dois SolidCrafts (WebAssembly, servido pelo próprio front em /solidcraft): um à vista, o outro abre o próximo projeto por trás. -->
     <iframe
@@ -58,4 +64,14 @@
   (restaurar)="restaurar($event)"
   (baixar)="baixar($event)"
   (fechado)="historico.set(null)"
+/>
+
+<cw-conferencia-modelo
+  [projetoId]="projeto()"
+  [versaoId]="versao()"
+  [aberta]="conferindo()"
+  [podeEditar]="podeEditar()"
+  [ocupado]="!!sincronizando() || pensando() || trocando()"
+  (alterado)="modeloConferido($event)"
+  (fechado)="conferindo.set(false)"
 />

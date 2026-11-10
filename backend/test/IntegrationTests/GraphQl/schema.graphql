@@ -174,6 +174,18 @@ type ClientesEdge {
   node: Cliente!
 }
 
+type ConferenciaDoModelo {
+  versaoId: Long!
+  arquivoId: Long
+  medido: Boolean!
+  alteravel: Boolean!
+  pesoDoMetal: Decimal!
+  pesosPorLiga: [PesoDaLiga!]!
+  corpos: [CorpoConferido!]!
+  sobreposicoes: [SobreposicaoConferida!]!
+  materiais: [MaterialDisponivel!]!
+}
+
 type ConfiguracaoAtelie {
   nome: String!
   documento: String
@@ -186,6 +198,18 @@ type ConfiguracaoAtelie {
   site: String
   avisoBriefing: String
   possuiLogo: Boolean!
+}
+
+type CorpoConferido {
+  nome: String!
+  material: String
+  uso: UsoDoCorpo!
+  ligaId: Long
+  liga: String
+  volumeMm3: Decimal
+  massaGramas: Decimal
+  fechado: Boolean!
+  contaNoPeso: Boolean!
 }
 
 type Cotacao {
@@ -283,6 +307,13 @@ type Liga {
   densidade: Decimal!
 }
 
+type MaterialDisponivel {
+  nome: String!
+  rotulo: String!
+  uso: UsoDoCorpo!
+  ligaId: Long
+}
+
 "Information about pagination in a connection."
 type PageInfo {
   "Indicates whether more edges exist following the set defined by the clients arguments."
@@ -345,6 +376,12 @@ type PendenciaDoPreco {
   ligaId: Long
   metal: Metal
   corpos: [String!]!
+}
+
+type PesoDaLiga {
+  ligaId: Long!
+  liga: String!
+  peso: Decimal!
 }
 
 type PesoManual {
@@ -419,6 +456,14 @@ type ServicoExterno {
   valor: Decimal!
 }
 
+type SobreposicaoConferida {
+  corpoA: String!
+  corpoB: String!
+  volumeMm3: Decimal!
+  deMetal: Boolean!
+  podeUnir: Boolean!
+}
+
 type VersaoProjeto {
   id: Long!
   numero: Int!
@@ -430,6 +475,8 @@ type VersaoProjeto {
   itens: [ItemComposicao!]! @cost(weight: "10")
   "Preço da versão calculado agora com os preços do projeto. O cálculo detalhado exige precificacao.ler."
   preco: PrecoDaVersao! @cost(weight: "10")
+  "Conferência de peso e materiais do modelo 3D: corpos com material, volume e peso, sobreposições e os materiais do ateliê."
+  conferenciaDoModelo: ConferenciaDoModelo! @cost(weight: "10")
 }
 
 input BooleanOperationFilterInput {
@@ -596,6 +643,13 @@ enum TipoPeca {
   CORRENTE
   ENGASTE
   OUTRO
+}
+
+enum UsoDoCorpo {
+  METAL
+  PEDRA
+  APOIO
+  SEM_MATERIAL
 }
 
 "The `DateTime` scalar type represents a date and time with time zone offset information."

@@ -108,6 +108,11 @@ public sealed partial class Projeto
 
     public void RegistrarPesoReal(long versaoId, long ligaId, Peso? pesoReal) => ObterVersao(versaoId).RegistrarPesoReal(ligaId, pesoReal);
 
+    /// <summary>
+    /// Para o que muda a versão fora do agregado (ex.: o material dos corpos no arquivo 3D): publicada ou arquivada recusa.
+    /// </summary>
+    public void GarantirVersaoEmDesenvolvimento(long versaoId) => ObterVersao(versaoId).GarantirEmDesenvolvimento();
+
     private void HerdarPrecos(PrecosDoAtelie precosDoAtelie, DateTimeOffset agora)
     {
         ArgumentNullException.ThrowIfNull(precosDoAtelie);

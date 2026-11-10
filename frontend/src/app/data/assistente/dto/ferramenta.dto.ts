@@ -79,7 +79,7 @@ export interface ChatDaConversaDto {
 }
 
 /** Quem gravou a versão do arquivo. */
-export type OrigemArquivo = 'Ia' | 'Joalheiro' | 'Desfazer' | 'Restauracao';
+export type OrigemArquivo = 'Ia' | 'Joalheiro' | 'Desfazer' | 'Restauracao' | 'Conferencia';
 
 /** Uma versão do histórico do arquivo; `tamanho` 0 é o desenho em branco. */
 export interface VersaoDoArquivoDto {
