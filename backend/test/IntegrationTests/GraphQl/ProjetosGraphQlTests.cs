@@ -186,7 +186,7 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
     [Test]
     public async Task DeveLerConfiguracaoDoAtelieDelegandoAoMediatRAsync()
     {
-        var resposta = await (await ComoAdminAsync()).ExecutarAsync("{ configuracaoAtelie { nome valorHoraPadrao possuiLogo } }");
+        var resposta = await (await ComoAdminAsync()).ExecutarAsync("{ configuracaoAtelie { nome possuiLogo } }");
 
         resposta["errors"].Should().BeNull();
         resposta["data"]!["configuracaoAtelie"]!["nome"]!.GetValue<string>().Should().Be("Meu ateliê");

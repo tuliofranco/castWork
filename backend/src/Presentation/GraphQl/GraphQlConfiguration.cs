@@ -1,5 +1,7 @@
 using Castwork.Application.Atelie.Queries.GetConfiguracaoAtelie;
 using Castwork.Application.Common.Enderecos;
+using Castwork.Application.Precificacao.Queries;
+using Castwork.Application.Precificacao.Queries.GetPrecosDoAtelie;
 using Castwork.GraphQl.DataLoaders;
 using Castwork.GraphQl.Erros;
 using Castwork.GraphQl.Queries;
@@ -33,12 +35,18 @@ public static class GraphQlConfiguration
             .AddTypeExtension<ClientesQueries>()
             .AddTypeExtension<ProjetosQueries>()
             .AddTypeExtension<AtelieQueries>()
+            .AddTypeExtension<PrecificacaoQueries>()
             .AddType<PecaType>()
             .AddType<ClienteType>()
             .AddType<ProjetoType>()
 
             // DTO da Application exposto com nome de domínio, sem o sufixo técnico.
             .AddType(new ObjectType<ConfiguracaoAtelieDto>(d => d.Name("ConfiguracaoAtelie")))
+            .AddType(new ObjectType<PrecosDoAtelieDto>(d => d.Name("PrecosDoAtelie")))
+            .AddType(new ObjectType<CotacaoVigenteDto>(d => d.Name("CotacaoVigente")))
+            .AddType(new ObjectType<CotacaoDto>(d => d.Name("Cotacao")))
+            .AddType(new ObjectType<LigaDto>(d => d.Name("Liga")))
+            .AddType(new ObjectType<ParametrosDePrecoDto>(d => d.Name("ParametrosDePreco")))
             .AddType(new ObjectType<EnderecoDto>(d =>
             {
                 d.Name("Endereco");

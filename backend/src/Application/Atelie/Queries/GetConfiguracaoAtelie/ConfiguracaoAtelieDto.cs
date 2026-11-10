@@ -19,8 +19,6 @@ public sealed class ConfiguracaoAtelieDto : IMapFrom<ConfiguracaoAtelie>
 
     public EnderecoDto? Endereco { get; init; }
 
-    public decimal ValorHoraPadrao { get; init; }
-
     public string? Assinatura { get; init; }
 
     public string CorMarca { get; init; } = string.Empty;
@@ -39,6 +37,5 @@ public sealed class ConfiguracaoAtelieDto : IMapFrom<ConfiguracaoAtelie>
     public void Mapping(Mapster.TypeAdapterConfig config)
         => config.NewConfig<ConfiguracaoAtelie, ConfiguracaoAtelieDto>()
             .Map(d => d.Documento, s => s.Documento == null ? null : s.Documento.Formatado)
-            .Map(d => d.ValorHoraPadrao, s => s.ValorHoraPadrao.Valor)
             .Map(d => d.PossuiLogo, s => s.LogoTipo != null);
 }

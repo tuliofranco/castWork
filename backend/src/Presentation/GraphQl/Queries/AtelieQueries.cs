@@ -14,7 +14,7 @@ public sealed class AtelieQueries
 {
     [Serial]
     [Authorize]
-    [GraphQLDescription("Dados do ateliê da instalação (cabeçalho, documentos, valor/hora sugerido).")]
+    [GraphQLDescription("Dados do ateliê da instalação (cabeçalho e documentos).")]
     public Task<ConfiguracaoAtelieDto> GetConfiguracaoAtelie([Service] ISender mediator, CancellationToken cancellationToken)
         => mediator.Send(new GetConfiguracaoAtelieQuery(), cancellationToken);
 }

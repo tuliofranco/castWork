@@ -1,0 +1,37 @@
+<cw-cabecalho-pagina titulo="Precificação" subtitulo="Preços do ateliê: cotação dos metais, ligas e parâmetros que entram em todo orçamento.">
+  @if (!podeEditar) {
+    <p detalhes class="somente-leitura"><i class="bi bi-eye" aria-hidden="true"></i> Só consulta: alterar os preços exige permissão de edição.</p>
+  }
+</cw-cabecalho-pagina>
+
+<cw-estado-lista
+  [carregando]="!precos.hasValue() && precos.isLoading()"
+  [erro]="!!precos.error()"
+  mensagemErro="Não foi possível carregar os preços do ateliê."
+  [quantidadeEsqueleto]="4"
+  (tentarDeNovo)="precos.reload()"
+>
+  @if (precos.value(); as p) {
+    <section class="bloco" aria-labelledby="titulo-cotacoes">
+      <h2 id="titulo-cotacoes">Cotações</h2>
+      <p class="explicacao">Sempre do metal puro (ouro 24k, prata fina): a pureza de cada liga entra no cálculo pelo teor.</p>
+      <div class="cotacoes">
+        @for (cotacao of p.cotacoes; track cotacao.metal) {
+          <cw-cotacao-metal [cotacao]="cotacao" [podeEditar]="podeEditar" (atualizada)="precos.reload()" />
+        }
+      </div>
+    </section>
+
+    <section class="bloco" aria-labelledby="titulo-ligas">
+      <h2 id="titulo-ligas">Ligas</h2>
+      <p class="explicacao">O teor dá a fração de metal puro; a densidade converte o volume do modelo 3D em peso.</p>
+      <cw-ligas-atelie [ligas]="p.ligas" [podeEditar]="podeEditar" (alteradas)="precos.reload()" />
+    </section>
+
+    <section class="bloco" aria-labelledby="titulo-parametros">
+      <h2 id="titulo-parametros">Parâmetros</h2>
+      <p class="explicacao">Padrões do ateliê para todo orçamento.</p>
+      <cw-parametros-preco [parametros]="p.parametros" [podeEditar]="podeEditar" (salvos)="precos.reload()" />
+    </section>
+  }
+</cw-estado-lista>

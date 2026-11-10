@@ -39,9 +39,10 @@ public sealed partial class ConfiguracaoAtelie : BaseEntity<long>, IAggregateRoo
     public Endereco? Endereco { get; private set; }
 
     /// <summary>
-    /// Valor da hora de bancada sugerido ao precificar uma peça.
+    /// Padrões de preço do ateliê (perda, valor da hora, markup, taxas, arredondamento). Alterados pela tela de
+    /// preços, com a regra de precificação, e não junto com os dados e a marca.
     /// </summary>
-    public Dinheiro ValorHoraPadrao { get; private set; } = Dinheiro.Zero;
+    public ParametrosDePreco ParametrosDePreco { get; private set; } = null!;
 
     /// <summary>
     /// Frase curta que acompanha o nome nos documentos ("Joias autorais feitas à mão").
