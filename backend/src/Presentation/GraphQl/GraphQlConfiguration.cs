@@ -57,6 +57,7 @@ public static class GraphQlConfiguration
             .AddType(new ObjectType<ServicoExternoDto>(d => d.Name("ServicoExterno")))
             .AddType(new ObjectType<PendenciaDoPrecoDto>(d => d.Name("PendenciaDoPreco")))
             .AddType(new ObjectType<AvisoDoPrecoDto>(d => d.Name("AvisoDoPreco")))
+            .AddType(new ObjectType<PesoManualDto>(d => d.Name("PesoManual")))
             .AddType(new ObjectType<EnderecoDto>(d =>
             {
                 d.Name("Endereco");

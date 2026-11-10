@@ -21,8 +21,13 @@
     </p>
     <p class="dica">
       <i class="bi bi-info-circle" aria-hidden="true"></i>
-      Calculado agora com o peso <strong>estimado</strong> do metal e os preços deste projeto. Muda
-      junto com a versão: quem congela o preço é a proposta.
+      @if (p.calculo?.origemDoPeso === 'MODELO') {
+        Calculado agora com o peso do metal <strong>medido no modelo 3D</strong> e os preços deste
+        projeto.
+      } @else {
+        Calculado agora com o peso <strong>estimado</strong> do metal e os preços deste projeto.
+      }
+      Muda junto com a versão: quem congela o preço é a proposta.
     </p>
 
     @if (p.calculo; as c) {
@@ -50,7 +55,15 @@
                     ></a>
                   }
                 }
-                @if (resolveNosMetais(pendencia) && editavel()) {
+                @if (resolveNo3d(pendencia, c)) {
+                  <a
+                    class="atalho"
+                    [routerLink]="['/projetos', projetoId(), 'versoes', versao().id, 'modelo-3d']"
+                    >{{ pendencia.tipo === 'CORPOS_SEM_MATERIAL' ? 'Conferir no 3D' : 'Abrir o 3D' }}
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i
+                  ></a>
+                }
+                @if (resolveNosMetais(pendencia, c) && editavel()) {
                   <button type="button" class="btn btn-sutil atalho" (click)="abrir('metais', c)">
                     {{
                       pendencia.tipo === 'LIGA_DESATIVADA' ? 'Trocar a liga' : 'Informar os metais'
@@ -65,7 +78,15 @@
 
       @for (aviso of c.avisos; track $index) {
         <p class="aviso-preco">
-          <i class="bi bi-clock-history" aria-hidden="true"></i> {{ aviso.descricao }}
+          <i [class]="'bi ' + iconeDoAviso(aviso.tipo)" aria-hidden="true"></i>
+          {{ aviso.descricao }}
+        </p>
+      }
+
+      @if (c.pesosManuaisGuardados.length > 0) {
+        <p class="aviso-preco manual-guardado">
+          <i class="bi bi-archive" aria-hidden="true"></i>
+          Peso manual guardado e não usado (vale o 3D): {{ pesosManuais(c) }}.
         </p>
       }
 
@@ -78,9 +99,11 @@
             <tr class="metal">
               <th scope="row">
                 {{ linhaDoMetal(m, c) }}
+                <span class="origem-do-peso">{{ origemDoPeso(c) }}</span>
                 @if (m.pesoReal !== null && m.diferencaDoPesoReal !== null) {
                   <span class="peso-real"
-                    >estimado {{ gramas(m.pesoEstimado) }} · real {{ gramas(m.pesoReal) }} ·
+                    >{{ c.origemDoPeso === 'MODELO' ? '3D' : 'estimado' }}
+                    {{ gramas(m.pesoEstimado) }} · real {{ gramas(m.pesoReal) }} ·
                     {{ diferenca(m.diferencaDoPesoReal) }}</span
                   >
                 }
@@ -115,7 +138,7 @@
                       Salvar peso real
                     </button>
                   </form>
-                } @else if (podeEditar()) {
+                } @else if (podeEditar() && registraPesoReal(m, c)) {
                   <button
                     type="button"
                     class="btn btn-sutil peso-real-botao"
@@ -131,7 +154,9 @@
             </tr>
           } @empty {
             <tr>
-              <th scope="row">Metal: nenhum informado</th>
+              <th scope="row">
+                {{ c.origemDoPeso === 'MODELO' ? 'Metal: nenhum medido no 3D' : 'Metal: nenhum informado' }}
+              </th>
               <td>{{ moeda(0) }}</td>
             </tr>
           }
@@ -188,6 +213,9 @@
               <p class="dica">
                 Peso <strong>estimado</strong> da peça pronta em cada liga, sem a perda de fundição
                 (ela entra no cálculo).
+                @if (c.origemDoPeso === 'MODELO') {
+                  Esta versão tem modelo 3D: vale o peso medido nele; o manual fica guardado.
+                }
               </p>
               <div formArrayName="linhas">
                 @for (linha of formMetais.controls.linhas.controls; track linha; let i = $index) {

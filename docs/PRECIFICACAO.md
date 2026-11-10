@@ -103,6 +103,23 @@ a 7 trocam pelo peso medido no modelo 3D.
   (sem o peso real).
 - Sem `precificacao.ler`, a versão mostra **só o preço final e o status**; montar o orçamento exige `precificacao.editar`.
 
+## Peso medido no modelo 3D (etapa 6)
+
+O peso do metal da versão passa a vir **do modelo 3D**: o sistema mede o arquivo atual no SolidCraft (sem IA), soma a
+massa de cada corpo por liga e usa no cálculo da etapa 4.
+
+- **Material obrigatório:** com qualquer corpo sem material (inclui o "Default" do SolidCraft), o preço fica
+  **Incompleto** com a pendência "N corpos sem material", com atalho para o Modelo 3D (a conferência é a etapa 7).
+- **Fora do peso:** corpos "Pedra" (o custo da pedra vem da composição) e "Apoio (não conta)".
+- **Versão com 3D e peso manual:** vale o 3D; o manual fica guardado, não é usado, e a tela diz isso. Versão **sem 3D**
+  continua com o peso manual, marcado como "estimado manualmente".
+- **Avisos** (não bloqueiam): corpos de metal sobrepostos (a parte comum seria contada duas vezes) e corpo aberto
+  (volume pouco confiável; fica fora do peso).
+- **Medição guardada** por arquivo (id) e materiais: só mede de novo quando o arquivo muda (ou a densidade de uma liga).
+- **Falha** do SolidCraft não derruba a tela: o preço aparece Incompleto com a pendência "não foi possível medir o
+  modelo".
+- Sem migration: a medição não é gravada no banco.
+
 ## Regras
 
 - Valores negativos ou zero são recusados: cotação, densidade, valor da hora e markup.
@@ -122,5 +139,5 @@ a 7 trocam pelo peso medido no modelo 3D.
 
 ## Fora desta etapa
 
-Peso vindo do 3D (etapas 5 a 7), proposta, PDF e congelamento do preço, atualizar vários projetos de uma vez, cotação
+Conferência de peso e materiais (etapa 7), proposta, PDF e congelamento do preço, atualizar vários projetos de uma vez, cotação
 automática de mercado, platina e outros metais.

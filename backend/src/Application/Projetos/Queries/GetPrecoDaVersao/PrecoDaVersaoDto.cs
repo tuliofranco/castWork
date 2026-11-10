@@ -30,6 +30,16 @@ public sealed class PrecoDaVersaoDto
 /// </summary>
 public sealed class CalculoDoPrecoDto
 {
+    /// <summary>
+    /// <c>Modelo</c>: o peso dos metais foi medido no arquivo 3D atual; <c>Manual</c>: estimado (versão sem 3D).
+    /// </summary>
+    public OrigemDoPeso OrigemDoPeso { get; init; }
+
+    /// <summary>
+    /// Com 3D, o peso manual que a versão tem guardado e que não é usado (vale o 3D). Vazio sem 3D.
+    /// </summary>
+    public IReadOnlyList<PesoManualDto> PesosManuaisGuardados { get; init; } = [];
+
     public IReadOnlyList<CustoDoMetalDto> Metais { get; init; } = [];
 
     public decimal CustoDosMetais { get; init; }
@@ -91,7 +101,7 @@ public sealed class CustoDoMetalDto
     public bool LigaAtiva { get; init; }
 
     /// <summary>
-    /// Peso estimado da peça pronta (g).
+    /// Peso da peça pronta (g): o medido no modelo 3D ou, sem 3D, o estimado manualmente (<see cref="CalculoDoPrecoDto.OrigemDoPeso"/>).
     /// </summary>
     public decimal PesoEstimado { get; init; }
 
@@ -180,6 +190,11 @@ public sealed class PendenciaDoPrecoDto
     /// O metal sem cotação no projeto.
     /// </summary>
     public Metal? Metal { get; init; }
+
+    /// <summary>
+    /// Os corpos do modelo 3D sem material.
+    /// </summary>
+    public IReadOnlyList<string> Corpos { get; init; } = [];
 }
 
 public sealed class AvisoDoPrecoDto
@@ -189,4 +204,24 @@ public sealed class AvisoDoPrecoDto
     public string Descricao { get; init; } = string.Empty;
 
     public Metal? Metal { get; init; }
+
+    /// <summary>
+    /// Os corpos do modelo 3D envolvidos (sobrepostos ou aberto).
+    /// </summary>
+    public IReadOnlyList<string> Corpos { get; init; } = [];
+}
+
+/// <summary>
+/// Peso estimado manualmente para uma liga, guardado na versão.
+/// </summary>
+public sealed class PesoManualDto
+{
+    public long LigaId { get; init; }
+
+    public string Liga { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gramas.
+    /// </summary>
+    public decimal Peso { get; init; }
 }

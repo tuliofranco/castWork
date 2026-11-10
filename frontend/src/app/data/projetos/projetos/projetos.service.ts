@@ -109,6 +109,12 @@ export const GET_PRECO_DA_VERSAO = gql`
           preco
           status
           calculo @include(if: $comCalculo) {
+            origemDoPeso
+            pesosManuaisGuardados {
+              ligaId
+              liga
+              peso
+            }
             metais {
               ligaId
               liga
@@ -156,10 +162,12 @@ export const GET_PRECO_DA_VERSAO = gql`
               pecaId
               ligaId
               metal
+              corpos
             }
             avisos {
               tipo
               descricao
+              corpos
             }
           }
         }
