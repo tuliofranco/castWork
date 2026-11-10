@@ -1466,6 +1466,18 @@ namespace Castwork.Infra.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<decimal?>("Markup")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("markup");
+
+                    b.Property<string>("Metais")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metais")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1489,11 +1501,37 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("publicada_em");
 
+                    b.Property<string>("Servicos")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("servicos")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "MaoDeObra", "Castwork.Domain.Entities.Projetos.VersaoProjeto.MaoDeObra#MaoDeObra", b1 =>
+                        {
+                            b1.Property<decimal?>("Horas")
+                                .HasPrecision(6, 2)
+                                .HasColumnType("numeric(6,2)")
+                                .HasColumnName("mao_de_obra_horas");
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("mao_de_obra_tipo");
+
+                            b1.Property<decimal?>("ValorFixo")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("mao_de_obra_valor_fixo");
+                        });
 
                     b.HasKey("Id")
                         .HasName("pk_projeto_versoes");

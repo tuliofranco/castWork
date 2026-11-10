@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloTestingController, ApolloTestingModule } from 'apollo-angular/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { GET_PRECOS_DO_PROJETO, GET_PROJETO, ProjetosService } from './projetos.service';
+import { GET_PRECOS_DO_PROJETO, GET_PRECO_DA_VERSAO, GET_PROJETO, ProjetosService } from './projetos.service';
 
 describe('ProjetosService', () => {
   function configurar() {
@@ -72,6 +72,40 @@ describe('ProjetosService', () => {
     const atualizar = http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/precos/atualizar');
     expect(editar.request.body).toEqual(dto);
     [editar, atualizar].forEach((c) => c.flush(null));
+    http.verify();
+  });
+
+  it('deve pedir o preço só da versão e o cálculo só quando permitido', async () => {
+    const { service, apollo } = configurar();
+    const preco = { preco: 7850, status: 'COMPLETO' };
+    const promessa = firstValueFrom(service.getPrecoDaVersao(1, 20, false));
+
+    const op = apollo.expectOne(GET_PRECO_DA_VERSAO);
+    expect(op.operation.variables).toEqual({ id: 1, versaoId: 20, comCalculo: false });
+    op.flush({ data: { projeto: { id: 1, versoes: [{ id: 20, preco }] } } });
+
+    expect(await promessa).toEqual(preco);
+  });
+
+  it('deve gravar o orçamento da versão pelas rotas dela, com o enum da mão de obra no formato do REST', () => {
+    const { service, http } = configurar();
+
+    service.putMetaisDaVersao(1, 2, { metais: [{ ligaId: 2, pesoGramas: 5 }] }).subscribe();
+    service.putMaoDeObra(1, 2, { tipo: 'POR_HORAS', horas: 6 }).subscribe();
+    service.putServicos(1, 2, { servicos: [{ nome: 'Ródio', valor: 60 }] }).subscribe();
+    service.putMarkupDaVersao(1, 2, { markup: null }).subscribe();
+    service.putPesoReal(1, 2, 3, { pesoGramas: 5.2 }).subscribe();
+
+    const chamadas = [
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/versoes/2/metais'),
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/versoes/2/mao-de-obra'),
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/versoes/2/servicos'),
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/versoes/2/markup'),
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/versoes/2/metais/3/peso-real'),
+    ];
+    expect(chamadas[1].request.body).toEqual({ tipo: 'PorHoras', horas: 6 });
+    expect(chamadas[3].request.body).toEqual({ markup: null });
+    chamadas.forEach((c) => c.flush(null));
     http.verify();
   });
 });

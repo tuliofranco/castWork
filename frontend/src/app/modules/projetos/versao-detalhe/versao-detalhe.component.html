@@ -191,6 +191,8 @@
       </section>
     }
   </div>
+
+  <cw-preco-versao [projetoId]="+id()" [versao]="v" [podeVerCalculo]="podeVerCalculo" [podeEditar]="podeEditarOrcamento" />
 } @else {
   <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="5" />
 }

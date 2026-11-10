@@ -31,10 +31,15 @@ public sealed class ProjetoType : ObjectType<Projeto>
             .Resolve(async ctx => await ctx.DataLoader<PrecosPorProjetoDataLoader>().LoadRequiredAsync(ctx.Parent<Projeto>().Id, ctx.RequestAborted));
 
         // Versões vêm por DataLoader: na lista de projetos, uma consulta para todas as versões de todos eles.
+        // O "id" opcional restringe a uma versão (a página da versão pede o preço só dela).
         descriptor.Field("versoes")
             .Description("Versões da arte, da mais recente para a mais antiga.")
+            .Argument("id", a => a.Type<LongType>().Description("Só a versão com este Id."))
             .Type<NonNullType<ListType<NonNullType<VersaoProjetoType>>>>()
             .Resolve(async ctx =>
-                (await ctx.DataLoader<VersoesPorProjetoDataLoader>().LoadAsync(ctx.Parent<Projeto>().Id, ctx.RequestAborted)) ?? []);
+            {
+                var versoes = (await ctx.DataLoader<VersoesPorProjetoDataLoader>().LoadAsync(ctx.Parent<Projeto>().Id, ctx.RequestAborted)) ?? [];
+                return ctx.ArgumentValue<long?>("id") is long id ? [.. versoes.Where(v => v.Id == id)] : versoes;
+            });
     }
 }

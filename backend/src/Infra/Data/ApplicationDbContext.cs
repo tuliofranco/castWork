@@ -75,6 +75,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         configurationBuilder.Properties<PapelMensagem>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<OrigemArquivo>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<Metal>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<TipoMaoDeObra>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(18, 2);
     }
 }

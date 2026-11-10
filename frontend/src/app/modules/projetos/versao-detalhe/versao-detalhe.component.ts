@@ -23,14 +23,15 @@ import { type Observable, debounceTime, distinctUntilChanged, finalize, of } fro
 import { STATUS_VERSAO } from '../status-versao';
 import { ArquivosVersaoComponent } from './arquivos-versao.component';
 import { EtapasVersaoComponent } from './etapas-versao.component';
+import { PrecoVersaoComponent } from './preco-versao.component';
 
 /**
  * Página de uma versão: composição e, enquanto ela estiver em desenvolvimento, a biblioteca ao lado
- * para adicionar peças. Publicar, duplicar e arquivar também estão aqui.
+ * para adicionar peças, e o card do preço. Publicar, duplicar e arquivar também estão aqui.
  */
 @Component({
   selector: 'cw-versao-detalhe',
-  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PainelPdfComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent],
+  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PainelPdfComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent, PrecoVersaoComponent],
   templateUrl: './versao-detalhe.component.html',
   styleUrl: './versao-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,7 +48,11 @@ export class VersaoDetalheComponent {
   readonly id = input.required<string>();
   readonly versaoId = input.required<string>();
 
-  protected readonly podeEditar = inject(PermissaoService).temAlguma(['projetos.editar']);
+  private readonly permissao = inject(PermissaoService);
+  protected readonly podeEditar = this.permissao.temAlguma(['projetos.editar']);
+  /** O cálculo do preço (custos, markup, cotações); sem a regra, o card mostra só o preço e o status. */
+  protected readonly podeVerCalculo = this.permissao.temAlguma(['precificacao.ler']);
+  protected readonly podeEditarOrcamento = this.permissao.temAlguma(['precificacao.editar']);
   protected readonly status = STATUS_VERSAO;
   protected readonly rotuloTipo = rotuloTipoPeca;
   protected readonly iconeTipo = iconeTipoPeca;
