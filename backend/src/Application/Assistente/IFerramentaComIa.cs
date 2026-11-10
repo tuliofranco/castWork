@@ -29,5 +29,7 @@ public interface IFerramentaComIa
 
 /// <summary>
 /// O contexto (JSON) que a IA recebe no turno e as ferramentas locais dela (nulo quando só usa o MCP).
+/// <see cref="PreparoDoArquivo"/>: o que o arquivo de trabalho precisa ter ao ser aberto (JSON que só a ferramenta
+/// entende, ex.: os materiais do modelo 3D); nulo quando não há.
 /// </summary>
-public sealed record PreparoDoTurno(string Contexto, IFerramentasLocais? Locais = null);
+public sealed record PreparoDoTurno(string Contexto, IFerramentasLocais? Locais = null, string? PreparoDoArquivo = null);

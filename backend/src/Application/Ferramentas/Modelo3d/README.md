@@ -11,11 +11,45 @@ Modelo 3D paramétrico da peça no SolidCraft. O joalheiro edita no SolidCraft e
 
 | Camada | Pasta |
 |---|---|
-| Application | `Application/Ferramentas/Modelo3d` (contexto do turno) |
-| Infra | `Infra/IA/Ferramentas/Modelo3d` (instruções, MCP, texto dos passos) |
-| Front | `modules/ferramentas/modelo-3d` (`PonteSolidCraft` abre e salva pelo iframe, com a API `window.solidcraft`) |
+| Application | `Application/Ferramentas/Modelo3d` (contexto do turno, `MateriaisDoModelo`) |
+| Infra | `Infra/IA/Ferramentas/Modelo3d` (instruções, MCP, texto dos passos, resumo do modelo, `MateriaisNoArquivo`) |
+| Front | `modules/ferramentas/modelo-3d` (`PonteSolidCraft` abre, salva e confere os materiais pelo iframe, com a API `window.solidcraft`) |
 
 Não tem estado de domínio próprio: usa o arquivo e a conversa do Assistente. Sem prévia em SVG na pasta da versão.
+
+## Materiais do ateliê no arquivo (etapa 5 da precificação)
+
+As ligas do ateliê viram **materiais dentro do arquivo 3D**, e a classificação de cada corpo (que liga, pedra ou apoio)
+**vive no arquivo**, não no banco: acompanha o histórico do arquivo e o Desfazer.
+
+- **Quais:** um material por **liga ativa**, com a densidade dela e uma aparência metálica coerente (ouro amarelo, branco,
+  rosé, prata), mais **"Pedra"** (não entra no peso do metal; o custo da pedra vem da composição) e **"Apoio (não
+  conta)"** (rascunho, guia ou corpo auxiliar, fora do cálculo). Montados em `MateriaisDoModelo` (Application).
+- **Nome estável:** `Castwork liga {id}` (ex.: `Castwork liga 2`), o mesmo se o nome da liga mudar.
+  `MateriaisDoModelo.LigaDoMaterial` faz o caminho de volta (a etapa 6 mede o peso por ele).
+- **Quando:** ao abrir o arquivo da versão para um turno da IA, a Infra garante os materiais (`MateriaisNoArquivo`): lê o
+  `material.list`, cria com `material.create` só os que faltam e, se a densidade da liga mudou no ateliê, atualiza com
+  `material.edit`, tudo num `batch` (tudo ou nada). Abrir de novo não duplica nada. Nada é apagado: corpos podem usar o
+  material de uma liga desativada. Se falhar, a IA modela assim mesmo (fica no log). O arquivo só é gravado se a IA
+  também alterar o modelo; no turno seguinte os materiais são garantidos de novo.
+- **Caminho genérico:** a ferramenta devolve no `PreparoDoTurno` o `PreparoDoArquivo` (a lista em JSON); o Assistente o
+  leva no `PedidoAFerramenta` e a Infra aplica pelo `DefinicaoDeFerramenta.PrepararArquivo` (`Assistente/PreparoDoArquivo`).
+- **IA:** o contexto da versão lista os `materiais` (nome, uso, densidade). As instruções pedem `material.assign` em todo
+  corpo de metal que ela criar (no mesmo `batch`), pela liga do briefing/composição ou perguntando; "Pedra" e "Apoio
+  (não conta)" quando for o caso; e não criar, editar nem apagar materiais.
+- **"Modelo agora":** cada corpo sai com o material (`Aro (fechado, Castwork liga 2): …`); o "Default" do SolidCraft
+  (1,29 g/cm³, plástico) conta como **sem material** e sai como `SEM MATERIAL`, com uma linha final listando esses corpos.
+- **Livre para modelar:** nada impede criar corpo sem material.
+- **Front:** a tela avisa "N corpos sem material" (discreto, sem bloquear) depois de abrir, salvar e trazer o que a IA fez,
+  pelo `inspect.measure` do SolidCraft embutido (`window.solidcraft.request('command', …)`, em `corpos-sem-material.ts`).
+
+Sem migration: nada muda no banco.
+
+**Testes:** unitários em `UnitTests/Infra/IA/MateriaisNoArquivoTests.cs` (comandos a partir das ligas, nomes estáveis,
+idempotência, densidade, instruções) e `ResultadoDaFerramentaTests.cs` (resumo com material). Integração em
+`IntegrationTests/Ferramentas/Modelo3d/MateriaisDoModelo3dTests.cs`: o preparo do turno com as ligas ativas e, com o
+SolidCraft de teste, materiais criados, sem duplicar, salvos no arquivo e lidos de volta pelo `measure`. Esse teste usa
+o `SolidCraft:Caminho` dos User Secrets da API (ou `SolidCraft__Caminho`) e fica ignorado sem ele.
 
 O front serve o SolidCraft web em `/solidcraft` (`npm run solidcraft:instalar`); o servidor precisa do
 `solidcraft-cli` da mesma versão.

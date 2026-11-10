@@ -23,7 +23,8 @@ public interface IAssistenteFerramenta
 /// <see cref="Observar"/> recebe os eventos do turno ao vivo (pensamento, passos e texto). <see cref="Locais"/>:
 /// ferramentas do próprio Castwork que a IA também pode usar (as do briefing). Sem fala nem imagem, a IA abre a
 /// conversa (a mensagem de abertura fica oculta no chat). <see cref="Modelo"/> e <see cref="Esforco"/>: a escolha
-/// do joalheiro no chat (nulos usam o padrão da configuração).
+/// do joalheiro no chat (nulos usam o padrão da configuração). <see cref="PreparoDoArquivo"/>: o que a ferramenta pede que
+/// o arquivo tenha ao ser aberto (ex.: os materiais do modelo 3D), garantido antes da IA começar.
 /// </summary>
 public sealed record PedidoAFerramenta(
     string Ferramenta,
@@ -37,7 +38,8 @@ public sealed record PedidoAFerramenta(
     IFerramentasLocais? Locais = null,
     IReadOnlyList<AnexoDoTurno>? Anexos = null,
     string? Modelo = null,
-    string? Esforco = null)
+    string? Esforco = null,
+    string? PreparoDoArquivo = null)
 {
     public static readonly IReadOnlyList<string> Modelos = ["haiku", "sonnet", "opus"];
 

@@ -25,6 +25,8 @@
       <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o modelo. O que você mudar agora será substituído.</p>
     } @else if (trocando()) {
       <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o modelo…</p>
+    } @else if (semMaterial().length > 0) {
+      <p class="aviso-ia" role="status"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ avisoSemMaterial() }}</p>
     }
     <!-- Dois SolidCrafts (WebAssembly, servido pelo próprio front em /solidcraft): um à vista, o outro abre o próximo projeto por trás. -->
     <iframe

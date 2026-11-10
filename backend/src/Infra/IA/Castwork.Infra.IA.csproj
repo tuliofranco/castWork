@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Castwork.UnitTests" />
+    <InternalsVisibleTo Include="Castwork.IntegrationTests" />
   </ItemGroup>
 
 </Project>
