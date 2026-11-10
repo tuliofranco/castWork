@@ -7,7 +7,8 @@ namespace Castwork.Infra.IA.Ferramentas.Modelo3d;
 
 /// <summary>
 /// O que o modelo 3D precisa além da definição: o caminho do SolidCraft, a checagem dele ao subir a API, o medidor do
-/// modelo (peso do metal no preço da versão), que guarda as medições em memória, e o editor da conferência de materiais.
+/// modelo (peso do metal no preço da versão), que guarda as medições em memória, o editor da conferência de materiais e o
+/// montador do modelo da versão a partir das peças.
 /// </summary>
 internal static class RegistroDoModelo3d
 {
@@ -17,6 +18,7 @@ internal static class RegistroDoModelo3d
         services.AddHostedService<VerificacaoSolidCraft>();
         services.AddSingleton<IMedidorDoModelo, MedidorDoModeloSolidCraft>();
         services.AddSingleton<IEditorDoModelo, EditorDoModeloSolidCraft>();
+        services.AddSingleton<IMontadorDoModelo, MontadorDoModeloSolidCraft>();
         return services;
     }
 }

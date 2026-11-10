@@ -11,10 +11,11 @@ import { of } from 'rxjs';
 import { ProjetoConfiguracoesComponent } from './projeto-configuracoes.component';
 
 describe('ProjetoConfiguracoesComponent', () => {
-  const projeto: ProjetoDto = { id: 1, nome: 'Colar Raízes', descricao: null, cliente: { id: 3, nome: 'Maria Silva' }, versoes: [] };
+  const projeto: ProjetoDto = { id: 1, nome: 'Colar Raízes', descricao: null, pecas: [], cliente: { id: 3, nome: 'Maria Silva' }, versoes: [] };
   const servico = {
     getProjeto: vi.fn(() => of(projeto)),
     putCliente: vi.fn(() => of(undefined)),
+    putNome: vi.fn(() => of(undefined)),
   };
 
   async function abrir(podeEditar = true) {
@@ -41,7 +42,7 @@ describe('ProjetoConfiguracoesComponent', () => {
   it('deve mostrar o cliente definido e só abrir o seletor ao pedir para trocar', async () => {
     const { el, estabilizar } = await abrir();
     expect(el.querySelector('#cliente')).toBeNull();
-    expect(el.querySelector('.definido')?.textContent).toContain('Maria Silva');
+    expect(el.querySelector('[aria-labelledby="titulo-cliente"] .definido')?.textContent).toContain('Maria Silva');
 
     el.querySelector<HTMLButtonElement>('[aria-label="Trocar cliente"]')!.click();
     await estabilizar();
@@ -54,10 +55,28 @@ describe('ProjetoConfiguracoesComponent', () => {
     expect(servico.putCliente).toHaveBeenCalledWith(1, 4);
   });
 
-  it('não deve oferecer troca de cliente para quem não tem a regra', async () => {
+  it('deve editar o nome do projeto', async () => {
+    const { el, estabilizar } = await abrir();
+    expect(el.querySelector('#nome')).toBeNull();
+    expect(el.textContent).toContain('Colar Raízes');
+
+    el.querySelector<HTMLButtonElement>('[aria-label="Editar nome"]')!.click();
+    await estabilizar();
+    const campo = el.querySelector<HTMLInputElement>('#nome')!;
+    expect(botao(el, 'Salvar')!.disabled).toBe(true);
+    campo.value = '  Colar Raízes II  ';
+    campo.dispatchEvent(new Event('input'));
+    await estabilizar();
+    botao(el, 'Salvar')!.click();
+
+    expect(servico.putNome).toHaveBeenCalledWith(1, 'Colar Raízes II');
+  });
+
+  it('não deve oferecer troca de cliente nem edição do nome para quem não tem a regra', async () => {
     const { el } = await abrir(false);
 
     expect(el.querySelector('[aria-label="Trocar cliente"]')).toBeNull();
+    expect(el.querySelector('[aria-label="Editar nome"]')).toBeNull();
     expect(el.textContent).toContain('Maria Silva');
   });
 });

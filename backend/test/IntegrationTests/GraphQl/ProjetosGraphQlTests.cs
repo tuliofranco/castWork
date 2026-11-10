@@ -21,7 +21,7 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
         query ($termo: String, $primeiros: Int) {
           projetos(termo: $termo, first: $primeiros) {
             totalCount
-            nodes { id nome cliente { nome } versoes { numero nome status itens { quantidade peca { nome tipo teor } } } }
+            nodes { id nome cliente { nome } pecas { nome status } versoes { numero nome status itens { quantidade peca { nome tipo teor } } } }
           }
         }
         """;
@@ -42,11 +42,13 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
     public async Task DeveListarProjetosComClienteVersoesEComposicaoAsync()
     {
         var maria = await Usar(new ClienteBuilder()).CustomizeCommand(c => c.Nome = "Maria Silva").BuildAsync();
-        var elo = await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.Teor) = ("Elo oval", Domain.Entities.Pecas.TipoPeca.Elo, "18k")).BuildAsync();
         var colar = await Usar(new ProjetoBuilder()).DoCliente(maria).CustomizeCommand(c => c.Nome = "Colar Raízes").BuildAsync();
         var autoral = await Usar(new ProjetoBuilder()).CustomizeCommand(c => c.Nome = "Pulseira autoral").BuildAsync();
+        var elo = await Usar(new PecaDoProjetoBuilder(colar).Publicada())
+            .CustomizeCommand(c => (c.Nome, c.Tipo, c.LigaId, c.Material) = ("Elo oval", Domain.Entities.Pecas.TipoPeca.Elo, 2, null))
+            .CriarAsync();
         var v1 = await V1Async(colar);
-        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = colar, VersaoId = v1, PecaId = elo, Quantidade = 12 });
+        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = colar, VersaoId = v1, PecaDoProjetoId = elo, Quantidade = 12 });
         await AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = colar, VersaoId = v1 });
         await AmbienteDeTeste.SendAsync(new DuplicarVersaoCommand { ProjetoId = colar, VersaoId = v1, Nome = "Com pedra" });
 
@@ -58,6 +60,8 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
         nodes.Select(n => n!["nome"]!.GetValue<string>()).Should().Equal("Pulseira autoral", "Colar Raízes");
         nodes[0]!["cliente"].Should().BeNull();
         nodes[0]!["versoes"]!.AsArray().Should().BeEmpty("o projeto nasce sem versões");
+        nodes[0]!["pecas"]!.AsArray().Should().BeEmpty();
+        nodes[1]!["pecas"]!.AsArray().Select(p => (p!["nome"]!.GetValue<string>(), p["status"]!.GetValue<string>())).Should().Equal(("Elo oval", "PUBLICADA"));
         var versoesDoColar = ClienteGraphQl.Ler<List<VersaoLida>>(nodes[1]!["versoes"]);
         nodes[1]!["cliente"]!["nome"]!.GetValue<string>().Should().Be("Maria Silva");
         versoesDoColar.Should().BeEquivalentTo(
@@ -87,9 +91,9 @@ public class ProjetosGraphQlTests : TesteDeIntegracao
     [Test]
     public async Task DeveBuscarPecasDaBibliotecaPorNomeOuMaterialEFiltrarPorTipoAsync()
     {
-        await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.Material) = ("Elo oval", Domain.Entities.Pecas.TipoPeca.Elo, "Ouro amarelo")).BuildAsync();
-        await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.Material) = ("Turmalina", Domain.Entities.Pecas.TipoPeca.Pedra, "Turmalina")).BuildAsync();
-        await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.Material) = ("Fecho", Domain.Entities.Pecas.TipoPeca.Fecho, "Ouro amarelo")).BuildAsync();
+        await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.LigaId, c.Material) = ("Elo oval", Domain.Entities.Pecas.TipoPeca.Elo, 2, null)).BuildAsync();
+        await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.LigaId, c.Material) = ("Turmalina", Domain.Entities.Pecas.TipoPeca.Pedra, null, "Turmalina")).BuildAsync();
+        await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.LigaId, c.Material) = ("Fecho", Domain.Entities.Pecas.TipoPeca.Fecho, 3, null)).BuildAsync();
         var admin = await ComoAdminAsync();
 
         var porMaterial = await admin.ExecutarAsync("query ($t: String) { pecas(termo: $t) { nodes { nome } } }", new { t = "OURO" });

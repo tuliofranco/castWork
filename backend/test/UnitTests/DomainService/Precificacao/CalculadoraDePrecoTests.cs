@@ -129,16 +129,16 @@ public class CalculadoraDePrecoTests
         var preco = CalculadoraDePreco.Calcular(entrada);
 
         preco.Status.Should().Be(StatusDoPreco.Incompleto);
-        preco.Pendencias.Select(p => (p.Tipo, p.PecaId, p.LigaId, p.Metal)).Should().BeEquivalentTo(new (TipoDePendencia, long?, long?, Metal?)[]
+        preco.Pendencias.Select(p => (p.Tipo, p.PecaDoProjetoId, p.LigaId, p.Metal)).Should().BeEquivalentTo(new (TipoDePendencia, long?, long?, Metal?)[]
         {
             (TipoDePendencia.LigaDesativada, null, 1000, null),
             (TipoDePendencia.MetalSemCotacao, null, null, Metal.Prata),
-            (TipoDePendencia.PecaSemCusto, 10, null, null),
+            (TipoDePendencia.PecaSemValor, 10, null, null),
             (TipoDePendencia.ValorHoraADefinir, null, null, null),
         });
-        preco.Pendencias.Select(p => p.Descricao).Should().Contain("Turmalina está sem custo na biblioteca.").And.Contain("O projeto não tem cotação de prata.");
+        preco.Pendencias.Select(p => p.Descricao).Should().Contain("Turmalina está sem valor no projeto.").And.Contain("O projeto não tem cotação de prata.");
         preco.Metais[^1].Should().BeEquivalentTo(new { CotacaoDoPuro = (Dinheiro?)null, ValorPorGrama = (Dinheiro?)null, Custo = Dinheiro.Zero });
-        preco.CustoDaComposicao.Valor.Should().Be(100m, "a peça sem custo entra como zero");
+        preco.CustoDaComposicao.Valor.Should().Be(100m, "a peça sem valor entra como zero");
         preco.Preco.Should().BeGreaterThan(Dinheiro.Zero, "o preço parcial sai assim mesmo");
     }
 

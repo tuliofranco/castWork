@@ -7,5 +7,5 @@ public sealed class CriarPecaCommandValidator : ValidatorBase<CriarPecaCommand>
 {
     public CriarPecaCommandValidator(IUnitOfWork unitOfWork)
         : base(unitOfWork)
-        => this.ValidarDadosDaPeca();
+        => this.ValidarDadosDaPeca(UnitOfWork, soLigaAtiva: true);
 }

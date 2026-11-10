@@ -39,9 +39,9 @@
               <li>
                 <span>{{ pendencia.descricao }}</span>
                 @switch (pendencia.tipo) {
-                  @case ('PECA_SEM_CUSTO') {
-                    <a class="atalho" [routerLink]="['/pecas', pendencia.pecaId, 'editar']"
-                      >Abrir a peça <i class="bi bi-chevron-right" aria-hidden="true"></i
+                  @case ('PECA_SEM_VALOR') {
+                    <a class="atalho" [routerLink]="['/projetos', projetoId(), 'pecas', pendencia.pecaDoProjetoId]"
+                      >Abrir a peça no projeto <i class="bi bi-chevron-right" aria-hidden="true"></i
                     ></a>
                   }
                   @case ('METAL_SEM_COTACAO') {

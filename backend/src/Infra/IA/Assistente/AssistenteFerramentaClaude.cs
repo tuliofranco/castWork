@@ -313,8 +313,14 @@ internal sealed partial class AssistenteFerramentaClaude(
                     continue;
                 }
 
-                var passo = andamento.Comecar(definicao.DescreverPasso is { } descrever ? descrever(uso.Nome!, uso.Entrada) : "Trabalhando");
                 var entrada = uso.Entrada ?? [];
+                if (pedido.EscopoDaVersao && definicao.RecusarNaVersao?.Invoke(uso.Nome!, entrada) is { } recusa)
+                {
+                    resultados.Add(new BlocoGuardado("resultado", recusa, Id: uso.Id, Erro: true));
+                    continue;
+                }
+
+                var passo = andamento.Comecar(definicao.DescreverPasso is { } descrever ? descrever(uso.Nome!, uso.Entrada) : "Trabalhando");
                 var argumentos = JsonSerializer.SerializeToElement(definicao.AjustarEntrada is { } ajustar ? ajustar(uso.Nome!, entrada) : entrada);
                 var resultado = await mcp.ChamarFerramentaAsync(uso.Nome!, argumentos, cancellationToken);
                 if (!resultado.Erro && definicao.FerramentasQueAlteram.Contains(uso.Nome!))

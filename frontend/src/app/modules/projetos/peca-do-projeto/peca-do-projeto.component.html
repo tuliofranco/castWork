@@ -1,0 +1,176 @@
+<cw-cabecalho-pagina [titulo]="editando() ? (peca.value()?.nome ?? 'Peça do projeto') : 'Nova peça'" [voltarPara]="voltarPara()" voltarRotulo="Projeto" />
+
+<cw-estado-lista
+  [carregando]="editando() && peca.isLoading()"
+  [erro]="!!peca.error()"
+  mensagemErro="Não foi possível carregar a peça."
+  [vazio]="editando() && peca.hasValue() && !peca.value()"
+  iconeVazio="gem"
+  tituloVazio="Peça não encontrada neste projeto."
+  descricaoVazio="O endereço pode estar incompleto."
+  (tentarDeNovo)="peca.reload()"
+>
+  <a acaoVazio class="btn btn-secundario" [routerLink]="voltarPara()">Voltar para o projeto</a>
+
+  @if (peca.value(); as p) {
+    <p class="situacao">
+      <cw-selo [tom]="status[p.status].tom" [icone]="status[p.status].icone">{{ status[p.status].rotulo }}</cw-selo>
+      @if (!p.ativo) {
+        <cw-selo icone="pause-circle">Inativa</cw-selo>
+      }
+      <span>{{ status[p.status].descricao }}</span>
+      @if (podeEditar && p.status === 'RASCUNHO' && p.ativo) {
+        <button type="button" class="btn btn-secundario" [disabled]="enviando()" (click)="publicar()">
+          <i class="bi bi-cloud-upload" aria-hidden="true"></i> Publicar
+        </button>
+      }
+    </p>
+
+    <!-- O desenho 2D e o modelo 3D só desta peça (conversa, imagens e arquivos próprios), com o arquivo final de cada um. -->
+    <section class="bloco" aria-labelledby="titulo-ferramentas-peca">
+      <h2 id="titulo-ferramentas-peca">Ferramentas da peça</h2>
+      <div class="lista-ferramentas">
+        <a class="ferramenta" routerLink="desenho-2d">
+          <i class="bi bi-vector-pen" aria-hidden="true"></i>
+          <span>
+            <strong>Desenho 2D</strong><small>O desenho técnico desta peça com o assistente</small>
+            <small [class]="temFinal('desenho-2d') ? 'final' : 'sem-final'">{{ descreverFinal('desenho-2d') }}</small>
+          </span>
+        </a>
+        <a class="ferramenta" routerLink="modelo-3d">
+          <i class="bi bi-box" aria-hidden="true"></i>
+          <span>
+            <strong>Modelo 3D</strong><small>O modelo desta peça; o peso vem do arquivo final</small>
+            <small [class]="temFinal('modelo-3d') ? 'final' : 'sem-final'">{{ descreverFinal('modelo-3d') }}</small>
+          </span>
+        </a>
+      </div>
+      @if (peso.value(); as w) {
+        <p class="peso">
+          Peso:
+          <strong>{{ w.gramas === null ? '—' : (w.gramas | number: '1.3-3') + ' g' }}</strong>
+          · {{ origemDoPeso(w) }}
+        </p>
+      }
+    </section>
+
+    <!-- PDFs da peça, gerados na hora pelo servidor. -->
+    <section class="bloco" aria-labelledby="titulo-documentos">
+      <h2 id="titulo-documentos">Documentos</h2>
+      <div class="documento">
+        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+        <span class="texto">Ficha técnica</span>
+        <button type="button" class="btn btn-secundario" aria-label="Ver ficha técnica" [disabled]="gerandoFicha()" (click)="verFichaTecnica()">
+          <i class="bi bi-eye" aria-hidden="true"></i> Ver
+        </button>
+        <button type="button" class="btn btn-secundario" aria-label="Baixar ficha técnica" [disabled]="gerandoFicha()" (click)="baixarFichaTecnica()">
+          <i class="bi bi-download" aria-hidden="true"></i> Baixar
+        </button>
+      </div>
+    </section>
+
+    @if (podeVerValor) {
+      <section class="bloco" aria-labelledby="titulo-valor">
+        <h2 id="titulo-valor">Valor no projeto</h2>
+        @if (podeEditarValor) {
+          <form class="linha-valor" [formGroup]="formValor" (ngSubmit)="salvarValor()" novalidate>
+            <cw-campo
+              rotulo="Custo por unidade (R$)"
+              para="valor"
+              [opcional]="true"
+              [controle]="valor"
+              dica="Quanto custa comprar ou produzir uma unidade neste projeto, não o preço de venda."
+              [mensagens]="{ min: 'O valor não pode ser negativo.' }"
+            >
+              <input id="valor" type="number" step="0.01" min="0" inputmode="decimal" class="form-control" formControlName="valor" />
+            </cw-campo>
+            <button type="submit" class="btn btn-primary" [disabled]="enviando()">Definir valor</button>
+          </form>
+        } @else {
+          <p class="valor-atual">{{ p.valor === null || p.valor === undefined ? 'Sem valor' : (p.valor | currency: 'BRL') }}</p>
+        }
+      </section>
+    }
+  }
+
+  <form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+    <fieldset class="tipos">
+      <legend class="form-label">Tipo</legend>
+      <div class="opcoes">
+        @for (opcao of tipos; track opcao.valor) {
+          <label class="opcao" [class.marcada]="form.controls.tipo.value === opcao.valor">
+            <input type="radio" class="visually-hidden" formControlName="tipo" [value]="opcao.valor" />
+            <i class="bi" [class]="'bi-' + opcao.icone" aria-hidden="true"></i>
+            {{ opcao.rotulo }}
+          </label>
+        }
+      </div>
+    </fieldset>
+
+    <div class="grade">
+      <cw-campo class="c6" rotulo="Nome" para="nome" [controle]="form.controls.nome" [mensagens]="{ required: 'Informe o nome da peça.' }">
+        <input id="nome" class="form-control" formControlName="nome" placeholder="Ex.: Elo oval" autocomplete="off" />
+      </cw-campo>
+
+      @if (ehPedra()) {
+        <cw-campo class="c4" rotulo="Material" para="material" [opcional]="true" [controle]="form.controls.material" dica="Pedra não tem liga nem teor.">
+          <input id="material" class="form-control" formControlName="material" placeholder="Ex.: Turmalina" />
+        </cw-campo>
+      } @else {
+        <cw-campo class="c4" rotulo="Liga" para="ligaId" [opcional]="true" [controle]="form.controls.ligaId" [dica]="dicaDaLiga()">
+          <select id="ligaId" class="form-select" formControlName="ligaId">
+            <option [ngValue]="null">{{ materialSemLiga() ? materialSemLiga() + ' (sem liga cadastrada)' : 'Sem liga' }}</option>
+            @for (liga of opcoesDeLiga(); track liga.id) {
+              <option [ngValue]="liga.id">{{ liga.nome }}</option>
+            }
+          </select>
+        </cw-campo>
+      }
+      <cw-campo class="c2" rotulo="Peso (g)" para="pesoGramas" [opcional]="true" [controle]="form.controls.pesoGramas" [mensagens]="{ min: 'O peso deve ser maior que zero.' }">
+        <input id="pesoGramas" type="number" step="0.001" min="0" inputmode="decimal" class="form-control" formControlName="pesoGramas" />
+      </cw-campo>
+
+      <cw-campo class="c6" rotulo="Descrição" para="descricao" [opcional]="true" [controle]="form.controls.descricao">
+        <textarea id="descricao" class="form-control" rows="3" formControlName="descricao"></textarea>
+      </cw-campo>
+    </div>
+
+    @if (editando()) {
+      <label class="ativa"><input type="checkbox" formControlName="ativo" /> Ativa (desativada não entra em composição nova)</label>
+    }
+
+    @for (mensagem of errosGerais(); track mensagem) {
+      <p class="aviso-formulario" role="alert">{{ mensagem }}</p>
+    }
+
+    @if (confirmandoOutraPeca()) {
+      <div class="confirmar" role="alertdialog" aria-labelledby="texto-outra-peca">
+        <span id="texto-outra-peca">
+          Esta peça está publicada na biblioteca. Alterar os dados faz dela outra peça: ela volta a rascunho e, ao ser publicada de novo, entra na
+          biblioteca como peça nova. A peça da biblioteca não muda.
+        </span>
+        <span class="botoes">
+          <button type="button" class="btn btn-sutil" (click)="confirmandoOutraPeca.set(false)">Cancelar</button>
+          <button type="submit" class="btn btn-primary" [disabled]="enviando()">Salvar como outra peça</button>
+        </span>
+      </div>
+    }
+
+    @if (podeEditar) {
+      <cw-barra-acoes>
+        <a class="btn btn-secundario" [routerLink]="voltarPara()">{{ editando() ? 'Voltar' : 'Cancelar' }}</a>
+        @if (!confirmandoOutraPeca()) {
+          <button type="submit" class="btn btn-primary" [disabled]="enviando()">
+            {{ enviando() ? 'Salvando...' : editando() ? 'Salvar alterações' : 'Criar peça' }}
+          </button>
+        }
+      </cw-barra-acoes>
+    }
+  </form>
+</cw-estado-lista>
+
+<cw-painel-pdf [arquivo]="fichaAberta()" [titulo]="'Ficha técnica · ' + (peca.value()?.nome ?? '')" (fechado)="fichaAberta.set(null)">
+  @if (fichaAberta(); as pdf) {
+    <button type="button" class="btn btn-primary" (click)="salvarArquivo(pdf)"><i class="bi bi-download" aria-hidden="true"></i> Baixar</button>
+  }
+</cw-painel-pdf>

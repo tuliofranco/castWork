@@ -14,6 +14,7 @@ using Castwork.Application.Projetos.Commands.DuplicarVersao;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
 using Castwork.Application.Projetos.Commands.RegistrarPesoReal;
 using Castwork.Application.Projetos.Commands.RemoverItem;
+using Castwork.Application.Projetos.Commands.RenomearProjeto;
 using Castwork.Application.Projetos.Commands.VincularCliente;
 
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,17 @@ public sealed class ProjetosController : ApiController
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Criar([FromBody] CriarProjetoCommand command, CancellationToken cancellationToken)
         => Criado(await Mediator.Send(command, cancellationToken));
+
+    [HttpPut("{projetoId:long}/nome")]
+    [EndpointSummary("Troca o nome do projeto.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Renomear([FromRoute] long projetoId, [FromBody] RenomearProjetoCommand command, CancellationToken cancellationToken)
+    {
+        command.ProjetoId = projetoId;
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
 
     [HttpPut("{projetoId:long}/cliente")]
     [EndpointSummary("Vincula o projeto a um cliente (ou desvincula com clienteId nulo).")]
@@ -109,7 +121,7 @@ public sealed class ProjetosController : ApiController
     }
 
     [HttpPost("{projetoId:long}/versoes/{versaoId:long}/publicar")]
-    [EndpointSummary("Publica a versão: a composição fica congelada.")]
+    [EndpointSummary("Publica a versão: a composição fica congelada. Recusa se alguma peça dela está em rascunho.")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> PublicarVersao([FromRoute] long projetoId, [FromRoute] long versaoId, CancellationToken cancellationToken)
@@ -119,7 +131,7 @@ public sealed class ProjetosController : ApiController
     }
 
     [HttpPost("{projetoId:long}/versoes/{versaoId:long}/itens")]
-    [EndpointSummary("Adiciona uma peça à composição (se já estiver, soma a quantidade).")]
+    [EndpointSummary("Adiciona uma peça do projeto à composição (se já estiver, soma a quantidade).")]
     [ProducesResponseType<IdCriado>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> AdicionarItem(

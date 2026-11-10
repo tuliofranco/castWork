@@ -39,4 +39,22 @@ public class PesoDoModeloTests
             new CorpoDoModelo("Aba", UsoDoCorpo.Metal, 3, null, Fechado: false));
         modelo.Sobreposicoes.Should().Equal(new SobreposicaoDeCorpos("Aro", "Aba", 1.5m));
     }
+
+    [Test]
+    public void DeveMedirOPesoDaPecaTodoNaLigaDelaSemPedraApoioNemCorpoAberto()
+    {
+        var medicao = new MedicaoDoModelo(
+            [
+                new CorpoMedido("Aro", "Castwork liga 3", 100m, 1m, Fechado: true),
+                new CorpoMedido("Garra", "Default", 20m, 0.026m, Fechado: true),
+                new CorpoMedido("Brilhante", "Pedra", 25m, 0.0875m, Fechado: true),
+                new CorpoMedido("Guia", "Apoio (não conta)", 300m, 0.3m, Fechado: true),
+                new CorpoMedido("Aba", "Castwork liga 2", null, null, Fechado: false),
+            ],
+            []);
+
+        var peso = PesoDoModelo.PesoNaLiga(medicao, 15.5m);
+
+        peso.Gramas.Should().Be(1.86m, "aro + garra = 120 mm³ × 15,5 g/cm³, mesmo com o aro em outra liga e a garra sem material");
+    }
 }

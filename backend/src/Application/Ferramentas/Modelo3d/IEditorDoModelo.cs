@@ -1,9 +1,9 @@
 namespace Castwork.Application.Ferramentas.Modelo3d;
 
 /// <summary>
-/// Altera o arquivo 3D sem IA, para a conferência de peso e materiais: garante nele os materiais do ateliê (os mesmos do
-/// turno da IA), aplica a alteração e devolve o conteúdo novo, que vira uma nova versão do arquivo. Não cria nem apaga
-/// corpos: só define o material e une corpos.
+/// Altera o arquivo 3D sem IA, para a conferência de peso e materiais e para o arquivo final da peça: garante nele os
+/// materiais do ateliê (os mesmos do turno da IA), aplica a alteração e devolve o conteúdo novo, que vira uma nova versão do
+/// arquivo. Não cria nem apaga corpos: só define o material, une e renomeia corpos.
 /// </summary>
 public interface IEditorDoModelo
 {
@@ -15,7 +15,7 @@ public interface IEditorDoModelo
 }
 
 /// <summary>
-/// O que a conferência muda no arquivo.
+/// O que a conferência (ou o arquivo final da peça) muda no arquivo.
 /// </summary>
 public abstract record AlteracaoDoModelo;
 
@@ -30,3 +30,8 @@ public sealed record MaterialDoCorpo(string Corpo, string Material);
 /// Une os <see cref="Outros"/> ao <see cref="Alvo"/>: viram um corpo só, com o nome e o material do alvo.
 /// </summary>
 public sealed record UniaoDeCorpos(string Alvo, IReadOnlyList<string> Outros) : AlteracaoDoModelo;
+
+/// <summary>
+/// Renomeia os corpos, na ordem (<see cref="NomesDosCorpos.Renomeacoes"/>): o arquivo final da peça com o nome dela.
+/// </summary>
+public sealed record RenomeacaoDeCorpos(IReadOnlyList<(string De, string Para)> Corpos) : AlteracaoDoModelo;

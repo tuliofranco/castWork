@@ -72,10 +72,10 @@ internal static class MateriaisNoArquivo
             parametros["opacity"] = (double)material.Opacidade;
         }
 
-        // Metal: brilho metálico (o PBR só vale para material opaco).
+        // Metal: brilho de peça polida (o PBR só vale para material opaco).
         if (material.Metalico && material.Opacidade >= 1)
         {
-            parametros["pbr"] = new JsonObject { ["metallic"] = 1.0, ["roughness"] = 0.25, ["dielectric_ior"] = 1.5 };
+            parametros["pbr"] = new JsonObject { ["metallic"] = 1.0, ["roughness"] = 0.10, ["dielectric_ior"] = 1.5 };
         }
 
         return parametros;

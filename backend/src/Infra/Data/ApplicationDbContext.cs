@@ -35,6 +35,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<ImagemConversa> ImagensConversa => Set<ImagemConversa>();
 
+    public DbSet<ImagemDoArquivo> ImagensDoArquivo => Set<ImagemDoArquivo>();
+
     public DbSet<ConsumoDaIa> ConsumosDaIa => Set<ConsumoDaIa>();
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
@@ -71,6 +73,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         // Enums como texto (nome do valor): legível no banco e estável a renumerações.
         configurationBuilder.Properties<TipoPeca>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<StatusVersao>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<StatusPecaDoProjeto>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<TipoJoia>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<PapelMensagem>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<OrigemArquivo>().HaveConversion<string>().HaveMaxLength(20);

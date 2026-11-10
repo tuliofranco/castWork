@@ -26,10 +26,10 @@ public class MateriaisNoArquivoTests
     public void DeveMontarUmMaterialPorLigaComNomeEstavelMaisPedraEApoio()
     {
         Materiais.Select(m => (m.Nome, m.Densidade, m.Cor, m.LigaId)).Should().Equal(
-            ("Castwork liga 2", 15.5m, "#d9b44a", 2L),
-            ("Castwork liga 3", 15m, "#e4e1d6", 3L),
-            ("Castwork liga 4", 15.1m, "#e2a98e", 4L),
-            ("Castwork liga 7", 10.36m, "#c8cbd0", 7L),
+            ("Castwork liga 2", 15.5m, "#ffe29b", 2L),
+            ("Castwork liga 3", 15m, "#dcdcde", 3L),
+            ("Castwork liga 4", 15.1m, "#f5c6b0", 4L),
+            ("Castwork liga 7", 10.36m, "#faf8f2", 7L),
             ("Pedra", MateriaisDoModelo.DensidadeDaPedra, "#cfe6f2", (long?)null),
             ("Apoio (não conta)", MateriaisDoModelo.DensidadeDoApoio, "#9aa3ad", (long?)null));
     }
@@ -58,7 +58,7 @@ public class MateriaisNoArquivoTests
             ("material.create", "Pedra"),
             ("material.create", "Apoio (não conta)"));
         comandos[0]["params"]!.ToJsonString().Should().Be(
-            """{"name":"Castwork liga 2","density_g_cm3":15.5,"color":"#d9b44a","pbr":{"metallic":1,"roughness":0.25,"dielectric_ior":1.5}}""");
+            """{"name":"Castwork liga 2","density_g_cm3":15.5,"color":"#ffe29b","pbr":{"metallic":1,"roughness":0.1,"dielectric_ior":1.5}}""");
         comandos[4]["params"]!.ToJsonString().Should().Be("""{"name":"Pedra","density_g_cm3":3.5,"color":"#cfe6f2","opacity":0.85}""");
     }
 

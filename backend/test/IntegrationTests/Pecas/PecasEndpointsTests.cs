@@ -3,6 +3,10 @@ using System.Net.Http.Json;
 
 using Castwork.Application.Acesso.Commands.Login;
 using Castwork.Application.Common.Security;
+using Castwork.Application.Projetos.Commands.AdicionarItem;
+using Castwork.Application.Projetos.Commands.CriarVersao;
+using Castwork.Application.Projetos.Commands.DefinirValorDaPecaDoProjeto;
+using Castwork.Application.Projetos.Commands.ImportarPecaDaBiblioteca;
 using Castwork.IntegrationTests.GraphQl;
 using Castwork.TestBootstrap.Ambiente;
 using Castwork.TestBootstrap.Builders;
@@ -12,21 +16,20 @@ using Microsoft.EntityFrameworkCore;
 namespace Castwork.IntegrationTests.Pecas;
 
 /// <summary>
-/// Biblioteca de peças como a tela usa: escrita pelo REST (<c>api/pecas</c>) e leitura pelo GraphQL,
-/// com o custo visível só para quem tem <c>precificacao.ler</c>.
+/// Biblioteca de peças pelo GraphQL: só consulta, sem valor, com o histórico de uso (projetos, versões e o valor em cada
+/// projeto, este só com <c>precificacao.ler</c>). A escrita pelo REST (<c>api/pecas</c>) continua, sem valor.
 /// </summary>
 public class PecasEndpointsTests : TesteDeIntegracao
 {
-    private const string ConsultaComCusto = """
+    private const string ConsultaComHistorico = """
         query ($id: Long!) {
-          peca(id: $id) { id nome custo }
-          pecas(first: 10) { nodes { id custo } }
+          peca(id: $id) { id nome historicoDeUso { projetoId projeto pecaDoProjetoId valor versoes { versaoId numero nome status quantidade } } }
         }
         """;
 
-    private const string ConsultaSemCusto = """
+    private const string ConsultaHistoricoSemValor = """
         query ($id: Long!) {
-          peca(id: $id) { id nome }
+          peca(id: $id) { id nome historicoDeUso { projeto versoes { numero } } }
         }
         """;
 
@@ -43,55 +46,85 @@ public class PecasEndpointsTests : TesteDeIntegracao
     public async Task RemoverCriadosPeloHttpAsync()
     {
         // Peças criadas por HTTP não passam por builder: remove aqui.
+        await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Database.ExecuteSqlRawAsync("UPDATE projeto_pecas SET peca_id = NULL"));
         await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Pecas.ExecuteDeleteAsync());
         _http.Dispose();
     }
 
     [Test]
-    public async Task DeveCriarEAlterarPecaComCustoELerOCustoPeloGraphQlAsync()
+    public async Task DeveCriarEAlterarPecaPelaApiSemValorAsync()
     {
         var admin = await EntrarAsync(Usar(new UsuarioBuilder()).Admin());
 
-        var criada = await SendAsync(admin, HttpMethod.Post, "/api/pecas", new { nome = "Turmalina 4 mm", tipo = "Pedra", custo = 85.5m });
+        var criada = await SendAsync(admin, HttpMethod.Post, "/api/pecas", new { nome = "Turmalina 4 mm", tipo = "Pedra" });
         var id = (await criada.Content.ReadFromJsonAsync<IdLido>())!.Id;
-        var semCusto = await SendAsync(admin, HttpMethod.Post, "/api/pecas", new { nome = "Fecho lagosta", tipo = "Fecho" });
-        var lidaAoCriar = await admin.ExecutarAsync(ConsultaComCusto, new { id });
-        var alterada = await SendAsync(admin, HttpMethod.Put, $"/api/pecas/{id}", new { nome = "Turmalina 5 mm", tipo = "Pedra", custo = 110m });
-        var negativa = await SendAsync(admin, HttpMethod.Put, $"/api/pecas/{id}", new { nome = "Turmalina 5 mm", tipo = "Pedra", custo = -1m });
-        var lidaAoAlterar = await admin.ExecutarAsync(ConsultaComCusto, new { id });
+        var alterada = await SendAsync(admin, HttpMethod.Put, $"/api/pecas/{id}", new { nome = "Turmalina 5 mm", tipo = "Pedra" });
+        var lida = await admin.ExecutarAsync("query ($id: Long!) { peca(id: $id) { nome historicoDeUso { projeto } } }", new { id });
+        var custo = await admin.ExecutarAsync("query ($id: Long!) { peca(id: $id) { custo } }", new { id });
 
-        (criada.StatusCode, semCusto.StatusCode, alterada.StatusCode, negativa.StatusCode)
-            .Should().Be((HttpStatusCode.Created, HttpStatusCode.Created, HttpStatusCode.NoContent, HttpStatusCode.BadRequest));
-        lidaAoCriar["errors"].Should().BeNull();
-        lidaAoCriar["data"]!["peca"]!["custo"]!.GetValue<decimal>().Should().Be(85.5m);
-        lidaAoCriar["data"]!["pecas"]!["nodes"]!.AsArray().Select(p => p!["custo"]?.GetValue<decimal>())
-            .Should().BeEquivalentTo(new decimal?[] { 85.5m, null }, "a peça sem custo responde null");
-        (lidaAoAlterar["data"]!["peca"]!["nome"]!.GetValue<string>(), lidaAoAlterar["data"]!["peca"]!["custo"]!.GetValue<decimal>())
-            .Should().Be(("Turmalina 5 mm", 110m));
+        (criada.StatusCode, alterada.StatusCode).Should().Be((HttpStatusCode.Created, HttpStatusCode.NoContent));
+        lida["errors"].Should().BeNull();
+        lida["data"]!["peca"]!["nome"]!.GetValue<string>().Should().Be("Turmalina 5 mm");
+        lida["data"]!["peca"]!["historicoDeUso"]!.AsArray().Should().BeEmpty("nenhum projeto usa a peça");
+        custo["errors"].Should().NotBeNull("a peça da biblioteca não tem mais custo");
     }
 
     [Test]
-    public async Task DeveEsconderOCustoDeQuemNaoConsultaAPrecificacaoAsync()
+    public async Task DeveMostrarOHistoricoDeUsoComOValorDeCadaProjetoAsync()
     {
-        var id = await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Nome, c.Tipo, c.Custo) = ("Turmalina", Castwork.Domain.Entities.Pecas.TipoPeca.Pedra, 85.5m)).BuildAsync();
-        var soPecas = await Usar(new PerfilBuilder()).ComRegras(Regras.Pecas.Consultar, Regras.Pecas.Alterar).BuildAsync();
-        var comPrecificacao = await Usar(new PerfilBuilder()).ComRegras(Regras.Pecas.Consultar, Regras.Precificacao.Consultar).BuildAsync();
-        var semPrecificacao = await EntrarAsync(Usar(new UsuarioBuilder()).DoPerfil(soPecas));
-        var leitor = await EntrarAsync(Usar(new UsuarioBuilder()).DoPerfil(comPrecificacao));
+        var admin = await EntrarAsync(Usar(new UsuarioBuilder()).Admin());
+        var colar = await Usar(new ProjetoBuilder()).CustomizeCommand(c => c.Nome = "Colar Raízes").BuildAsync();
+        var pulseira = await Usar(new ProjetoBuilder()).CustomizeCommand(c => c.Nome = "Pulseira Mar").BuildAsync();
+        var pecasDoColar = Usar(new PecaDoProjetoBuilder(colar).ComValor(80m).Publicada());
+        var turmalina = await pecasDoColar.CriarAsync();
+        var bibliotecaId = pecasDoColar.PecasDaBiblioteca.Single();
+        var v1 = await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = colar, Nome = "Base" });
+        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = colar, VersaoId = v1, PecaDoProjetoId = turmalina, Quantidade = 3 });
+        var naPulseira = await AmbienteDeTeste.SendAsync(new ImportarPecaDaBibliotecaCommand { ProjetoId = pulseira, PecaId = bibliotecaId });
+        await AmbienteDeTeste.SendAsync(new DefinirValorDaPecaDoProjetoCommand { ProjetoId = pulseira, PecaDoProjetoId = naPulseira, Valor = 95m });
 
-        var negado = await semPrecificacao.ExecutarAsync(ConsultaComCusto, new { id });
-        var semPedirCusto = await semPrecificacao.ExecutarAsync(ConsultaSemCusto, new { id });
-        var alteracao = await SendAsync(semPrecificacao, HttpMethod.Put, $"/api/pecas/{id}", new { nome = "Turmalina", tipo = "Pedra", custo = 1m });
-        var permitido = await leitor.ExecutarAsync(ConsultaComCusto, new { id });
+        var resposta = await admin.ExecutarAsync(ConsultaComHistorico, new { id = bibliotecaId });
+        var biblioteca = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Database
+            .SqlQuery<int>($"SELECT count(*)::int AS \"Value\" FROM information_schema.columns WHERE table_name = 'pecas' AND column_name = 'custo'")
+            .SingleAsync());
 
-        ClienteGraphQl.CodigosDeErro(negado).Should().OnlyContain(c => c == "AUTH_NOT_AUTHORIZED").And.NotBeEmpty();
-        negado["data"]?["peca"]?["custo"].Should().BeNull("o valor do custo não sai na resposta");
-        negado.ToJsonString().Should().NotContain("85.5");
-        semPedirCusto["errors"].Should().BeNull("o resto da peça continua legível");
-        semPedirCusto["data"]!["peca"]!["nome"]!.GetValue<string>().Should().Be("Turmalina");
-        alteracao.StatusCode.Should().Be(HttpStatusCode.NoContent);
-        permitido["errors"].Should().BeNull();
-        permitido["data"]!["peca"]!["custo"]!.GetValue<decimal>().Should().Be(85.5m, "quem não vê o custo não o altera");
+        resposta["errors"].Should().BeNull();
+        var historico = resposta["data"]!["peca"]!["historicoDeUso"]!.AsArray();
+        historico.Select(u => (u!["projeto"]!.GetValue<string>(), u["pecaDoProjetoId"]!.GetValue<long>(), u["valor"]!.GetValue<decimal>()))
+            .Should().Equal(("Pulseira Mar", naPulseira, 95m), ("Colar Raízes", turmalina, 80m));
+        historico[0]!["versoes"]!.AsArray().Should().BeEmpty("a pulseira importou a peça mas ainda não a usou numa versão");
+        historico[1]!["versoes"]!.AsArray().Select(v => (v!["versaoId"]!.GetValue<long>(), v["nome"]!.GetValue<string>(), v["status"]!.GetValue<string>(), v["quantidade"]!.GetValue<int>()))
+            .Should().Equal((v1, "Base", "EM_DESENVOLVIMENTO", 3));
+        biblioteca.Should().Be(0, "a biblioteca não guarda valor");
+    }
+
+    [Test]
+    public async Task DeveProtegerOValorDoHistoricoPelaPrecificacaoEOHistoricoPelaLeituraDeProjetosAsync()
+    {
+        var projeto = await Usar(new ProjetoBuilder()).BuildAsync();
+        var pecas = Usar(new PecaDoProjetoBuilder(projeto).ComValor(80m).Publicada());
+        await pecas.CriarAsync();
+        var id = pecas.PecasDaBiblioteca.Single();
+        var semPrecificacao = await EntrarComAsync(Regras.Pecas.Consultar, Regras.Projetos.Consultar);
+        var semProjetos = await EntrarComAsync(Regras.Pecas.Consultar, Regras.Precificacao.Consultar);
+
+        var valorNegado = await semPrecificacao.ExecutarAsync(ConsultaComHistorico, new { id });
+        var semPedirValor = await semPrecificacao.ExecutarAsync(ConsultaHistoricoSemValor, new { id });
+        var historicoNegado = await semProjetos.ExecutarAsync(ConsultaHistoricoSemValor, new { id });
+
+        ClienteGraphQl.CodigosDeErro(valorNegado).Should().OnlyContain(c => c == "AUTH_NOT_AUTHORIZED").And.NotBeEmpty();
+        valorNegado["data"]?["peca"]?["historicoDeUso"]?[0]?["valor"].Should().BeNull("o valor não sai na resposta");
+        semPedirValor["errors"].Should().BeNull();
+        semPedirValor["data"]!["peca"]!["historicoDeUso"]!.AsArray().Should().ContainSingle();
+        ClienteGraphQl.CodigosDeErro(historicoNegado).Should().Equal("AUTH_NOT_AUTHORIZED");
+        historicoNegado["data"]!["peca"]!["historicoDeUso"].Should().BeNull("sem ler projetos, o histórico não sai");
+        historicoNegado["data"]!["peca"]!["nome"].Should().NotBeNull("o resto da peça continua legível");
+    }
+
+    private async Task<ClienteGraphQl> EntrarComAsync(params string[] regras)
+    {
+        var perfil = await Usar(new PerfilBuilder()).ComRegras(regras).BuildAsync();
+        return await EntrarAsync(Usar(new UsuarioBuilder()).DoPerfil(perfil));
     }
 
     private async Task<ClienteGraphQl> EntrarAsync(UsuarioBuilder usuarios)

@@ -11,11 +11,13 @@ namespace Castwork.Application.Assistente.Queries;
 /// Uma versão do histórico do arquivo da ferramenta, para baixar. Nulo se for a versão em branco.
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
-public sealed class GetVersaoArquivoFerramentaQuery : IRequest<ArquivoDaFerramentaDto?>
+public sealed class GetVersaoArquivoFerramentaQuery : IRequest<ArquivoDaFerramentaDto?>, IEscopoDaFerramenta
 {
     public long ProjetoId { get; set; }
 
     public long VersaoId { get; set; }
+
+    public long PecaDoProjetoId { get; set; }
 
     public string Ferramenta { get; set; } = string.Empty;
 
@@ -26,8 +28,8 @@ public sealed class GetVersaoArquivoFerramentaQueryHandler(IUnitOfWork unitOfWor
 {
     public async Task<ArquivoDaFerramentaDto?> Handle(GetVersaoArquivoFerramentaQuery request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken)
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken)
             ?? throw new EntidadeNaoEncontradaException("Arquivo", request.ArquivoId);
         var arquivo = await unitOfWork.GetRepository<ArquivoFerramenta>()
             .FindBy(a => a.Id == request.ArquivoId && a.ConversaId == conversa.Id)

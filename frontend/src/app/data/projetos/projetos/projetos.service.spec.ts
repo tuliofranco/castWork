@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloTestingController, ApolloTestingModule } from 'apollo-angular/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { GET_PRECOS_DO_PROJETO, GET_PRECO_DA_VERSAO, GET_PROJETO, ProjetosService } from './projetos.service';
+import { GET_PECAS_DO_PROJETO, GET_PESOS_DA_VERSAO, GET_PESO_DA_PECA, GET_PRECOS_DO_PROJETO, GET_PRECO_DA_VERSAO, GET_PROJETO, ProjetosService } from './projetos.service';
 
 describe('ProjetosService', () => {
   function configurar() {
@@ -26,7 +26,7 @@ describe('ProjetosService', () => {
   it('deve usar as rotas aninhadas de versão e item', () => {
     const { service, http } = configurar();
 
-    service.postItem(1, 2, { pecaId: 3, quantidade: 12 }).subscribe();
+    service.postItem(1, 2, { pecaDoProjetoId: 3, quantidade: 12 }).subscribe();
     service.putItem(1, 2, 9, { quantidade: 14 }).subscribe();
     service.deleteItem(1, 2, 9).subscribe();
     service.postPublicarVersao(1, 2).subscribe();
@@ -39,9 +39,42 @@ describe('ProjetosService', () => {
       http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/versoes/2/publicar'),
       http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/versoes/2/duplicar'),
     ];
-    expect(chamadas[0].request.body).toEqual({ pecaId: 3, quantidade: 12 });
+    expect(chamadas[0].request.body).toEqual({ pecaDoProjetoId: 3, quantidade: 12 });
     chamadas.forEach((c) => c.flush(null));
     http.verify();
+  });
+
+  it('deve usar as rotas das peças do projeto', () => {
+    const { service, http } = configurar();
+
+    service.postPecaDoProjeto(1, { nome: 'Elo', tipo: 'ELO' }).subscribe();
+    service.postImportarPeca(1, 40).subscribe();
+    service.putPecaDoProjeto(1, 5, { nome: 'Elo', tipo: 'ELO', ativo: true }).subscribe();
+    service.putValorDaPeca(1, 5, { valor: 12.5 }).subscribe();
+    service.postPublicarPeca(1, 5).subscribe();
+
+    const chamadas = [
+      http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/pecas'),
+      http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/pecas/importar'),
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/pecas/5'),
+      http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/pecas/5/valor'),
+      http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/pecas/5/publicar'),
+    ];
+    expect(chamadas[1].request.body).toEqual({ pecaId: 40 });
+    expect(chamadas[3].request.body).toEqual({ valor: 12.5 });
+    chamadas.forEach((c) => c.flush(null));
+    http.verify();
+  });
+
+  it('deve pedir o valor das peças do projeto só com comValor', async () => {
+    const { service, apollo } = configurar();
+    const promessa = firstValueFrom(service.getPecasDoProjeto(7, false));
+
+    const op = apollo.expectOne(GET_PECAS_DO_PROJETO);
+    expect(op.operation.variables).toEqual({ id: 7, comValor: false });
+    op.flush({ data: { projeto: null } });
+
+    expect(await promessa).toBeNull();
   });
 
   it('deve buscar os preços do projeto sempre do servidor', async () => {
@@ -107,5 +140,36 @@ describe('ProjetosService', () => {
     expect(chamadas[3].request.body).toEqual({ markup: null });
     chamadas.forEach((c) => c.flush(null));
     http.verify();
+  });
+
+  it('deve pedir o peso só da peça e somar os pesos da composição pelo Id da peça', async () => {
+    const { service, apollo } = configurar();
+
+    const peso = firstValueFrom(service.getPesoDaPeca(1, 4));
+    const opPeso = apollo.expectOne(GET_PESO_DA_PECA);
+    opPeso.flush({ data: { projeto: { id: 1, pecas: [{ id: 4, peso: { gramas: 1.86, origem: 'MODELO', pesoDigitado: 1 } }] } } });
+    const pesos = firstValueFrom(service.getPesosDaVersao(1, 2));
+    const opPesos = apollo.expectOne(GET_PESOS_DA_VERSAO);
+    opPesos.flush({
+      data: {
+        projeto: {
+          id: 1,
+          versoes: [
+            {
+              id: 2,
+              itens: [
+                { id: 1, peca: { id: 4, peso: { gramas: 1.86, origem: 'MODELO' } } },
+                { id: 2, peca: { id: 5, peso: { gramas: null, origem: 'MODELO_NAO_MEDIDO' } } },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(opPeso.operation.variables).toEqual({ id: 1, pecaId: 4 });
+    expect(await peso).toEqual({ gramas: 1.86, origem: 'MODELO', pesoDigitado: 1 });
+    expect(opPesos.operation.variables).toEqual({ id: 1, versaoId: 2 });
+    expect([...(await pesos)]).toEqual([[4, 1.86]]);
   });
 });

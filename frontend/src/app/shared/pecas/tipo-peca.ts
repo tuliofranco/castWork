@@ -20,8 +20,10 @@ export function iconeTipoPeca(tipo: TipoPeca): string {
 }
 
 /** 750 → "750 (18k)". Quilates com uma casa só quando não for inteiro. */
-export function formatarTeor(milesimos: number | null): string {
+export function formatarTeor(milesimos: number | null, metal?: 'OURO' | 'PRATA' | null): string {
   if (milesimos === null) return '—';
+  // Quilate é medida de ouro: na prata (925) e quando o metal não é conhecido, só os milésimos.
+  if (metal !== 'OURO') return String(milesimos);
   const quilates = Math.round((milesimos / 1000) * 24 * 10) / 10;
   return `${milesimos} (${Number.isInteger(quilates) ? quilates : quilates.toFixed(1)}k)`;
 }

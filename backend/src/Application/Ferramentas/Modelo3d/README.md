@@ -3,7 +3,7 @@
 Modelo 3D paramétrico da peça no SolidCraft. O joalheiro edita no SolidCraft embutido e a IA modela pelo MCP.
 
 - **Código:** `modelo-3d`
-- **Escopo:** versão.
+- **Escopo:** versão e cada peça do projeto (`DaPeca`): a peça tem conversa, imagens e arquivo próprios.
 - **Ferramentas da IA:** as do servidor MCP `solidcraft-cli mcp --headless` (execute, batch, set_parameter,
   inspect_design, measure, screenshot…). Configuração em `SolidCraftOptions` (seção `SolidCraft:Caminho`).
 - **Arquivo de trabalho:** o projeto da versão em JSON (o mesmo que o SolidCraft web troca por
@@ -12,12 +12,15 @@ Modelo 3D paramétrico da peça no SolidCraft. O joalheiro edita no SolidCraft e
 | Camada | Pasta |
 |---|---|
 | Application | `Application/Ferramentas/Modelo3d` (contexto do turno, `MateriaisDoModelo`, `IMedidorDoModelo`, `PesoDoModelo`, `IEditorDoModelo`; commands `DefinirMaterialDosCorpos` e `UnirCorposSobrepostos`; query `GetConferenciaDoModelo`) |
-| Infra | `Infra/IA/Ferramentas/Modelo3d` (instruções, MCP, texto dos passos, resumo do modelo, `MateriaisNoArquivo`, `MedidorDoModeloSolidCraft`, `EditorDoModeloSolidCraft`, `EdicaoNoArquivo`) |
-| REST | `Controllers/Ferramentas/Modelo3d/Modelo3dController` (`api/projetos/{id}/versoes/{versaoId}/modelo-3d`) |
+| Infra | `Infra/IA/Ferramentas/Modelo3d` (instruções, MCP, texto dos passos, resumo do modelo, `MateriaisNoArquivo`, `MedidorDoModeloSolidCraft`, `EditorDoModeloSolidCraft`, `EdicaoNoArquivo`, `MontadorDoModeloSolidCraft`, `MontagemNoArquivo`) |
+| REST | `Controllers/Ferramentas/Modelo3d/Modelo3dController` (`api/projetos/{id}/versoes/{versaoId}/modelo-3d`): conferência e `POST montar-a-partir-das-pecas` |
 | GraphQL | `VersaoProjeto.conferenciaDoModelo` (`ConferenciaPorVersaoDataLoader`) |
-| Front | `modules/ferramentas/modelo-3d` (`PonteSolidCraft` abre, salva e confere os materiais pelo iframe, com a API `window.solidcraft`; `cw-conferencia-modelo`), `data/ferramentas/modelo-3d` |
+| Front | `modules/ferramentas/modelo-3d` (`PonteSolidCraft` abre, salva e confere os materiais pelo iframe, com a API `window.solidcraft`; `cw-conferencia-modelo`; rotas da versão e da peça), `data/ferramentas/modelo-3d` |
 
 Não tem estado de domínio próprio: usa o arquivo e a conversa do Assistente. Sem prévia em SVG na pasta da versão.
+Cada arquivo novo ganha quatro imagens guardadas, pelo `screenshot` do SolidCraft em 1920x1200, sem grade nem eixos, nas
+vistas `iso`, `front`, `top` e `right` (guardadas como `iso`, `frente`, `topo` e `lado`; ver
+[Assistente](../../Assistente/README.md#imagens-guardadas)).
 
 ## Materiais do ateliê no arquivo (etapa 5 da precificação)
 
@@ -124,6 +127,62 @@ teste (`AmbienteDeTeste.Editor`): leitura, nova versão do arquivo e desfazer, u
 sobreposição, corpo fora do modelo, material desconhecido, modelo que mudou), versão publicada/arquivada, permissões,
 falha do SolidCraft e o caminho GraphQL + REST. Com o SolidCraft de teste, `EditorDoModeloTests.cs` (material e união de
 verdade, medidos de novo; ignorado sem `SolidCraft:Caminho`). Unitários em `UnitTests/Infra/IA/EdicaoNoArquivoTests.cs`.
+
+## Modelo 3D da peça do projeto
+
+Cada peça do projeto tem o próprio modelo (rota `api/projetos/{id}/pecas/{pecaDoProjetoId}/ferramentas/modelo-3d/...`),
+com conversa, imagens e histórico de arquivos só dela. O que vale como o modelo da peça é o **arquivo final**, marcado
+pelo joalheiro no histórico (`MarcarArquivoFinalFerramentaCommand`, ver o README do Assistente).
+
+- **Contexto da IA** (`ContextoDoModelo3d.MontarDaPecaAsync`): a peça (tipo, nome, liga e teor, `materialDaLiga`, peso
+  informado, descrição, status), o briefing do projeto e os materiais do ateliê. As instruções pedem modelar só a peça,
+  centrada na origem, com o material da liga dela.
+- **Peso da peça** (`GetPesoDaPecaQuery`, `PesoDoModelo.MedirArquivoFinalDaPecaAsync` e `PesoDoModelo.PesoNaLiga`): o
+  arquivo final é medido pelo mesmo medidor da versão (medição guardada pelo arquivo) e o peso é o **volume** dos corpos
+  que contam (de metal e sem material; "Pedra", "Apoio" e corpo aberto ficam fora) × a **densidade da liga da peça**
+  (atual, mesmo desativada). O material de cada corpo não muda o peso: a peça é de uma liga só. Sem 3D final: o digitado.
+  Com 3D e sem liga (pedra, material livre): o digitado. Não foi possível medir: sem peso. GraphQL:
+  `PecaDoProjeto.peso` (`PesoDaPeca`: `gramas`, `origem`, `pesoDigitado`), por `PesoPorPecaDoProjetoDataLoader`, e
+  `Projeto.pecas(id:)` para pedir só uma peça.
+- **Sem conferência** na peça (o peso não depende do material de cada corpo) e sem "Montar a partir das peças".
+- **Nomes:** ao marcar o final (`Modelo3dNoAssistente`, `IArquivoFinalDaFerramenta`), o arquivo é medido e, se algum
+  corpo não tem o nome da peça, o `IEditorDoModelo` renomeia (`RenomeacaoDeCorpos`, `body.rename` num `batch`): o corpo
+  único fica "Elo Infinito 2,5 cm"; vários, "Nome", "Nome (2)"... (`NomesDosCorpos`). O renomeado vira uma nova versão do
+  arquivo (`OrigemArquivo.NomesDaPeca`), que é a marcada. Sem medição (SolidCraft fora), marca como está.
+- **Peça publicada:** trocar o arquivo final faz dela outra peça; salvar, a IA, desfazer e restaurar sem marcar não.
+  Publicar leva o modelo final para a biblioteca (sem final, o 3D não vai); importar traz uma cópia, já marcada como final.
+
+## Montar a partir das peças (versão)
+
+O modelo da versão é só a montagem das peças: ele é montado a partir do modelo 3D **final** de cada peça da composição (`MontarAPartirDasPecasCommand`, `POST
+.../modelo-3d/montar-a-partir-das-pecas`, `projetos.editar`): uma cópia do modelo de cada peça **por unidade** (a
+quantidade da composição), enfileiradas ao longo do X depois do que o modelo já tem, para a IA ou o joalheiro
+posicionarem depois. Grava uma nova versão do arquivo (`OrigemArquivo.Montagem`, desfazível pelo histórico) e devolve as
+peças montadas e as que ficaram de fora por não terem modelo 3D final.
+
+- **Recusa:** versão publicada ou arquivada; a IA trabalhando no modelo; nenhuma peça da composição com modelo final; mais de
+  100 unidades.
+- **Infra** (`MontadorDoModeloSolidCraft`, `MontagemNoArquivo`), o mesmo `solidcraft-cli mcp --headless` da medição, numa
+  pasta temporária: mede a faixa em X de cada peça (`measure`, bbox), abre o arquivo da versão (ou começa um novo),
+  garante os materiais do ateliê, e para cada unidade `component.insert_design` (o arquivo da peça, deslocado em X, num
+  componente "Elo oval (3)") seguido de `component.break_link` (o componente fica com os corpos e esquece o arquivo) e do
+  `body.rename` que dá aos corpos da unidade o nome dela ("Elo oval (3)"; vários: "Elo oval (3) (2)"...). Os
+  corpos mantêm o material do arquivo da peça; o material que o SolidCraft renomeou por ter outra densidade no arquivo da
+  peça (`Castwork liga 2 (linked 1)`) volta ao do ateliê e o corpo sem material recebe a liga da peça (`material.assign`
+  num `batch`). Viabilidade conferida no SolidCraft `73e188d`: os corpos chegam com o material e o arquivo salvo não
+  depende mais do da peça.
+- **IA da versão:** o contexto marca na composição quais peças têm modelo final (`temModelo3d`), e as instruções dizem
+  que a IA só monta e posiciona os componentes das peças, sem criar corpos; faltando uma peça, ela orienta modelá-la na
+  própria peça e marcar o final. O backend também recusa: na conversa da versão (`PedidoAFerramenta.EscopoDaVersao`), a
+  `DefinicaoDeFerramenta.RecusarNaVersao` do modelo 3D (`CriacaoDeCorpos`) devolve erro à IA, sem chamar o MCP, em
+  `execute` ou `batch` com um comando que cria corpos (`solid.extrude`, primitivas, superfícies, chapas, malhas,
+  `component.insert_design`...). Na peça, o 3D continua livre.
+
+**Testes:** integração em `IntegrationTests/Projetos/DesenhoDasPecasTests.cs` (peso da peça, montagem com o montador de
+teste `AmbienteDeTeste.Montador`, recusas) e, com o SolidCraft de teste, `Ferramentas/Modelo3d/MontadorDoModeloTests.cs`
+(duas unidades do elo e a pedra, materiais do ateliê, sem sobreposição; ignorado sem `SolidCraft:Caminho`). O mesmo arquivo confere, no
+SolidCraft, o `body.rename` do arquivo final. Unitários em `UnitTests/Infra/IA/MontagemNoArquivoTests.cs`,
+`CriacaoDeCorposTests.cs`, `EdicaoNoArquivoTests.cs`, `NomesDosCorposTests.cs` e `PesoDoModeloTests.cs` (peso na liga).
 
 ## Instalação
 

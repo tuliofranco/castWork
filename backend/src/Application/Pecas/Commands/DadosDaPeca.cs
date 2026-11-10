@@ -3,28 +3,46 @@ using Castwork.Domain.Entities.Pecas;
 namespace Castwork.Application.Pecas.Commands;
 
 /// <summary>
-/// Campos de uma peça, comuns a criar e alterar.
+/// Campos de uma peça, comuns à peça da biblioteca e à peça do projeto (criar e alterar). O material é a liga (peças de
+/// metal) ou, na pedra, o texto livre.
 /// </summary>
-public abstract class DadosDaPeca
+public interface IDadosDaPeca
+{
+    string Nome { get; }
+
+    TipoPeca Tipo { get; }
+
+    /// <summary>
+    /// Liga do ateliê, em todo tipo menos pedra. Opcional. A peça guarda o Id e uma cópia do nome e do teor da liga.
+    /// </summary>
+    long? LigaId { get; }
+
+    /// <summary>
+    /// Material livre, só na pedra ("Turmalina"). Opcional.
+    /// </summary>
+    string? Material { get; }
+
+    decimal? PesoGramas { get; }
+
+    string? Descricao { get; }
+}
+
+/// <summary>
+/// Base dos commands da biblioteca (criar e alterar peça).
+/// </summary>
+public abstract class DadosDaPeca : IDadosDaPeca
 {
     public string Nome { get; set; } = string.Empty;
 
     public TipoPeca Tipo { get; set; }
 
-    public string? Material { get; set; }
+    /// <inheritdoc/>
+    public long? LigaId { get; set; }
 
-    /// <summary>
-    /// Teor do metal: "18k" ou "750". Opcional.
-    /// </summary>
-    public string? Teor { get; set; }
+    /// <inheritdoc/>
+    public string? Material { get; set; }
 
     public decimal? PesoGramas { get; set; }
 
     public string? Descricao { get; set; }
-
-    /// <summary>
-    /// Custo de compra ou produção de uma unidade, em R$ (não é o preço de venda). Opcional. Só é gravado para quem
-    /// tem <c>precificacao.ler</c>: para os demais o campo é ignorado (quem não vê o custo não o altera).
-    /// </summary>
-    public decimal? Custo { get; set; }
 }

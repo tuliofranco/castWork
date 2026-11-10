@@ -1,9 +1,11 @@
 using Castwork.Application.Atelie.Queries.GetConfiguracaoAtelie;
 using Castwork.Application.Common.Enderecos;
 using Castwork.Application.Ferramentas.Modelo3d.Queries.GetConferenciaDoModelo;
+using Castwork.Application.Pecas.Queries;
 using Castwork.Application.Precificacao.Queries;
 using Castwork.Application.Precificacao.Queries.GetPrecosDoAtelie;
 using Castwork.Application.Projetos.Queries;
+using Castwork.Application.Projetos.Queries.GetPesoDaPeca;
 using Castwork.Application.Projetos.Queries.GetPrecoDaVersao;
 using Castwork.GraphQl.DataLoaders;
 using Castwork.GraphQl.Erros;
@@ -64,6 +66,17 @@ public static class GraphQlConfiguration
             .AddType(new ObjectType<CorpoConferidoDto>(d => d.Name("CorpoConferido")))
             .AddType(new ObjectType<SobreposicaoConferidaDto>(d => d.Name("SobreposicaoConferida")))
             .AddType(new ObjectType<MaterialDisponivelDto>(d => d.Name("MaterialDisponivel")))
+            .AddType(new ObjectType<VersaoQueUsaPecaDto>(d => d.Name("VersaoQueUsaPeca")))
+            .AddType(new ObjectType<DesenhoDaPecaDto>(d =>
+            {
+                d.Name("DesenhoDaPeca");
+                d.Ignore(x => x.PecaId);
+            }))
+            .AddType(new ObjectType<PesoDaPecaDto>(d =>
+            {
+                d.Name("PesoDaPeca");
+                d.Ignore(x => x.PecaDoProjetoId);
+            }))
             .AddType(new ObjectType<EnderecoDto>(d =>
             {
                 d.Name("Endereco");
@@ -75,7 +88,12 @@ public static class GraphQlConfiguration
             .AddFiltering()
             .AddSorting()
             .AddDataLoader<ClientePorIdDataLoader>()
-            .AddDataLoader<PecaPorIdDataLoader>()
+            .AddDataLoader<PecaDoProjetoPorIdDataLoader>()
+            .AddDataLoader<PecasPorProjetoDataLoader>()
+            .AddDataLoader<HistoricoDeUsoPorPecaDataLoader>()
+            .AddDataLoader<DesenhosPorPecaDataLoader>()
+            .AddDataLoader<PesoPorPecaDoProjetoDataLoader>()
+            .AddDataLoader<ArquivosFinaisPorPecaDoProjetoDataLoader>()
             .AddDataLoader<VersoesPorProjetoDataLoader>()
             .AddDataLoader<ItensPorVersaoDataLoader>()
             .AddDataLoader<PrecosPorProjetoDataLoader>()

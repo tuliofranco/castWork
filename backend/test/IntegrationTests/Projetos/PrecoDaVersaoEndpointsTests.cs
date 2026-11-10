@@ -35,10 +35,10 @@ public class PrecoDaVersaoEndpointsTests : TesteDeIntegracao
                   markupDaVersao
                   precoSemArredondar
                   metais { ligaId liga pesoEstimado pesoAFundir valorPorGrama custo pesoReal diferencaDoPesoReal }
-                  composicao { pecaId quantidade custoUnitario custo }
+                  composicao { pecaDoProjetoId quantidade custoUnitario custo }
                   maoDeObra { tipo horas valorHora custo }
                   servicos { nome valor }
-                  pendencias { tipo descricao pecaId ligaId metal }
+                  pendencias { tipo descricao pecaDoProjetoId ligaId metal }
                   avisos { tipo descricao }
                 }
               }
@@ -94,7 +94,7 @@ public class PrecoDaVersaoEndpointsTests : TesteDeIntegracao
         (ouro["liga"]!.GetValue<string>(), ouro["pesoAFundir"]!.GetValue<decimal>(), ouro["valorPorGrama"]!.GetValue<decimal>(), ouro["custo"]!.GetValue<decimal>())
             .Should().Be(("Ouro 18k amarelo", 5.4m, 480m, 2592m));
         (ouro["pesoReal"]!.GetValue<decimal>(), ouro["diferencaDoPesoReal"]!.GetValue<decimal>()).Should().Be((5.2m, 4m));
-        (calculo["composicao"]![0]!["pecaId"]!.GetValue<long>(), calculo["composicao"]![0]!["custo"]!.GetValue<decimal>()).Should().Be((pecaId, 800m));
+        (calculo["composicao"]![0]!["pecaDoProjetoId"]!.GetValue<long>(), calculo["composicao"]![0]!["custo"]!.GetValue<decimal>()).Should().Be((pecaId, 800m));
         (calculo["maoDeObra"]!["tipo"]!.GetValue<string>(), calculo["maoDeObra"]!["custo"]!.GetValue<decimal>()).Should().Be(("POR_HORAS", 540m));
         calculo["servicos"]!.AsArray().Select(s => s!["nome"]!.GetValue<string>()).Should().Equal("Fundição", "Ródio");
         calculo["pendencias"]!.AsArray().Should().BeEmpty();
@@ -122,7 +122,7 @@ public class PrecoDaVersaoEndpointsTests : TesteDeIntegracao
         precoNegado["calculo"].Should().BeNull("sem precificacao.ler os custos, o markup e as cotações não saem");
         precoNegado["status"]!.GetValue<string>().Should().Be("INCOMPLETO");
         completo["data"]!["projeto"]!["versoes"]![1]!["preco"]!["calculo"]!["pendencias"]!.AsArray().Select(p => p!["tipo"]!.GetValue<string>())
-            .Should().BeEquivalentTo("SEM_METAL_COM_PESO", "PECA_SEM_CUSTO");
+            .Should().BeEquivalentTo("SEM_METAL_COM_PESO", "PECA_SEM_VALOR");
         edicao.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
@@ -144,14 +144,14 @@ public class PrecoDaVersaoEndpointsTests : TesteDeIntegracao
             .Should().Be((HttpStatusCode.UnprocessableEntity, HttpStatusCode.UnprocessableEntity, HttpStatusCode.NoContent, HttpStatusCode.NotFound));
     }
 
-    private async Task<(long ProjetoId, long VersaoId, long PecaId)> VersaoComUmaPecaAsync(decimal? custo)
+    private async Task<(long ProjetoId, long VersaoId, long PecaDoProjetoId)> VersaoComUmaPecaAsync(decimal? custo)
     {
         await AmbienteDeTeste.SendAsync(new AtualizarCotacaoCommand { Metal = Metal.Ouro, Valor = 640m });
         await AmbienteDeTeste.SendAsync(new AtualizarParametrosDePrecoCommand { PerdaPercentual = 8m, ValorHora = 90m, Markup = 1.8m, TaxasPercentual = 6m, ArredondarPara = 10m });
         var projetoId = await Usar(new ProjetoBuilder()).BuildAsync();
         var versaoId = await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = projetoId, Nome = "Base" });
-        var pecaId = await Usar(new PecaBuilder()).CustomizeCommand(c => c.Custo = custo).BuildAsync();
-        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaId = pecaId, Quantidade = 2 });
+        var pecaId = await Usar(new PecaDoProjetoBuilder(projetoId).ComValor(custo).Publicada()).CriarAsync();
+        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaDoProjetoId = pecaId, Quantidade = 2 });
         return (projetoId, versaoId, pecaId);
     }
 

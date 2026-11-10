@@ -50,7 +50,7 @@ internal static class AlteracaoNaConferencia
         projeto.GarantirVersaoEmDesenvolvimento(request.VersaoId);
 
         var agora = relogio.GetUtcNow();
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, Modelo3dNoAssistente.Codigo, cancellationToken)
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, EscopoDaFerramenta.DaVersao(request.ProjetoId, request.VersaoId), Modelo3dNoAssistente.Codigo, cancellationToken)
             ?? throw new RegraDeNegocioException("A versão não tem modelo 3D.");
         if (conversa.AguardandoIa(agora))
         {

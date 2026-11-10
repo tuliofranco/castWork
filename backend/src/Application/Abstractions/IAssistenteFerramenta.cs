@@ -25,6 +25,8 @@ public interface IAssistenteFerramenta
 /// conversa (a mensagem de abertura fica oculta no chat). <see cref="Modelo"/> e <see cref="Esforco"/>: a escolha
 /// do joalheiro no chat (nulos usam o padrão da configuração). <see cref="PreparoDoArquivo"/>: o que a ferramenta pede que
 /// o arquivo tenha ao ser aberto (ex.: os materiais do modelo 3D), garantido antes da IA começar.
+/// <see cref="EscopoDaVersao"/>: a conversa é de uma versão (não de uma peça nem do projeto); a ferramenta pode limitar o
+/// que a IA faz ali (no modelo 3D da versão, só montar e posicionar as peças).
 /// </summary>
 public sealed record PedidoAFerramenta(
     string Ferramenta,
@@ -39,7 +41,8 @@ public sealed record PedidoAFerramenta(
     IReadOnlyList<AnexoDoTurno>? Anexos = null,
     string? Modelo = null,
     string? Esforco = null,
-    string? PreparoDoArquivo = null)
+    string? PreparoDoArquivo = null,
+    bool EscopoDaVersao = false)
 {
     public static readonly IReadOnlyList<string> Modelos = ["haiku", "sonnet", "opus"];
 

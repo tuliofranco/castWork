@@ -1,17 +1,31 @@
 <cw-conversa-ia
   ferramenta="modelo-3d"
-  titulo="Modelo 3D"
+  [titulo]="titulo()"
   [projetoId]="projeto()"
-  [versaoId]="versao()"
+  [escopo]="escopo()"
   [voltarPara]="voltarPara()"
-  voltarRotulo="Versão"
+  [voltarRotulo]="daPeca() ? 'Peça' : 'Versão'"
   [antesDeEnviar]="antesDeEnviar"
   (arquivoMudou)="arquivoMudou()"
 >
   <ng-container acoes>
-    <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirConferencia()">
-      <i class="bi bi-rulers" aria-hidden="true"></i> Peso e materiais
-    </button>
+    @if (!daPeca()) {
+      @if (podeEditar()) {
+        <!-- Uma cópia do modelo de cada peça da composição por unidade, enfileiradas para posicionar depois. -->
+        <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="montar()">
+          <i class="bi bi-boxes" aria-hidden="true"></i> Montar a partir das peças
+        </button>
+      }
+      <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirConferencia()">
+        <i class="bi bi-rulers" aria-hidden="true"></i> Peso e materiais
+      </button>
+    }
+    @if (daPeca() && podeEditar()) {
+      <!-- O arquivo à vista vira o final da peça: o que vale para o peso, a montagem e a publicação. -->
+      <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando() || !atualNaoEFinal()" (click)="marcarComoFinal()">
+        <i class="bi bi-patch-check" aria-hidden="true"></i> Marcar como final
+      </button>
+    }
     <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
       <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
     </button>
@@ -21,6 +35,7 @@
   </ng-container>
 
   <div area class="prancheta">
+    <cw-aviso-peca-publicada [publicada]="publicada()" />
     @if (sincronizando(); as aviso) {
       <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
     }
@@ -32,6 +47,14 @@
       <p class="aviso-ia" role="status">
         <i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ avisoSemMaterial() }}
         <button type="button" class="conferir" (click)="abrirConferencia()">Conferir</button>
+      </p>
+    } @else if (atualNaoEFinal()) {
+      <p class="aviso-ia" role="status">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+        {{ finalId() ? 'Este não é o arquivo final da peça: o peso, a montagem e a publicação usam o final.' : 'A peça ainda não tem arquivo final: sem ele, fica sem modelo 3D.' }}
+        @if (podeEditar()) {
+          <button type="button" class="conferir" (click)="marcarComoFinal()">Marcar como final</button>
+        }
       </p>
     }
     <!-- Dois SolidCrafts (WebAssembly, servido pelo próprio front em /solidcraft): um à vista, o outro abre o próximo projeto por trás. -->
@@ -60,18 +83,24 @@
 
 <cw-historico-modelo
   [versoes]="historico()"
+  [titulo]="daPeca() ? titulo() : 'Histórico do modelo'"
+  [finalId]="finalId()"
+  [podeMarcarFinal]="daPeca() && podeEditar()"
+  (marcarFinal)="marcarComoFinal($event.id)"
   [ocupado]="!!sincronizando() || pensando()"
   (restaurar)="restaurar($event)"
   (baixar)="baixar($event)"
   (fechado)="historico.set(null)"
 />
 
-<cw-conferencia-modelo
-  [projetoId]="projeto()"
-  [versaoId]="versao()"
-  [aberta]="conferindo()"
-  [podeEditar]="podeEditar()"
-  [ocupado]="!!sincronizando() || pensando() || trocando()"
-  (alterado)="modeloConferido($event)"
-  (fechado)="conferindo.set(false)"
-/>
+@if (!daPeca()) {
+  <cw-conferencia-modelo
+    [projetoId]="projeto()"
+    [versaoId]="versao()"
+    [aberta]="conferindo()"
+    [podeEditar]="podeEditar()"
+    [ocupado]="!!sincronizando() || pensando() || trocando()"
+    (alterado)="modeloConferido($event)"
+    (fechado)="conferindo.set(false)"
+  />
+}

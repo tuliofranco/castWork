@@ -35,6 +35,12 @@ public static class DependencyInjection
         services.AddSingleton<IPainelDoTurno, PainelDoTurnoEmMemoria>();
         services.AddMemoryCache();
         services.AddSingleton<IPreviaFerramenta, PreviaFerramentaMcp>();
+
+        // As imagens guardadas de cada arquivo novo, geradas em segundo plano depois de salvar.
+        services.AddSingleton<IGeradorDeImagens, GeradorDeImagensMcp>();
+        services.AddSingleton<FilaDeImagensEmMemoria>();
+        services.AddSingleton<IFilaDeImagens>(sp => sp.GetRequiredService<FilaDeImagensEmMemoria>());
+        services.AddHostedService<ImagensEmSegundoPlano>();
         return services;
     }
 }

@@ -14,6 +14,6 @@ e gera o PDF.
 |---|---|
 | Domain | `Domain/Entities/Ferramentas/Briefings` (Briefing, DocumentoBriefing, FormularioBriefing…) |
 | Application | `Application/Ferramentas/Briefings` |
-| Infra | `Infra/IA/Ferramentas/Briefings` (instruções) |
+| Infra | `Infra/IA/Ferramentas/Briefings` (instruções); PDF em `Infra/Documentos/WordCraft` (`RoteiroDoBriefing` sobre o visual comum `RoteiroWordCraft`, que a ficha técnica da peça também usa; execução em `ExecutorWordCraft`) |
 | Presentation | `Presentation/WebAPI/Controllers/Ferramentas/Briefings` |
 | Front | `modules/ferramentas/briefing` (rota `projetos/:id/briefing`), `data/ferramentas/briefing` |

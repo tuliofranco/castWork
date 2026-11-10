@@ -12,7 +12,8 @@ export interface PostVersaoDto {
 }
 
 export interface PostItemDto {
-  readonly pecaId: number;
+  /** Peça ativa deste projeto. */
+  readonly pecaDoProjetoId: number;
   readonly quantidade: number;
   readonly observacao?: string | null;
 }

@@ -5,6 +5,7 @@ import { Apollo, gql } from 'apollo-angular';
 import { type Observable, map } from 'rxjs';
 
 import type { ConferenciaDoModeloDto, ModeloAlteradoDto, PostUnirCorposDto, PutMateriaisDosCorposDto } from './dto/conferencia-do-modelo.dto';
+import type { ModeloMontadoDto } from './dto/modelo-montado.dto';
 
 /** Conferência de peso e materiais: mede o arquivo 3D atual da versão (a medição fica guardada pelo arquivo). */
 export const GET_CONFERENCIA_DO_MODELO = gql`
@@ -58,9 +59,9 @@ interface GetConferenciaDoModeloResposta {
 }
 
 /**
- * Modelo 3D da versão fora da conversa com a IA: a conferência de peso e materiais. Leitura pelo GraphQL; definir o
- * material e unir corpos são commands REST (`/projetos/{id}/versoes/{versaoId}/modelo-3d/...`), e cada um grava uma nova
- * versão do arquivo.
+ * Modelo 3D da versão fora da conversa com a IA: a conferência de peso e materiais e o "Montar a partir das peças".
+ * Leitura pelo GraphQL; definir o material, unir corpos e montar são commands REST
+ * (`/projetos/{id}/versoes/{versaoId}/modelo-3d/...`), e cada um grava uma nova versão do arquivo.
  */
 @Injectable({ providedIn: 'root' })
 export class Modelo3dService {
@@ -83,5 +84,10 @@ export class Modelo3dService {
 
   postUnirCorpos(projetoId: number, versaoId: number, dto: PostUnirCorposDto): Observable<ModeloAlteradoDto> {
     return this.http.post<ModeloAlteradoDto>(`projetos/${projetoId}/versoes/${versaoId}/modelo-3d/unir-corpos`, dto);
+  }
+
+  /** Uma cópia do modelo de cada peça da composição por unidade, enfileiradas no modelo da versão. */
+  postMontarAPartirDasPecas(projetoId: number, versaoId: number): Observable<ModeloMontadoDto> {
+    return this.http.post<ModeloMontadoDto>(`projetos/${projetoId}/versoes/${versaoId}/modelo-3d/montar-a-partir-das-pecas`, null);
   }
 }

@@ -37,4 +37,14 @@ describe('Modelo3dService', () => {
     unir.flush({ arquivoId: 11, arquivoAnteriorId: 10 });
     http.verify();
   });
+
+  it('deve montar o modelo da versão a partir das peças pela rota do modelo 3D', () => {
+    const { service, http } = configurar();
+
+    service.postMontarAPartirDasPecas(1, 2).subscribe();
+
+    const montar = http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/versoes/2/modelo-3d/montar-a-partir-das-pecas');
+    montar.flush({ arquivoId: 12, arquivoAnteriorId: null, pecas: [], pecasSemModelo: [] });
+    http.verify();
+  });
 });

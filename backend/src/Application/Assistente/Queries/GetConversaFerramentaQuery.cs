@@ -10,11 +10,13 @@ namespace Castwork.Application.Assistente.Queries;
 /// A conversa da ferramenta na versão; vazia (sem mensagens nem arquivo) se ainda não começou.
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
-public sealed class GetConversaFerramentaQuery : IRequest<ConversaFerramentaDto>
+public sealed class GetConversaFerramentaQuery : IRequest<ConversaFerramentaDto>, IEscopoDaFerramenta
 {
     public long ProjetoId { get; set; }
 
     public long VersaoId { get; set; }
+
+    public long PecaDoProjetoId { get; set; }
 
     public string Ferramenta { get; set; } = string.Empty;
 }
@@ -23,8 +25,8 @@ public sealed class GetConversaFerramentaQueryHandler(IUnitOfWork unitOfWork, Ti
 {
     public async Task<ConversaFerramentaDto> Handle(GetConversaFerramentaQuery request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken);
         if (conversa is null)
         {
             return new ConversaFerramentaDto([], null, false, 1, 0);

@@ -64,7 +64,7 @@ describe('PrecificacaoComponent', () => {
     expect(texto(prata?.querySelector('.valor'))).toBe('Sem cotação');
     expect([...el.querySelectorAll('cw-ligas-atelie .meta')].map(texto)).toEqual([
       'Ouro · teor 750 (18k) · 15,5 g/cm³',
-      'Prata · teor 925 (22.2k) · 10,36 g/cm³',
+      'Prata · teor 925 · 10,36 g/cm³',
     ]);
     expect(texto(el.querySelector('cw-parametros-preco .aviso'))).toContain('Defina o valor da hora');
   });

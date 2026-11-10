@@ -13,6 +13,6 @@ public sealed class AlterarPecaCommandValidator : ValidatorBase<AlterarPecaComma
     {
         // Só peça ativa: a desativada não entra em versão nova.
         RuleFor(c => c.PecaId).GreaterThan(0).MustExists<AlterarPecaCommand, Peca>(UnitOfWork).WithName("Peça");
-        this.ValidarDadosDaPeca();
+        this.ValidarDadosDaPeca(UnitOfWork, soLigaAtiva: false);
     }
 }

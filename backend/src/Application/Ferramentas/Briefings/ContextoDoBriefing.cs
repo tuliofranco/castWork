@@ -27,13 +27,9 @@ internal static class ContextoDoBriefing
     public static async Task<DadosDocumentoBriefing> ParaDocumentoAsync(IUnitOfWork unitOfWork, Briefing briefing, DateOnly hoje, CancellationToken cancellationToken)
     {
         var (projeto, cliente) = await ProjetoEClienteAsync(unitOfWork, briefing.ProjetoId, cancellationToken);
-        var atelie = await unitOfWork.GetRepository<ConfiguracaoAtelie>().FindBy(c => c.Id == ConfiguracaoAtelie.IdUnico)
-            .Select(c => new { c.Nome, c.Assinatura, c.CorMarca, c.Logo, c.Telefone, c.Email, c.Instagram, c.Site, c.AvisoBriefing, Cidade = c.Endereco == null ? null : c.Endereco.Cidade + "/" + c.Endereco.Uf })
-            .AsNoTracking().SingleAsync(cancellationToken);
-
-        var contatos = new[] { atelie.Telefone, atelie.Email, atelie.Instagram is null ? null : "@" + atelie.Instagram, atelie.Site }
-            .Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c!).ToList();
-        var marca = new MarcaDoDocumento(atelie.Nome, atelie.Assinatura, atelie.CorMarca, atelie.Logo, atelie.Cidade, contatos);
+        var marca = await MarcaAsync(unitOfWork, cancellationToken);
+        var aviso = await unitOfWork.GetRepository<ConfiguracaoAtelie>().FindBy(c => c.Id == ConfiguracaoAtelie.IdUnico)
+            .Select(c => c.AvisoBriefing).SingleAsync(cancellationToken);
 
         var especificacoes = new List<(string, string)> { ("Tipo de peça", briefing.TipoJoia.ToString()) };
         void Se(string rotulo, string? valor)
@@ -62,7 +58,21 @@ internal static class ContextoDoBriefing
             briefing.Prazo?.ToString("dd/MM/yyyy", PtBr),
             Investimento(briefing.Orcamento),
             briefing.Observacoes,
-            atelie.AvisoBriefing);
+            aviso);
+    }
+
+    /// <summary>
+    /// A identidade do ateliê nos documentos (briefing e ficha técnica da peça): nome, assinatura, cor, logo, cidade e contatos.
+    /// </summary>
+    public static async Task<MarcaDoDocumento> MarcaAsync(IUnitOfWork unitOfWork, CancellationToken cancellationToken)
+    {
+        var atelie = await unitOfWork.GetRepository<ConfiguracaoAtelie>().FindBy(c => c.Id == ConfiguracaoAtelie.IdUnico)
+            .Select(c => new { c.Nome, c.Assinatura, c.CorMarca, c.Logo, c.Telefone, c.Email, c.Instagram, c.Site, Cidade = c.Endereco == null ? null : c.Endereco.Cidade + "/" + c.Endereco.Uf })
+            .AsNoTracking().SingleAsync(cancellationToken);
+
+        var contatos = new[] { atelie.Telefone, atelie.Email, atelie.Instagram is null ? null : "@" + atelie.Instagram, atelie.Site }
+            .Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c!).ToList();
+        return new MarcaDoDocumento(atelie.Nome, atelie.Assinatura, atelie.CorMarca, atelie.Logo, atelie.Cidade, contatos);
     }
 
     /// <summary>
@@ -107,7 +117,7 @@ internal static class ContextoDoBriefing
             },
         });
 
-    private static async Task<(string Projeto, string? Cliente)> ProjetoEClienteAsync(IUnitOfWork unitOfWork, long projetoId, CancellationToken cancellationToken)
+    public static async Task<(string Projeto, string? Cliente)> ProjetoEClienteAsync(IUnitOfWork unitOfWork, long projetoId, CancellationToken cancellationToken)
     {
         var projeto = await unitOfWork.GetRepository<Projeto>().FindBy(p => p.Id == projetoId)
             .Select(p => new { p.Nome, p.ClienteId }).AsNoTracking().SingleAsync(cancellationToken);

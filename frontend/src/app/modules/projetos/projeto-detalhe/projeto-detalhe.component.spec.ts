@@ -3,6 +3,7 @@ import { Router, provideRouter } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { ProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
+import { PecasService } from '@data/pecas/pecas/pecas.service';
 import { PrecosService } from '@data/precificacao/precos/precos.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
@@ -11,13 +12,16 @@ import { of } from 'rxjs';
 import { ProjetoDetalheComponent } from './projeto-detalhe.component';
 
 describe('ProjetoDetalheComponent', () => {
-  const peca = { id: 10, nome: 'Elo', tipo: 'ELO' as const, material: null, teor: null, pesoGramas: null };
+  const peca = { id: 10, nome: 'Elo', tipo: 'ELO' as const, material: null, teor: null, pesoGramas: null, ativo: true, status: 'PUBLICADA' as const };
+  const rascunho = { id: 11, nome: 'Elo torcido', tipo: 'ELO' as const, material: null, teor: null, pesoGramas: null, ativo: true, status: 'RASCUNHO' as const };
   const projeto: ProjetoDto = {
     id: 1,
     nome: 'Colar Raízes',
     descricao: 'Inspirado em raízes',
     cliente: { id: 3, nome: 'Maria Silva' },
+    pecas: [peca, rascunho],
     versoes: [
+      { id: 24, numero: 4, nome: 'Torcida', observacoes: null, status: 'EM_DESENVOLVIMENTO', publicadaEm: null, itens: [{ id: 3, quantidade: 8, observacao: null, peca: rascunho }] },
       { id: 23, numero: 3, nome: 'Rascunho', observacoes: null, status: 'ARQUIVADA', publicadaEm: null, itens: [] },
       { id: 22, numero: 2, nome: 'Com pedra', observacoes: null, status: 'EM_DESENVOLVIMENTO', publicadaEm: null, itens: [{ id: 1, quantidade: 2, observacao: null, peca }] },
       { id: 21, numero: 1, nome: 'Versão 1', observacoes: null, status: 'PUBLICADA', publicadaEm: '2026-11-05T13:00:00Z', itens: [{ id: 2, quantidade: 1, observacao: null, peca }] },
@@ -32,6 +36,7 @@ describe('ProjetoDetalheComponent', () => {
   const servico = {
     getProjeto: vi.fn(() => of(projeto)),
     getPrecosDoProjeto: vi.fn(() => of(precos)),
+    getPecasDoProjeto: vi.fn(() => of([{ ...peca, descricao: null, pecaId: 40, valor: 12.5 }])),
     postArquivarVersao: vi.fn(() => of(undefined)),
     postDesarquivarVersao: vi.fn(() => of(undefined)),
     postPublicarVersao: vi.fn(() => of(undefined)),
@@ -47,6 +52,7 @@ describe('ProjetoDetalheComponent', () => {
         { provide: ProjetosService, useValue: servico },
         { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
         { provide: PrecosService, useValue: { getPrecos: () => of({ cotacoes: [], ligas: [], parametros: precos.parametros }) } },
+        { provide: PecasService, useValue: { getPecas: () => of(null) } },
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
         { provide: ToastService, useValue: { sucesso: vi.fn() } },
       ],
@@ -64,7 +70,7 @@ describe('ProjetoDetalheComponent', () => {
   it('deve listar só as versões não arquivadas e mostrá-las sob demanda', async () => {
     const { el, estabilizar } = await abrir();
 
-    expect(versoes(el)).toEqual(['1 | Versão 1 | Publicada', '2 | Com pedra | Em desenvolvimento']);
+    expect(versoes(el)).toEqual(['1 | Versão 1 | Publicada', '2 | Com pedra | Em desenvolvimento', '4 | Torcida | Em desenvolvimento']);
 
     botao(el, 'Mostrar arquivadas (1)')!.click();
     await estabilizar();
@@ -86,6 +92,27 @@ describe('ProjetoDetalheComponent', () => {
     expect(publicada).toBe('');
     expect(servico.postArquivarVersao).toHaveBeenCalledWith(1, 22);
     expect(servico.postDesarquivarVersao).toHaveBeenCalledWith(1, 23);
+  });
+
+  it('deve recusar publicar a versão com peça em rascunho mostrando a peça com atalho', async () => {
+    const { el, estabilizar } = await abrir();
+    const linha = [...el.querySelectorAll('.versao')].find((v) => v.textContent?.includes('Torcida'))!;
+
+    [...linha.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === 'Publicar')!.click();
+    await estabilizar();
+
+    expect(servico.postPublicarVersao).not.toHaveBeenCalled();
+    const aviso = linha.querySelector('cw-pecas-em-rascunho')!;
+    expect(aviso.textContent).toContain('Elo torcido');
+    expect(aviso.querySelector('a')!.getAttribute('href')).toBe('/projetos/1/pecas/11');
+  });
+
+  it('deve mostrar a seção Peças do projeto entre os preços e as versões', async () => {
+    const { el } = await abrir();
+
+    const secoes = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
+    expect(secoes.indexOf('Peças do projeto')).toBeGreaterThan(secoes.indexOf('Preços deste projeto'));
+    expect(secoes.indexOf('Peças do projeto')).toBeLessThan(secoes.indexOf('Versões'));
   });
 
   it('deve criar uma versão com o nome dado e abrir a página dela', async () => {

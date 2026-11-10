@@ -132,14 +132,17 @@ public sealed class CustoDoMetalDto
 
 public sealed class CustoDaPecaDto
 {
-    public long PecaId { get; init; }
+    /// <summary>
+    /// A peça do projeto.
+    /// </summary>
+    public long PecaDoProjetoId { get; init; }
 
     public string Nome { get; init; } = string.Empty;
 
     public int Quantidade { get; init; }
 
     /// <summary>
-    /// Nulo: peça sem custo na biblioteca.
+    /// O valor da peça no projeto; nulo: peça sem valor.
     /// </summary>
     public decimal? CustoUnitario { get; init; }
 
@@ -177,9 +180,9 @@ public sealed class PendenciaDoPrecoDto
     public string Descricao { get; init; } = string.Empty;
 
     /// <summary>
-    /// A peça sem custo, para abrir e resolver.
+    /// A peça do projeto sem valor, para abrir no projeto e resolver.
     /// </summary>
-    public long? PecaId { get; init; }
+    public long? PecaDoProjetoId { get; init; }
 
     /// <summary>
     /// A liga desativada.

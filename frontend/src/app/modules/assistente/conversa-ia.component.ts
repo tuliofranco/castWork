@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import type { ChatDaConversaDto, ConversaFerramentaDto, MensagemFerramentaDto } from '@data/assistente/dto/ferramenta.dto';
-import { FerramentasService } from '@data/assistente/ferramentas.service';
+import { type EscopoDaFerramenta, FerramentasService } from '@data/assistente/ferramentas.service';
 import { ToastService } from '@shared/services/toast.service';
 import { ANDAMENTO_VAZIO, type AndamentoDoTurno, aplicarEvento } from '@shared/ui/ferramenta-ia/andamento-ia.component';
 import type { ArquivoDoProjeto } from '@shared/ui/ferramenta-ia/arquivos-do-projeto.component';
@@ -32,6 +32,7 @@ const INTERVALO_DE_CONSULTA_MS = 4000;
       [listarArquivosDoProjeto]="listarArquivosDoProjeto"
       [boasVindas]="boasVindas()"
       [ferramenta]="ferramenta()"
+      [chatUnico]="daPeca()"
       (enviar)="enviar($event)"
       (desfazer)="desfazer($event)"
       (apagarConversa)="apagar()"
@@ -56,8 +57,8 @@ export class ConversaIaComponent {
   private readonly toast = inject(ToastService);
 
   readonly projetoId = input.required<number>();
-  /** Nulo nas ferramentas do projeto (o briefing). */
-  readonly versaoId = input.required<number | null>();
+  /** A versão (Id), a peça do projeto (`{ pecaId }`) ou, nas ferramentas do projeto (o briefing), nulo. */
+  readonly escopo = input.required<EscopoDaFerramenta>();
   /** Código da ferramenta na API (`desenho-2d`). */
   readonly ferramenta = input.required<string>();
   readonly titulo = input.required<string>();
@@ -79,6 +80,11 @@ export class ConversaIaComponent {
   /** A IA está trabalhando (a ferramenta usa para avisar e bloquear o que conflita). */
   readonly pensando = signal(false);
 
+  /** Na peça do projeto, uma conversa só por ferramenta (sem chats paralelos). */
+  protected readonly daPeca = computed(() => {
+    const escopo = this.escopo();
+    return typeof escopo === 'object' && escopo !== null;
+  });
   protected readonly conversa = signal<ConversaFerramentaDto>({ mensagens: [], arquivoId: null, processando: false, chat: 1, chatsAnteriores: 0 });
   protected readonly andamento = signal<AndamentoDoTurno | null>(null);
   protected readonly chats = signal<readonly ChatDaConversaDto[] | null>(null);
@@ -96,8 +102,8 @@ export class ConversaIaComponent {
     // O turno da IA continua no servidor se o joalheiro sair: a resposta é lida quando ele voltar.
     inject(DestroyRef).onDestroy(() => (this.destruido = true));
     effect(() => {
-      const [projetoId, versaoId, ferramenta] = [this.projetoId(), this.versaoId(), this.ferramenta()];
-      untracked(() => void this.carregar(projetoId, versaoId, ferramenta));
+      const [projetoId, escopo, ferramenta] = [this.projetoId(), this.escopo(), this.ferramenta()];
+      untracked(() => void this.carregar(projetoId, escopo, ferramenta));
     });
   }
 
@@ -126,7 +132,7 @@ export class ConversaIaComponent {
       const conversa = await firstValueFrom(
         this.ferramentas.postConversa(
           this.projetoId(),
-          this.versaoId(),
+          this.escopo(),
           this.ferramenta(),
           texto || null,
           imagens.map((i) => i.base64),
@@ -152,34 +158,34 @@ export class ConversaIaComponent {
   }
 
   protected async novoChat(): Promise<void> {
-    this.conversa.set(await firstValueFrom(this.ferramentas.postNovoChat(this.projetoId(), this.versaoId(), this.ferramenta())));
+    this.conversa.set(await firstValueFrom(this.ferramentas.postNovoChat(this.projetoId(), this.escopo(), this.ferramenta())));
   }
 
   protected async verChats(): Promise<void> {
-    this.chats.set(await firstValueFrom(this.ferramentas.getChats(this.projetoId(), this.versaoId(), this.ferramenta())));
+    this.chats.set(await firstValueFrom(this.ferramentas.getChats(this.projetoId(), this.escopo(), this.ferramenta())));
   }
 
   /** O chat escolhido no histórico vira o em andamento e aparece na conversa. */
   protected async abrirChat(numero: number): Promise<void> {
     if (numero !== this.conversa().chat) {
-      this.conversa.set(await firstValueFrom(this.ferramentas.postContinuarChat(this.projetoId(), this.versaoId(), this.ferramenta(), numero)));
+      this.conversa.set(await firstValueFrom(this.ferramentas.postContinuarChat(this.projetoId(), this.escopo(), this.ferramenta(), numero)));
     }
 
     this.chats.set(null);
   }
 
   protected async desfazer(ordem: number): Promise<void> {
-    this.conversa.set(await firstValueFrom(this.ferramentas.postDesfazer(this.projetoId(), this.versaoId(), this.ferramenta(), ordem)));
+    this.conversa.set(await firstValueFrom(this.ferramentas.postDesfazer(this.projetoId(), this.escopo(), this.ferramenta(), ordem)));
     this.arquivoMudou.emit();
   }
 
   protected async apagar(): Promise<void> {
-    await firstValueFrom(this.ferramentas.deleteConversa(this.projetoId(), this.versaoId(), this.ferramenta()));
+    await firstValueFrom(this.ferramentas.deleteConversa(this.projetoId(), this.escopo(), this.ferramenta()));
     this.conversa.update((c) => ({ ...c, mensagens: [] }));
   }
 
-  private async carregar(projetoId: number, versaoId: number | null, ferramenta: string): Promise<void> {
-    const conversa = await firstValueFrom(this.ferramentas.getConversa(projetoId, versaoId, ferramenta));
+  private async carregar(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string): Promise<void> {
+    const conversa = await firstValueFrom(this.ferramentas.getConversa(projetoId, escopo, ferramenta));
     this.conversa.set(conversa);
     if (conversa.processando) await this.aguardarIa();
 
@@ -197,7 +203,7 @@ export class ConversaIaComponent {
       while (!this.destruido) {
         await new Promise((ok) => setTimeout(ok, INTERVALO_DE_CONSULTA_MS));
         if (this.destruido) return;
-        const conversa = await firstValueFrom(this.ferramentas.getConversa(this.projetoId(), this.versaoId(), this.ferramenta()));
+        const conversa = await firstValueFrom(this.ferramentas.getConversa(this.projetoId(), this.escopo(), this.ferramenta()));
         this.conversa.set(conversa);
         if (!conversa.processando) {
           this.respondeu.emit();
@@ -215,7 +221,7 @@ export class ConversaIaComponent {
   /** Abre o acompanhamento ao vivo do turno e soma cada evento ao andamento mostrado no chat. */
   private acompanhar(aguardar: boolean): Subscription {
     this.andamento.set(ANDAMENTO_VAZIO());
-    return this.ferramentas.acompanhar(this.projetoId(), this.versaoId(), this.ferramenta(), aguardar).subscribe({
+    return this.ferramentas.acompanhar(this.projetoId(), this.escopo(), this.ferramenta(), aguardar).subscribe({
       next: (evento) => this.andamento.update((a) => (a ? aplicarEvento(a, evento) : a)),
       // Sem o ao vivo, o chat continua com "Trabalhando..." e a resposta chega do mesmo jeito.
       error: () => undefined,
@@ -227,7 +233,7 @@ export class ConversaIaComponent {
       id: m.ordem,
       papel: m.papel === 'Joalheiro' ? 'joalheiro' : 'assistente',
       texto: m.texto ?? '',
-      imagens: m.imagens.map((chave) => this.ferramentas.caminhoDaImagem(this.projetoId(), this.versaoId(), chave)),
+      imagens: m.imagens.map((chave) => this.ferramentas.caminhoDaImagem(this.projetoId(), this.escopo(), chave)),
       acao: m.acao ?? undefined,
       pensamento: m.pensamento,
       passos: m.passos,

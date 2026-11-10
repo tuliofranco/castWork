@@ -15,7 +15,11 @@ namespace Castwork.Infra.IA.Assistente;
 /// <see cref="ModeloPadrao"/>: o modelo quando o joalheiro não escolheu (<c>haiku</c>, <c>sonnet</c>, <c>opus</c>);
 /// nulo usa o da configuração. <see cref="PrepararArquivo"/>: depois de abrir o arquivo, com o preparo que a Application
 /// mandou no pedido, a chamada que lê o arquivo e a que monta, a partir dessa leitura, o que falta nele (nula: nada
-/// falta); ex.: os materiais das ligas no modelo 3D (<see cref="PreparoDoArquivo"/>).
+/// falta); ex.: os materiais das ligas no modelo 3D (<see cref="PreparoDoArquivo"/>). <see cref="VistasGuardadas"/>: as imagens
+/// em alta qualidade geradas em segundo plano para cada arquivo novo (<see cref="GeradorDeImagensMcp"/>); nulo, a ferramenta
+/// não guarda imagens. <see cref="RecusarNaVersao"/>: na conversa de uma versão, o motivo de recusar a chamada que a IA fez
+/// (o nome da ferramenta do MCP e a entrada) sem passá-la ao MCP; nulo deixa passar (ex.: o modelo 3D da versão não cria
+/// corpos).
 /// </summary>
 internal sealed record DefinicaoDeFerramenta(
     string Codigo,
@@ -37,4 +41,13 @@ internal sealed record DefinicaoDeFerramenta(
     ((string Nome, string Argumentos) Chamada, Func<string, string?> Resumir)? ResumoDoArquivo = null,
     (string Nome, string Argumentos)? VistaParaOJoalheiro = null,
     string? ModeloPadrao = null,
-    ((string Nome, string Argumentos) Leitura, Func<string, string, (string Nome, string Argumentos)?> Ajustar)? PrepararArquivo = null);
+    ((string Nome, string Argumentos) Leitura, Func<string, string, (string Nome, string Argumentos)?> Ajustar)? PrepararArquivo = null,
+    IReadOnlyList<VistaGuardada>? VistasGuardadas = null,
+    Func<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>, string?>? RecusarNaVersao = null);
+
+/// <summary>
+/// Uma imagem guardada do arquivo: a vista (<c>VistaDaImagem</c>), a extensão do arquivo que o programa grava e a chamada
+/// que a gera, com o caminho onde gravar. A imagem é a que o programa devolve no resultado ou, se não devolve, o arquivo
+/// gravado no caminho (o SVG do 2D).
+/// </summary>
+internal sealed record VistaGuardada(string Vista, string Extensao, Func<string, (string Nome, string Argumentos)> Chamada);

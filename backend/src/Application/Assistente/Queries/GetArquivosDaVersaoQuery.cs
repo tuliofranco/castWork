@@ -32,7 +32,7 @@ public sealed class GetArquivosDaVersaoQueryHandler(IUnitOfWork unitOfWork)
 {
     public async Task<ListaPaginada<ArquivoDaVersaoDto>> Handle(GetArquivosDaVersaoQuery request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, EscopoDaFerramenta.DaVersao(request.ProjetoId, request.VersaoId), cancellationToken);
         var conversas = unitOfWork.GetRepository<ConversaFerramenta>().FindBy(c => c.VersaoId == request.VersaoId);
 
         return await unitOfWork.GetRepository<ArquivoFerramenta>()

@@ -7,8 +7,8 @@ using MediatR;
 namespace Castwork.Application.Pecas.Commands.AlterarPeca;
 
 /// <summary>
-/// Altera uma peça ativa da biblioteca. O Id vem da rota. Custo nulo deixa a peça sem custo; para quem não tem
-/// <c>precificacao.ler</c> o custo é ignorado e o atual é mantido.
+/// Altera uma peça ativa da biblioteca. O Id vem da rota. Continua na API, mas a tela não o usa: o projeto nunca
+/// altera a peça que publicou (alterar a cópia dele cria outra peça).
 /// </summary>
 [Permissao(Regras.Pecas.Alterar)]
 public sealed class AlterarPecaCommand : DadosDaPeca, IRequest
@@ -16,19 +16,13 @@ public sealed class AlterarPecaCommand : DadosDaPeca, IRequest
     public long PecaId { get; set; }
 }
 
-public sealed class AlterarPecaCommandHandler(IUnitOfWork unitOfWork, ISessaoService sessao, IPermissaoService permissaoService)
-    : IRequestHandler<AlterarPecaCommand>
+public sealed class AlterarPecaCommandHandler(IUnitOfWork unitOfWork) : IRequestHandler<AlterarPecaCommand>
 {
     public async Task Handle(AlterarPecaCommand request, CancellationToken cancellationToken)
     {
         var peca = await unitOfWork.GetRepository<Peca>().ObterPorIdOuFalharAsync(request.PecaId, cancellationToken);
-        peca.Atualizar(request.Nome, request.Tipo, request.Material, request.TeorDominio(), request.PesoDominio(), request.Descricao);
-
-        if (await permissaoService.SessaoPossuiRegraAsync(sessao, Regras.Precificacao.Consultar, cancellationToken))
-        {
-            peca.DefinirCusto(request.CustoDominio());
-        }
-
+        var liga = await request.ObterLigaAsync(unitOfWork, cancellationToken);
+        peca.Atualizar(request.Nome, request.Tipo, liga, request.Material, request.PesoDominio(), request.Descricao);
         await unitOfWork.SalvarAsync(cancellationToken);
     }
 }

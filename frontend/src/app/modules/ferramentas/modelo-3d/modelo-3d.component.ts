@@ -1,32 +1,42 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 import { PermissaoService } from '@core/services/permissao.service';
-import { FerramentasService } from '@data/assistente/ferramentas.service';
-import { nomeDeArquivo } from '@shared/arquivos/nome-de-arquivo';
+import { type EscopoDaFerramenta, FerramentasService } from '@data/assistente/ferramentas.service';
+import { Modelo3dService } from '@data/ferramentas/modelo-3d/modelo-3d.service';
+import { ProjetosService } from '@data/projetos/projetos/projetos.service';
+import { nomeDeArquivo, nomeDeArquivoDaPeca } from '@shared/arquivos/nome-de-arquivo';
 import { DownloadService } from '@shared/services/download.service';
 import { ToastService } from '@shared/services/toast.service';
-import { firstValueFrom } from 'rxjs';
+import { AvisoPecaPublicadaComponent } from '@shared/ui/ferramenta-ia/aviso-peca-publicada.component';
+import { firstValueFrom, map, of } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
 
 import { ConferenciaModeloComponent } from './conferencia-modelo.component';
 import { avisoDeCorposSemMaterial } from './corpos-sem-material';
 import { HistoricoModeloComponent } from './historico-modelo.component';
+import { resumoDaMontagem } from './montagem';
 import { PonteSolidCraft } from './ponte-solidcraft';
 
 const FERRAMENTA = 'modelo-3d';
 
 /**
  * Modelo 3D: o SolidCraft completo na área de trabalho e a IA desta ferramenta no chat. Os dois trabalham
- * no mesmo arquivo, o projeto 3D (JSON) da versão guardado no Castwork: a IA modela nele pelo MCP (no
- * servidor) e a tela troca o projeto; o que o joalheiro modela à mão é salvo antes de cada mensagem à IA.
+ * no mesmo arquivo, o projeto 3D (JSON) da versão (ou da peça do projeto, pela rota `pecas/:pecaId/modelo-3d`)
+ * guardado no Castwork: a IA modela nele pelo MCP (no servidor) e a tela troca o projeto; o que o joalheiro modela à
+ * mão é salvo antes de cada mensagem à IA.
  *
- * Como no desenho 2D, o projeto novo é aberto num segundo SolidCraft, por trás, e só aparece pronto.
+ * Como no desenho 2D, o projeto novo é aberto num segundo SolidCraft, por trás, e só aparece pronto. Na versão: a
+ * conferência de peso e materiais e o "Montar a partir das peças" (uma cópia do modelo de cada peça da composição por
+ * unidade). Na peça: uma conversa só, o joalheiro marca no histórico (ou no topo) qual arquivo é o **final** (o que vale
+ * para o peso, a montagem e a publicação; ao marcar, os corpos recebem o nome da peça), a tela avisa quando o arquivo à
+ * vista não é o final, e numa peça publicada trocar o final faz dela outra peça: a tela avisa e confirma antes.
  */
 @Component({
   selector: 'cw-modelo-3d',
-  imports: [ConversaIaComponent, ConferenciaModeloComponent, HistoricoModeloComponent],
+  imports: [ConversaIaComponent, ConferenciaModeloComponent, HistoricoModeloComponent, AvisoPecaPublicadaComponent],
   templateUrl: './modelo-3d.component.html',
   styleUrl: './modelo-3d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,15 +46,42 @@ export class Modelo3dComponent {
   private readonly toast = inject(ToastService);
   private readonly download = inject(DownloadService);
   private readonly permissao = inject(PermissaoService);
+  private readonly projetos = inject(ProjetosService);
+  private readonly modelo3d = inject(Modelo3dService);
 
+  /** `:id` do projeto e `:versaoId` da versão ou `:pecaId` da peça do projeto (withComponentInputBinding). */
   readonly id = input.required<string>();
-  readonly versaoId = input.required<string>();
+  readonly versaoId = input<string>();
+  readonly pecaId = input<string>();
   /** `?conferir=1` (do card Preço): abre a conferência de peso e materiais assim que o modelo estiver aberto. */
   readonly conferir = input<string>();
 
-  protected readonly voltarPara = computed(() => `/projetos/${this.id()}/versoes/${this.versaoId()}`);
+  protected readonly daPeca = computed(() => !!this.pecaId());
+  protected readonly voltarPara = computed(() =>
+    this.daPeca() ? `/projetos/${this.id()}/pecas/${this.pecaId()}` : `/projetos/${this.id()}/versoes/${this.versaoId()}`,
+  );
   protected readonly projeto = computed(() => Number(this.id()));
   protected readonly versao = computed(() => Number(this.versaoId()));
+  protected readonly escopo = computed<EscopoDaFerramenta>(() => (this.daPeca() ? { pecaId: Number(this.pecaId()) } : Number(this.versaoId())));
+  /** A peça do projeto (só na rota da peça), para saber se está publicada. */
+  protected readonly peca = rxResource({
+    params: () => (this.daPeca() ? { projetoId: Number(this.id()), pecaId: Number(this.pecaId()) } : undefined),
+    stream: ({ params }) =>
+      params ? this.projetos.getPecasDoProjeto(params.projetoId, false).pipe(map((pecas) => pecas?.find((p) => p.id === params.pecaId) ?? null)) : of(null),
+  });
+  protected readonly publicada = computed(() => this.peca.value()?.status === 'PUBLICADA');
+  /** "Elo oval · Modelo 3D" na peça; na versão, só "Modelo 3D". */
+  protected readonly titulo = computed(() => (this.daPeca() ? `${this.peca.value()?.nome ?? 'Peça'} · Modelo 3D` : 'Modelo 3D'));
+  /** Os arquivos finais da peça (só na rota da peça). */
+  protected readonly finais = rxResource({
+    params: () => (this.daPeca() ? { projetoId: Number(this.id()), pecaId: Number(this.pecaId()) } : undefined),
+    stream: ({ params }) => (params ? this.projetos.getArquivosFinaisDaPeca(params.projetoId, params.pecaId) : of([])),
+  });
+  protected readonly finalId = computed(() => this.finais.value()?.find((f) => f.ferramenta === FERRAMENTA)?.arquivoId ?? null);
+  /** O arquivo à vista (o atual); nulo sem modelo. */
+  protected readonly atualId = signal<number | null>(null);
+  /** Na peça, o arquivo à vista não é o final: o peso, a montagem e a publicação usam o final. */
+  protected readonly atualNaoEFinal = computed(() => this.daPeca() && !this.finais.isLoading() && this.atualId() !== null && this.atualId() !== this.finalId());
   /** Recarregando o projeto no SolidCraft (abrir, salvar, trazer o que a IA fez). */
   protected readonly sincronizando = signal<string | null>('Abrindo o SolidCraft...');
   /** Versões do arquivo no painel de histórico; nulo com o painel fechado. */
@@ -63,12 +100,16 @@ export class Modelo3dComponent {
   private readonly solidcraftA = viewChild.required<ElementRef<HTMLIFrameElement>>('solidcraftA');
   private readonly solidcraftB = viewChild.required<ElementRef<HTMLIFrameElement>>('solidcraftB');
   private readonly conversa = viewChild.required(ConversaIaComponent);
+  private readonly avisoPublicada = viewChild.required(AvisoPecaPublicadaComponent);
   private ponte: PonteSolidCraft | null = null;
 
   /** A IA está trabalhando: o SolidCraft avisa e o que conflita (salvar, restaurar) espera. */
   protected readonly pensando = computed(() => this.conversa().pensando());
 
-  /** Antes de cada mensagem à IA: o que foi modelado à mão vai para o Castwork (a IA trabalha no arquivo guardado). */
+  /**
+   * Antes de cada mensagem à IA: o que foi modelado à mão vai para o Castwork (a IA trabalha no arquivo guardado). O que a
+   * IA fizer não muda o arquivo final da peça.
+   */
   protected readonly antesDeEnviar = async (): Promise<void> => {
     if (!(await this.ponte?.temAlteracoes())) return;
     this.sincronizando.set('Guardando o seu modelo...');
@@ -86,9 +127,10 @@ export class Modelo3dComponent {
   private async iniciar(): Promise<void> {
     if (this.ponte) return;
     this.ponte = this.criarPonte(0);
-    this.sincronizando.set('Abrindo o modelo da versão...');
+    this.sincronizando.set(this.daPeca() ? 'Abrindo o modelo da peça...' : 'Abrindo o modelo da versão...');
     try {
-      const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA));
+      const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
+      this.atualId.set(arquivo?.id ?? null);
       await this.ponte.carregar(arquivo?.conteudo ?? null, nomeDeArquivo(arquivo?.nome, 'json', 'modelo').replace(/\.json$/, ''));
       void this.conferirMateriais();
     } catch {
@@ -97,7 +139,7 @@ export class Modelo3dComponent {
       this.sincronizando.set(null);
     }
 
-    if (this.conferir()) void this.abrirConferencia();
+    if (this.conferir() && !this.daPeca()) void this.abrirConferencia();
   }
 
   /**
@@ -130,6 +172,31 @@ export class Modelo3dComponent {
     void this.trazerArquivo();
   }
 
+  /**
+   * Traz para o modelo da versão uma cópia do modelo de cada peça da composição, uma por unidade, enfileiradas para
+   * posicionar depois. O que foi modelado à mão é salvo antes (a montagem parte do arquivo guardado).
+   */
+  protected async montar(): Promise<void> {
+    if (this.daPeca() || this.sincronizando() || this.pensando()) return;
+    try {
+      if (await this.ponte?.temAlteracoes()) {
+        this.sincronizando.set('Guardando o seu modelo...');
+        await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
+      }
+      this.sincronizando.set('Trazendo as peças para o modelo...');
+      const montado = await firstValueFrom(this.modelo3d.postMontarAPartirDasPecas(this.projetoId, this.versao()));
+      this.conversa().registrarArquivo(montado.arquivoId);
+      this.sincronizando.set(null);
+      await this.trazerArquivo();
+      this.toast.sucesso(resumoDaMontagem(montado));
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível montar o modelo a partir das peças.');
+    } finally {
+      this.sincronizando.set(null);
+    }
+  }
+
+  /** Salvar não muda o arquivo final da peça: vira mais uma versão no histórico. */
   protected async salvar(): Promise<void> {
     if (!this.ponte || this.sincronizando() || this.pensando()) return;
     try {
@@ -144,7 +211,7 @@ export class Modelo3dComponent {
   }
 
   protected async abrirHistorico(): Promise<void> {
-    this.historico.set(await firstValueFrom(this.ferramentas.getHistorico(this.projetoId, this.numeroDaVersao, FERRAMENTA)));
+    this.historico.set(await firstValueFrom(this.ferramentas.getHistorico(this.projetoId, this.escopo(), FERRAMENTA)));
   }
 
   /** Antes de trocar o projeto, guarda o que foi feito à mão: vira mais uma versão no histórico. */
@@ -155,7 +222,7 @@ export class Modelo3dComponent {
         await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
       }
 
-      const arquivoId = await firstValueFrom(this.ferramentas.postRestaurar(this.projetoId, this.numeroDaVersao, FERRAMENTA, versao.id));
+      const arquivoId = await firstValueFrom(this.ferramentas.postRestaurar(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
       this.conversa().registrarArquivo(arquivoId);
       this.historico.set(null);
       this.sincronizando.set(null);
@@ -167,22 +234,56 @@ export class Modelo3dComponent {
     }
   }
 
+  /**
+   * Marca como final da peça o arquivo do histórico (`arquivoId`) ou, sem ele, o à vista (o que foi modelado à mão é salvo
+   * antes). Numa peça publicada, trocar o final faz dela outra peça: confirma antes. Os corpos recebem o nome da peça numa
+   * versão nova do arquivo, que o SolidCraft à vista recarrega.
+   */
+  protected async marcarComoFinal(arquivoId?: number): Promise<void> {
+    if (!this.daPeca() || this.sincronizando() || this.pensando() || !(await this.avisoPublicada().confirmar())) return;
+    try {
+      if (arquivoId === undefined && (await this.ponte?.temAlteracoes())) {
+        this.sincronizando.set('Guardando o seu modelo...');
+        await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
+      }
+      const id = arquivoId ?? this.atualId();
+      if (id === null) {
+        this.toast.erro('Salve o modelo antes de marcá-lo como final.');
+        return;
+      }
+      this.sincronizando.set('Marcando como final...');
+      const final = await firstValueFrom(this.ferramentas.postMarcarFinal(this.projetoId, this.escopo(), FERRAMENTA, id));
+      this.historico.set(null);
+      this.finais.reload();
+      this.peca.reload();
+      if (final.ajustado) {
+        this.conversa().registrarArquivo(final.arquivoId);
+        this.sincronizando.set(null);
+        await this.trazerArquivo();
+      }
+      this.toast.sucesso(final.virouOutraPeca ? 'Arquivo final marcado. A peça voltou a rascunho como outra peça.' : 'Arquivo final marcado.');
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível marcar o arquivo final.');
+    } finally {
+      this.sincronizando.set(null);
+    }
+  }
+
+  /** Na peça, o arquivo baixado leva o nome dela ("Elo oval.json"). */
   protected async baixar(versao: VersaoDoArquivoDto): Promise<void> {
-    const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA, versao.id));
-    if (arquivo) this.download.salvar(arquivo, `modelo-${versao.id}.json`);
+    const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
+    const nome = this.daPeca() ? nomeDeArquivoDaPeca(this.peca.value()?.nome, 'json') : `modelo-${versao.id}.json`;
+    if (arquivo) this.download.salvar(arquivo, nome);
   }
 
   private get projetoId(): number {
     return Number(this.id());
   }
 
-  private get numeroDaVersao(): number {
-    return Number(this.versaoId());
-  }
-
   private async guardar(arquivo: Blob, aviso?: string): Promise<void> {
-    const arquivoId = await firstValueFrom(this.ferramentas.putArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA, await emBase64(arquivo)));
+    const arquivoId = await firstValueFrom(this.ferramentas.putArquivo(this.projetoId, this.escopo(), FERRAMENTA, await emBase64(arquivo)));
     this.conversa().registrarArquivo(arquivoId);
+    this.atualId.set(arquivoId);
     if (aviso) this.toast.sucesso(aviso);
   }
 
@@ -191,7 +292,8 @@ export class Modelo3dComponent {
    * de lugar com o que estava na tela, que é liberado.
    */
   private async trazerArquivo(): Promise<void> {
-    const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.numeroDaVersao, FERRAMENTA));
+    const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
+    this.atualId.set(arquivo?.id ?? null);
     const atras = this.ativo() === 0 ? 1 : 0;
     const nova = this.criarPonte(atras);
     this.trocando.set(true);
@@ -210,8 +312,12 @@ export class Modelo3dComponent {
     }
   }
 
-  /** Confere os materiais do modelo à vista; se o SolidCraft não responder, só não mostra o aviso. */
+  /**
+   * Confere os materiais do modelo à vista; se o SolidCraft não responder, só não mostra o aviso. Na peça não confere: o
+   * peso dela é medido todo na liga da peça.
+   */
   private async conferirMateriais(): Promise<void> {
+    if (this.daPeca()) return;
     try {
       this.semMaterial.set((await this.ponte?.corposSemMaterial()) ?? []);
     } catch {

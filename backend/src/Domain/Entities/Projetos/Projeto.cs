@@ -4,8 +4,9 @@ using Castwork.Domain.ValueObjects;
 namespace Castwork.Domain.Entities.Projetos;
 
 /// <summary>
-/// Projeto de uma arte (um colar, uma pulseira). Evolui em versões; cada versão tem a sua composição de peças.
-/// Versões e itens pertencem ao agregado: a numeração sequencial e a regra "publicada não muda" são garantidas aqui.
+/// Projeto de uma arte (um colar, uma pulseira). Evolui em versões; cada versão tem a sua composição, feita com as
+/// peças do projeto. Versões, itens e peças do projeto pertencem ao agregado: a numeração sequencial, a regra "publicada
+/// não muda" e "só entram peças deste projeto" são garantidas aqui.
 /// </summary>
 public sealed partial class Projeto : BaseEntity<long>, IAggregateRoot, IAuditavel
 {
@@ -14,6 +15,7 @@ public sealed partial class Projeto : BaseEntity<long>, IAggregateRoot, IAuditav
 
     private readonly List<VersaoProjeto> _versoes = [];
     private readonly List<CotacaoDoProjeto> _cotacoes = [];
+    private readonly List<PecaDoProjeto> _pecas = [];
 
     private Projeto()
     {
@@ -29,6 +31,11 @@ public sealed partial class Projeto : BaseEntity<long>, IAggregateRoot, IAuditav
     public long? ClienteId { get; private set; }
 
     public IReadOnlyCollection<VersaoProjeto> Versoes => _versoes.AsReadOnly();
+
+    /// <summary>
+    /// Peças do projeto: criadas aqui (rascunho) ou importadas da biblioteca. A composição das versões só usa estas.
+    /// </summary>
+    public IReadOnlyCollection<PecaDoProjeto> Pecas => _pecas.AsReadOnly();
 
     /// <summary>
     /// Preços do projeto: cotação de cada metal (só os que o ateliê já cotou, ou que o projeto informou).

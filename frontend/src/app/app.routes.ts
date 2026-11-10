@@ -31,6 +31,33 @@ export const routes: CastworkRoute[] = [
     loadComponent: () => import('@modules/ferramentas/modelo-3d/modelo-3d.component').then((m) => m.Modelo3dComponent),
   },
   {
+    // O desenho 2D e o modelo 3D de cada peça do projeto: as mesmas ferramentas, com conversa e arquivo só da peça.
+    path: 'projetos/:id/pecas/:pecaId/desenho-2d',
+    canActivate: [authGuard, permissionGuard],
+    data: { title: 'Desenho 2D da peça', permissoes: ['projetos.ler'] },
+    loadComponent: () => import('@modules/ferramentas/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
+  },
+  {
+    path: 'projetos/:id/pecas/:pecaId/modelo-3d',
+    canActivate: [authGuard, permissionGuard],
+    data: { title: 'Modelo 3D da peça', permissoes: ['projetos.ler'] },
+    loadComponent: () => import('@modules/ferramentas/modelo-3d/modelo-3d.component').then((m) => m.Modelo3dComponent),
+  },
+  {
+    // O desenho atual de uma peça do projeto, só para ver (aberto pela composição da versão); editar é na página da peça.
+    path: 'projetos/:id/pecas/:pecaId/desenhos/:ferramenta',
+    canActivate: [authGuard, permissionGuard],
+    data: { title: 'Desenho da peça', permissoes: ['projetos.ler'] },
+    loadComponent: () => import('@modules/pecas/desenho-da-peca/desenho-da-peca.component').then((m) => m.DesenhoDaPecaComponent),
+  },
+  {
+    // O desenho da peça da biblioteca, só para ver, também em tela cheia.
+    path: 'pecas/:id/desenhos/:ferramenta',
+    canActivate: [authGuard, permissionGuard],
+    data: { title: 'Desenho da peça', permissoes: ['pecas.ler'] },
+    loadComponent: () => import('@modules/pecas/desenho-da-peca/desenho-da-peca.component').then((m) => m.DesenhoDaPecaComponent),
+  },
+  {
     // O briefing é a ferramenta do projeto que escreve o documento: tela de foco, como o desenho 2D.
     path: 'projetos/:id/briefing',
     canActivate: [authGuard, permissionGuard],

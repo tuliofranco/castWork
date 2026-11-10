@@ -49,9 +49,9 @@ public sealed record CustoDoMetal(
     decimal? DiferencaDoPesoReal);
 
 /// <summary>
-/// Uma peça da composição: quantidade × custo unitário (zero quando a peça não tem custo).
+/// Uma peça da composição: quantidade × custo unitário, o valor da peça no projeto (zero quando ela não tem valor).
 /// </summary>
-public sealed record CustoDaPeca(long PecaId, string Nome, int Quantidade, Dinheiro? CustoUnitario, Dinheiro Custo);
+public sealed record CustoDaPeca(long PecaDoProjetoId, string Nome, int Quantidade, Dinheiro? CustoUnitario, Dinheiro Custo);
 
 /// <summary>
 /// Mão de obra: por horas (com o valor da hora do projeto) ou valor fixo. <see cref="Tipo"/> nulo: não informada.
@@ -59,12 +59,13 @@ public sealed record CustoDaPeca(long PecaId, string Nome, int Quantidade, Dinhe
 public sealed record CustoDaMaoDeObra(TipoMaoDeObra? Tipo, decimal? Horas, Dinheiro? ValorHora, Dinheiro Custo);
 
 /// <summary>
-/// O que deixa o preço incompleto, com a referência para resolver (a peça, a liga, o metal ou os corpos do modelo 3D).
+/// O que deixa o preço incompleto, com a referência para resolver (a peça do projeto, a liga, o metal ou os corpos do
+/// modelo 3D).
 /// </summary>
 public sealed record PendenciaDoPreco(
     TipoDePendencia Tipo,
     string Descricao,
-    long? PecaId = null,
+    long? PecaDoProjetoId = null,
     long? LigaId = null,
     Metal? Metal = null,
     IReadOnlyList<string>? Corpos = null);

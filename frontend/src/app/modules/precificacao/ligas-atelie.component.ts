@@ -41,7 +41,7 @@ type Edicao = number | 'nova' | null;
               <span class="cw-icone-linha"><i class="bi bi-droplet-half" aria-hidden="true"></i></span>
               <span class="principal">
                 <span class="nome">{{ liga.nome }}</span>
-                <span class="meta">{{ rotuloMetal(liga.metal) }} · teor {{ formatarTeor(liga.teor) }} · {{ numero(liga.densidade) }} g/cm³</span>
+                <span class="meta">{{ rotuloMetal(liga.metal) }} · teor {{ formatarTeor(liga.teor, liga.metal) }} · {{ numero(liga.densidade) }} g/cm³</span>
               </span>
               @if (podeEditar()) {
                 <button type="button" class="btn btn-sutil" [attr.aria-label]="'Editar ' + liga.nome" (click)="editar(liga)" [disabled]="editando() !== null">

@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using Castwork.Domain.Entities.Assistente;
 using Castwork.Infra.IA.Assistente;
 
 using Microsoft.Extensions.Options;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Castwork.Infra.IA.Ferramentas.Desenho2d;
 
 /// <summary>
-/// Desenho 2D: o CADCraft (<c>cadcraft-cli mcp</c>, sem janela) trabalhando no DXF da versão.
+/// Desenho 2D: o CADCraft (<c>cadcraft-cli mcp</c>, sem janela) trabalhando no DXF da versão ou da peça do projeto.
 /// </summary>
 internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerramentaNaIa
 {
@@ -22,7 +23,7 @@ internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerrame
     public const string Instrucoes = """
         Você é a assistente de desenho 2D do Castwork, um sistema para joalheiros artesanais. Você desenha no
         CADCraft (um CAD no estilo AutoCAD) pelas ferramentas que recebe, no arquivo de desenho desta versão
-        da peça. O joalheiro vê o mesmo desenho ao lado do chat, no tablet.
+        da joia (ou de uma peça do projeto). O joalheiro vê o mesmo desenho ao lado do chat, no tablet.
 
         Unidades: milímetros, eixo y para cima. Desenhe em escala 1:1 com as medidas reais da peça.
         Caminho mais rápido: `command_line` com a sintaxe do AutoCAD (ex.: `circle 0,0 9.25`,
@@ -41,6 +42,10 @@ internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerrame
         O joalheiro pode anexar fotos e croquis: use como referência de forma e proporção, e pergunte as
         medidas que a imagem não dá (não invente medidas). Use o contexto da versão (briefing e composição)
         para tirar medidas e materiais já definidos.
+
+        Quando o contexto traz "peca" (e não "versao"), o arquivo é o desenho de uma peça do projeto (um elo, um
+        fecho, um pingente...), que depois entra nas versões: desenhe só essa peça, com as medidas e a liga dela e o
+        briefing do projeto como referência.
 
         Responda em português do Brasil, curto e direto, em texto simples: sem markdown, sem negrito e sem
         títulos (o chat não formata). Comece dizendo em uma frase o que você fez no desenho.
@@ -79,7 +84,15 @@ internal sealed class Desenho2dNaIa(IOptions<CadCraftOptions> opcoes) : IFerrame
         ResumoDoArquivo: (("inspect_drawing", "{}"), ResumoDoDesenho.Resumir),
 
         // A imagem da resposta, só para o joalheiro: maior que a da IA, porque não custa tokens.
-        VistaParaOJoalheiro: ("render", JsonSerializer.Serialize(new { width = 960, height = 600 })));
+        VistaParaOJoalheiro: ("render", JsonSerializer.Serialize(new { width = 960, height = 600 })),
+
+        // Guardadas a cada arquivo novo: o SVG (vetorial, para o zoom) e um PNG grande (para a ficha técnica). O render do
+        // CADCraft não tem opção de fundo: sai como ele desenha, ajustado à extensão do desenho.
+        VistasGuardadas:
+        [
+            new(VistaDaImagem.Desenho2d, ".svg", caminho => ("save", JsonSerializer.Serialize(new { path = caminho }))),
+            new(VistaDaImagem.Desenho2d, ".png", _ => ("render", JsonSerializer.Serialize(new { width = 2400, height = 1500, fit = true }))),
+        ]);
 
     /// <summary>
     /// A imagem custa tokens pela área: o render da IA sai com no máximo 768 px de largura e 480 de altura (o

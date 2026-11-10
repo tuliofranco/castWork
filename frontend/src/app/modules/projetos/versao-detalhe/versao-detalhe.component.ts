@@ -4,10 +4,8 @@ import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
-import type { PecaDto } from '@data/pecas/pecas/dto/peca.dto';
-import { PecasService } from '@data/pecas/pecas/pecas.service';
 import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
-import type { ItemComposicaoDto, VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
+import type { ItemComposicaoDto, PecaDoProjetoResumoDto, VersaoProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { formatarTeor, iconeTipoPeca, rotuloTipoPeca } from '@shared/pecas/tipo-peca';
 import { DownloadService } from '@shared/services/download.service';
@@ -18,27 +16,43 @@ import { EstadoListaComponent } from '@shared/ui/estado-lista.component';
 import { PainelPdfComponent } from '@shared/ui/painel-pdf.component';
 import { QuantidadeComponent } from '@shared/ui/quantidade.component';
 import { SeloComponent } from '@shared/ui/selo.component';
-import { type Observable, debounceTime, distinctUntilChanged, finalize, of } from 'rxjs';
+import { type Observable, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 
+import { PecasEmRascunhoComponent, pecasEmRascunho } from '../pecas-em-rascunho.component';
+import { STATUS_PECA_DO_PROJETO } from '../status-peca-do-projeto';
 import { STATUS_VERSAO } from '../status-versao';
 import { ArquivosVersaoComponent } from './arquivos-versao.component';
 import { EtapasVersaoComponent } from './etapas-versao.component';
 import { PrecoVersaoComponent } from './preco-versao.component';
 
 /**
- * Página de uma versão: composição e, enquanto ela estiver em desenvolvimento, a biblioteca ao lado
- * para adicionar peças, e o card do preço. Publicar, duplicar e arquivar também estão aqui.
+ * Página de uma versão: composição e, enquanto ela estiver em desenvolvimento, as peças do projeto ao lado para
+ * adicionar, e o card do preço. Publicar, duplicar e arquivar também estão aqui; publicar com peça em rascunho mostra
+ * as peças que impedem, com atalho para cada uma.
  */
 @Component({
   selector: 'cw-versao-detalhe',
-  imports: [DecimalPipe, DatePipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PainelPdfComponent, EtapasVersaoComponent, QuantidadeComponent, SeloComponent, ArquivosVersaoComponent, PrecoVersaoComponent],
+  imports: [
+    DecimalPipe,
+    DatePipe,
+    RouterLink,
+    CabecalhoPaginaComponent,
+    CampoBuscaComponent,
+    EstadoListaComponent,
+    PainelPdfComponent,
+    EtapasVersaoComponent,
+    PecasEmRascunhoComponent,
+    QuantidadeComponent,
+    SeloComponent,
+    ArquivosVersaoComponent,
+    PrecoVersaoComponent,
+  ],
   templateUrl: './versao-detalhe.component.html',
   styleUrl: './versao-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VersaoDetalheComponent {
   private readonly projetosService = inject(ProjetosService);
-  private readonly pecasService = inject(PecasService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly briefingService = inject(BriefingService);
@@ -54,6 +68,7 @@ export class VersaoDetalheComponent {
   protected readonly podeVerCalculo = this.permissao.temAlguma(['precificacao.ler']);
   protected readonly podeEditarOrcamento = this.permissao.temAlguma(['precificacao.editar']);
   protected readonly status = STATUS_VERSAO;
+  protected readonly statusPeca = STATUS_PECA_DO_PROJETO;
   protected readonly rotuloTipo = rotuloTipoPeca;
   protected readonly iconeTipo = iconeTipoPeca;
   protected readonly formatarTeor = formatarTeor;
@@ -78,36 +93,56 @@ export class VersaoDetalheComponent {
   protected readonly voltarPara = computed(() => `/projetos/${this.id()}`);
   protected readonly editavel = computed(() => this.podeEditar && this.versao()?.status === 'EM_DESENVOLVIMENTO');
 
-  /** Soma do peso das peças que têm peso informado (quantidade × peso). */
-  protected readonly pesoTotal = computed(() =>
-    (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade * (item.peca.pesoGramas ?? 0), 0),
-  );
-  protected readonly unidades = computed(() => (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade, 0));
-
-  protected readonly buscaPeca = new FormControl('', { nonNullable: true });
-  private readonly termoPeca = toSignal(this.buscaPeca.valueChanges.pipe(debounceTime(300), distinctUntilChanged()), { initialValue: '' });
-  protected readonly biblioteca = rxResource({
-    params: () => ({ termo: this.termoPeca(), editavel: this.editavel() }),
-    stream: ({ params }) =>
-      params.editavel ? this.pecasService.getPecas({ termo: params.termo || null, primeiros: 12, somenteAtivas: true }) : of(null),
+  /**
+   * O peso que vale para cada peça da composição: com modelo 3D, o medido nele (na liga da peça); sem 3D, o digitado.
+   * Pedido à parte, porque medir os modelos leva um instante; enquanto não chega, vale o digitado.
+   */
+  protected readonly pesos = rxResource({
+    params: () => ({ projetoId: Number(this.id()), versaoId: Number(this.versaoId()), itens: this.versao()?.itens.length ?? 0 }),
+    stream: ({ params }) => this.projetosService.getPesosDaVersao(params.projetoId, params.versaoId),
   });
 
-  /** Quantidade escolhida para cada peça da biblioteca antes de tocar em Adicionar. */
+  /** Soma do peso das peças que têm peso (quantidade × peso da peça, o do modelo 3D quando ela tem). */
+  protected readonly pesoTotal = computed(() => {
+    const pesos = this.pesos.value();
+    return (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade * (pesos?.get(item.peca.id) ?? item.peca.pesoGramas ?? 0), 0);
+  });
+  protected readonly unidades = computed(() => (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade, 0));
+
+  /** Só as peças deste projeto entram na composição; a busca filtra por nome ou material, aqui mesmo. */
+  protected readonly buscaPeca = new FormControl('', { nonNullable: true });
+  private readonly termoPeca = toSignal(this.buscaPeca.valueChanges.pipe(debounceTime(150), distinctUntilChanged()), { initialValue: '' });
+  protected readonly pecasDoProjeto = computed(() => {
+    const termo = this.termoPeca().trim().toLocaleLowerCase('pt-BR');
+    return (this.projeto.value()?.pecas ?? [])
+      .filter((p) => p.ativo)
+      .filter((p) => !termo || p.nome.toLocaleLowerCase('pt-BR').includes(termo) || (p.material?.toLocaleLowerCase('pt-BR').includes(termo) ?? false));
+  });
+
+  /** Peças em rascunho na composição: a publicação é recusada enquanto houver alguma. */
+  protected readonly rascunhos = computed(() => {
+    const versao = this.versao();
+    return versao ? pecasEmRascunho(versao) : [];
+  });
+  /** Mostra o aviso das peças em rascunho depois de tocar em Publicar. */
+  protected readonly publicacaoBloqueada = signal(false);
+
+  /** Quantidade escolhida para cada peça do projeto antes de tocar em Adicionar. */
   private readonly quantidadesNovas = signal<Readonly<Record<number, number>>>({});
 
-  protected quantidadeNova(peca: PecaDto): number {
+  protected quantidadeNova(peca: PecaDoProjetoResumoDto): number {
     return this.quantidadesNovas()[peca.id] ?? 1;
   }
 
-  protected definirQuantidadeNova(peca: PecaDto, quantidade: number): void {
+  protected definirQuantidadeNova(peca: PecaDoProjetoResumoDto, quantidade: number): void {
     this.quantidadesNovas.update((atual) => ({ ...atual, [peca.id]: quantidade }));
   }
 
-  protected adicionar(peca: PecaDto): void {
+  protected adicionar(peca: PecaDoProjetoResumoDto): void {
     const versao = this.versao();
     if (!versao) return;
     const quantidade = this.quantidadeNova(peca);
-    this.executar(this.projetosService.postItem(this.projetoId(), versao.id, { pecaId: peca.id, quantidade }), `${quantidade}× ${peca.nome} adicionada.`, () =>
+    this.executar(this.projetosService.postItem(this.projetoId(), versao.id, { pecaDoProjetoId: peca.id, quantidade }), `${quantidade}× ${peca.nome} adicionada.`, () =>
       this.definirQuantidadeNova(peca, 1),
     );
   }
@@ -125,7 +160,14 @@ export class VersaoDetalheComponent {
 
   protected publicar(): void {
     const versao = this.versao();
-    if (versao) this.executar(this.projetosService.postPublicarVersao(this.projetoId(), versao.id), `Versão ${versao.numero} publicada.`);
+    if (!versao) return;
+    // O servidor também recusa; aqui o aviso mostra as peças com atalho, sem ir ao servidor.
+    if (this.rascunhos().length > 0) {
+      this.publicacaoBloqueada.set(true);
+      return;
+    }
+    this.publicacaoBloqueada.set(false);
+    this.executar(this.projetosService.postPublicarVersao(this.projetoId(), versao.id), `Versão ${versao.numero} publicada.`);
   }
 
   protected desarquivar(): void {

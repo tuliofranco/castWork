@@ -9,15 +9,25 @@ namespace Castwork.Domain.Entities.Assistente;
 public sealed partial class ConversaFerramenta
 {
     /// <summary>
-    /// <paramref name="versaoId"/> nulo cria a conversa de uma ferramenta do projeto (como o briefing).
+    /// <paramref name="versaoId"/> e <paramref name="pecaDoProjetoId"/> nulos criam a conversa de uma ferramenta do projeto
+    /// (como o briefing). A conversa é de uma versão ou de uma peça do projeto, nunca das duas.
     /// </summary>
-    public static ConversaFerramenta Criar(long projetoId, long? versaoId, string ferramenta, DateTimeOffset em) => new()
+    public static ConversaFerramenta Criar(long projetoId, long? versaoId, string ferramenta, DateTimeOffset em, long? pecaDoProjetoId = null)
     {
-        ProjetoId = Guard.IdValido(projetoId, nameof(ProjetoId)),
-        VersaoId = versaoId is { } v ? Guard.IdValido(v, nameof(VersaoId)) : null,
-        Ferramenta = Guard.Obrigatorio(ferramenta, nameof(Ferramenta), FerramentaMaxLength),
-        CriadaEm = em,
-    };
+        if (versaoId is not null && pecaDoProjetoId is not null)
+        {
+            throw new ValorInvalidoException(nameof(PecaDoProjetoId), "a conversa é da versão ou da peça, não das duas");
+        }
+
+        return new ConversaFerramenta
+        {
+            ProjetoId = Guard.IdValido(projetoId, nameof(ProjetoId)),
+            VersaoId = versaoId is { } v ? Guard.IdValido(v, nameof(VersaoId)) : null,
+            PecaDoProjetoId = pecaDoProjetoId is { } p ? Guard.IdValido(p, nameof(PecaDoProjetoId)) : null,
+            Ferramenta = Guard.Obrigatorio(ferramenta, nameof(Ferramenta), FerramentaMaxLength),
+            CriadaEm = em,
+        };
+    }
 
     public MensagemFerramenta RegistrarMensagem(
         PapelMensagem papel,
@@ -117,11 +127,66 @@ public sealed partial class ConversaFerramenta
     public void Apagar() => _mensagens.RemoveAll(m => m.Chat == ChatAtual);
 
     /// <summary>
+    /// Marca o arquivo como o final da peça (só na conversa de uma peça do projeto). O arquivo precisa ser desta conversa,
+    /// estar no histórico (não arquivado) e ter desenho.
+    /// </summary>
+    /// <returns>Se o arquivo final mudou (marcar de novo o mesmo não muda nada).</returns>
+    public bool MarcarArquivoFinal(ArquivoFerramenta arquivo)
+    {
+        ArgumentNullException.ThrowIfNull(arquivo);
+        if (PecaDoProjetoId is null)
+        {
+            throw new RegraDeNegocioException("Só o desenho de uma peça do projeto tem arquivo final.");
+        }
+
+        if (arquivo.ConversaId != Id)
+        {
+            throw new RegraDeNegocioException("O arquivo não é desta conversa.");
+        }
+
+        if (arquivo.Arquivado)
+        {
+            throw new RegraDeNegocioException("Desarquive o arquivo antes de marcá-lo como final.");
+        }
+
+        if (arquivo.EmBranco)
+        {
+            throw new RegraDeNegocioException("O desenho em branco não pode ser o arquivo final.");
+        }
+
+        if (ArquivoFinalId == arquivo.Id)
+        {
+            return false;
+        }
+
+        ArquivoFinalId = Guard.IdValido(arquivo.Id, nameof(ArquivoFinalId));
+        return true;
+    }
+
+    /// <summary>
+    /// O arquivo final não sai do histórico: arquivá-lo deixaria a peça sem desenho sem o joalheiro escolher.
+    /// </summary>
+    public void GarantirQuePodeArquivar(ArquivoFerramenta arquivo)
+    {
+        ArgumentNullException.ThrowIfNull(arquivo);
+        if (ArquivoFinalId is not null && ArquivoFinalId == arquivo.Id)
+        {
+            throw new RegraDeNegocioException("Este é o arquivo final da peça. Marque outro como final antes de arquivá-lo.");
+        }
+    }
+
+    /// <summary>
     /// Encerra o chat em andamento (fica no histórico) e começa outro, em branco: a IA não lembra do anterior,
-    /// mas continua no mesmo desenho. Com o chat atual ainda vazio, não há o que encerrar.
+    /// mas continua no mesmo desenho. Com o chat atual ainda vazio, não há o que encerrar. Na peça do projeto não há chats
+    /// paralelos: cada peça tem uma conversa só por ferramenta.
     /// </summary>
     public void NovoChat(DateTimeOffset agora)
     {
+        if (PecaDoProjetoId is not null)
+        {
+            throw new RegraDeNegocioException("A peça tem uma conversa só por ferramenta: continue nela.");
+        }
+
         GarantirSemIaTrabalhando(agora);
         if (!MensagensDoChat.Any())
         {

@@ -16,10 +16,14 @@ public sealed class BriefingNoAssistente(IUnitOfWork unitOfWork, IGeradorDocumen
 
     public bool DoProjeto => true;
 
+    public bool DaPeca => false;
+
     public bool AbreSozinha => true;
 
-    public async Task<PreparoDoTurno> PrepararAsync(long projetoId, long versaoId, CancellationToken cancellationToken)
+    public async Task<PreparoDoTurno> PrepararAsync(IEscopoDaFerramenta escopo, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(escopo);
+        var projetoId = escopo.ProjetoId;
         var briefing = await unitOfWork.ObterDoProjetoAsync(projetoId, cancellationToken);
         var nomes = await ContextoDoBriefing.NomesAsync(unitOfWork, projetoId, cancellationToken);
         var contexto = ContextoDoBriefing.ParaIa(briefing, nomes, DateOnly.FromDateTime(relogio.GetLocalNow().DateTime));

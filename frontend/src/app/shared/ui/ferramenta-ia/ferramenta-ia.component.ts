@@ -80,8 +80,10 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
           </button>
           @if (menuAberto()) {
             <div class="menu-painel" role="menu">
-              <button type="button" role="menuitem" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo chat</button>
-              <button type="button" role="menuitem" (click)="pedirChats()"><i class="bi bi-clock-history" aria-hidden="true"></i> Conversas anteriores</button>
+              @if (!chatUnico()) {
+                <button type="button" role="menuitem" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo chat</button>
+                <button type="button" role="menuitem" (click)="pedirChats()"><i class="bi bi-clock-history" aria-hidden="true"></i> Conversas anteriores</button>
+              }
               <button type="button" role="menuitem" class="perigo" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar este chat</button>
               <ng-content select="[menu]" />
             </div>
@@ -114,12 +116,14 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
             <h2 id="titulo-assistente"><i class="bi bi-stars" aria-hidden="true"></i> Assistente</h2>
             <i class="bi seta" [class]="chatAberto() ? 'bi-chevron-down' : 'bi-chevron-up'" aria-hidden="true"></i>
           </button>
-          <button type="button" class="btn btn-sutil btn-icone" aria-label="Novo chat" title="Novo chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-          </button>
-          <button type="button" class="btn btn-sutil btn-icone" aria-label="Conversas anteriores" title="Conversas anteriores" (click)="pedirChats()">
-            <i class="bi bi-clock-history" aria-hidden="true"></i>
-          </button>
+          @if (!chatUnico()) {
+            <button type="button" class="btn btn-sutil btn-icone" aria-label="Novo chat" title="Novo chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-sutil btn-icone" aria-label="Conversas anteriores" title="Conversas anteriores" (click)="pedirChats()">
+              <i class="bi bi-clock-history" aria-hidden="true"></i>
+            </button>
+          }
           <button type="button" class="btn btn-sutil btn-icone" aria-label="Apagar este chat" title="Apagar este chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirApagar()">
             <i class="bi bi-trash3" aria-hidden="true"></i>
           </button>
@@ -318,6 +322,8 @@ export class FerramentaIaComponent {
   readonly boasVindas = input<string | null>(null);
   /** Código da ferramenta: o modelo e o esforço escolhidos ficam lembrados por ferramenta neste navegador. */
   readonly ferramenta = input('');
+  /** Uma conversa só (na peça do projeto): sem "Novo chat" nem "Conversas anteriores". */
+  readonly chatUnico = input(false);
 
   protected readonly menuAberto = signal(false);
   /** No tablet em pé o assistente vira gaveta; deitado ou no computador fica sempre aberto. */

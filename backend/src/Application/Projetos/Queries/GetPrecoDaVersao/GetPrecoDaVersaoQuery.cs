@@ -1,7 +1,6 @@
 using Castwork.Application.Abstractions;
 using Castwork.Application.Common.Security;
 using Castwork.Application.Ferramentas.Modelo3d;
-using Castwork.Domain.Entities.Pecas;
 using Castwork.Domain.Entities.Precificacao;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.Exceptions;
@@ -68,7 +67,7 @@ public sealed class GetPrecoDaVersaoQueryHandler(
             CustoDosMetais = preco.CustoDosMetais.Valor,
             Composicao = [.. preco.Composicao.Select(p => new CustoDaPecaDto
             {
-                PecaId = p.PecaId,
+                PecaDoProjetoId = p.PecaDoProjetoId,
                 Nome = p.Nome,
                 Quantidade = p.Quantidade,
                 CustoUnitario = p.CustoUnitario?.Valor,
@@ -95,7 +94,7 @@ public sealed class GetPrecoDaVersaoQueryHandler(
             {
                 Tipo = p.Tipo,
                 Descricao = p.Descricao,
-                PecaId = p.PecaId,
+                PecaDoProjetoId = p.PecaDoProjetoId,
                 LigaId = p.LigaId,
                 Metal = p.Metal,
                 Corpos = p.Corpos ?? [],
@@ -115,7 +114,7 @@ public sealed class GetPrecoDaVersaoQueryHandler(
         => ligas.TryGetValue(ligaId, out var liga) ? liga.Nome : $"Liga {ligaId}";
 
     /// <summary>
-    /// Lê a versão com os preços do projeto, as ligas usadas e o custo das peças da composição. Com modelo 3D, os metais
+    /// Lê a versão com os preços do projeto, as ligas usadas e o valor das peças da composição no projeto. Com modelo 3D, os metais
     /// são os do modelo (peso medido por liga, com o peso real registrado na versão); o peso manual fica guardado e volta
     /// à parte, para a tela dizer que não é usado.
     /// </summary>
@@ -124,6 +123,7 @@ public sealed class GetPrecoDaVersaoQueryHandler(
         var projeto = await unitOfWork.GetRepository<Projeto>()
             .FindBy(p => p.Versoes.Any(v => v.Id == versaoId))
             .Include(p => p.Cotacoes)
+            .Include(p => p.Pecas)
             .Include(p => p.Versoes.Where(v => v.Id == versaoId)).ThenInclude(v => v.Itens)
             .AsSplitQuery()
             .AsNoTracking()
@@ -142,18 +142,13 @@ public sealed class GetPrecoDaVersaoQueryHandler(
             .AsNoTracking()
             .ToDictionaryAsync(l => l.Id, cancellationToken);
 
-        var pecaIds = versao.Itens.Select(i => i.PecaId).ToList();
-        var pecas = await unitOfWork.GetRepository<Peca>()
-            .FindBy(p => pecaIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Nome, p.Custo })
-            .AsNoTracking()
-            .ToDictionaryAsync(p => p.Id, cancellationToken);
+        var pecas = projeto.Pecas.ToDictionary(p => p.Id);
 
         var entrada = new EntradaDoPreco(
             projeto.ParametrosDePreco,
             [.. projeto.Cotacoes.Select(c => new CotacaoUsada(c.Metal, c.Valor, c.CotadaEm))],
             [.. pesos.Select(p => MetalUsado(p.LigaId, p.Peso, versao.Metais.FirstOrDefault(m => m.LigaId == p.LigaId)?.PesoReal, ligas))],
-            [.. versao.Itens.OrderBy(i => i.Id).Select(i => new PecaUsada(i.PecaId, pecas[i.PecaId].Nome, i.Quantidade, pecas[i.PecaId].Custo))],
+            [.. versao.Itens.OrderBy(i => i.Id).Select(i => new PecaUsada(i.PecaDoProjetoId, pecas[i.PecaDoProjetoId].Nome, i.Quantidade, pecas[i.PecaDoProjetoId].Valor))],
             versao.MaoDeObra,
             versao.Servicos,
             versao.Markup,

@@ -36,6 +36,9 @@ internal sealed class ProjetoConfiguration : IEntityTypeConfiguration<Projeto>
         builder.HasMany(p => p.Cotacoes).WithOne().HasForeignKey("ProjetoId").IsRequired().OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(p => p.Cotacoes).UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.HasMany(p => p.Pecas).WithOne().HasForeignKey("ProjetoId").IsRequired().OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(p => p.Pecas).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasMany(p => p.Versoes).WithOne().HasForeignKey("ProjetoId").IsRequired().OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(p => p.Versoes).UsePropertyAccessMode(PropertyAccessMode.Field);
 

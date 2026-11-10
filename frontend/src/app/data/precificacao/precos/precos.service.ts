@@ -9,6 +9,7 @@ import { type Observable, map } from 'rxjs';
 import type {
   CotacaoDto,
   GetHistoricoDeCotacoesQuery,
+  LigaDto,
   PostCotacaoDto,
   PostLigaDto,
   PrecosDoAtelieDto,
@@ -45,6 +46,19 @@ export const GET_PRECOS_DO_ATELIE = gql`
   }
 `;
 
+/** Só as ligas ativas, sem preços: basta `projetos.ler` (é o seletor de liga das peças do projeto). */
+export const GET_LIGAS = gql`
+  query GetLigas {
+    ligas {
+      id
+      nome
+      metal
+      teor
+      densidade
+    }
+  }
+`;
+
 export const GET_HISTORICO_DE_COTACOES = gql`
   query GetHistoricoDeCotacoes($metal: Metal!, $primeiros: Int, $apos: String) {
     historicoDeCotacoes(metal: $metal, first: $primeiros, after: $apos) {
@@ -66,6 +80,10 @@ interface GetPrecosDoAtelieResposta {
   readonly precosDoAtelie: PrecosDoAtelieDto;
 }
 
+interface GetLigasResposta {
+  readonly ligas: readonly LigaDto[];
+}
+
 interface GetHistoricoDeCotacoesResposta {
   readonly historicoDeCotacoes: PaginaDto<CotacaoDto>;
 }
@@ -81,6 +99,14 @@ export class PrecosService {
     return this.apollo.query<GetPrecosDoAtelieResposta>({ query: GET_PRECOS_DO_ATELIE, fetchPolicy: 'network-only' }).pipe(
       dadosGql(),
       map((dados) => dados.precosDoAtelie),
+    );
+  }
+
+  /** Ligas ativas do ateliê, para escolher o material das peças. */
+  getLigas(): Observable<readonly LigaDto[]> {
+    return this.apollo.query<GetLigasResposta>({ query: GET_LIGAS, fetchPolicy: 'network-only' }).pipe(
+      dadosGql(),
+      map((dados) => dados.ligas),
     );
   }
 

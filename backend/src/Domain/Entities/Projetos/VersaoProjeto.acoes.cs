@@ -37,17 +37,17 @@ public sealed partial class VersaoProjeto
     /// <summary>
     /// A mesma peça adicionada de novo soma à quantidade da linha existente, em vez de duplicar a linha.
     /// </summary>
-    internal ItemComposicao AdicionarItem(long pecaId, int quantidade, string? observacao)
+    internal ItemComposicao AdicionarItem(long pecaDoProjetoId, int quantidade, string? observacao)
     {
         GarantirEmDesenvolvimento();
-        var existente = _itens.SingleOrDefault(i => i.PecaId == pecaId);
+        var existente = _itens.SingleOrDefault(i => i.PecaDoProjetoId == pecaDoProjetoId);
         if (existente is not null)
         {
             existente.Alterar(existente.Quantidade + quantidade, observacao ?? existente.Observacao);
             return existente;
         }
 
-        var item = new ItemComposicao(pecaId, quantidade, observacao);
+        var item = new ItemComposicao(pecaDoProjetoId, quantidade, observacao);
         _itens.Add(item);
         return item;
     }

@@ -52,10 +52,72 @@ O teor dá a fração de metal puro (preço); a densidade converte o volume do m
 
 ## Custo das peças (etapa 2)
 
-As peças da biblioteca (pedras, fechos, correntes compradas prontas) têm **custo por unidade** (R$), opcional. É o
-custo de **compra ou produção**, não o preço de venda; peça sem custo deixa o preço da versão incompleto (etapa 4) e
-aparece com o selo "Sem custo" na lista. Pedra não é precificada pelo volume do 3D: o custo dela vem daqui. Só quem tem
-`precificacao.ler` vê (e grava) o custo. Custo por quilate ou tamanho e histórico de custos ficam para depois.
+> Substituída pela issue #26 (**Peças do projeto**, abaixo): o custo saiu da biblioteca e virou o **valor da peça no
+> projeto**.
+
+As peças (pedras, fechos, correntes compradas prontas) têm **custo por unidade** (R$), opcional. É o custo de **compra
+ou produção**, não o preço de venda; peça sem valor deixa o preço da versão incompleto (etapa 4). Pedra não é
+precificada pelo volume do 3D: o custo dela vem daqui. Custo por quilate ou tamanho e histórico de valores ficam para
+depois.
+
+## Peças do projeto (issue #26)
+
+As peças **nascem dentro do projeto** e só vão para a biblioteca quando são **publicadas**.
+
+- **Peça do projeto:** os dados da peça (nome, tipo, liga ou material livre, peso, descrição, ativa) e o **valor no projeto**,
+  o custo de uma unidade. A mesma peça pode ter valores diferentes em projetos diferentes. Status **Rascunho** ou
+  **Publicada**, com vínculo opcional à peça da biblioteca.
+- **Criar** no projeto: rascunho, sem vínculo e sem valor. **Importar** da biblioteca: cópia publicada e vinculada, sem
+  valor (o projeto define o seu); a mesma peça não é importada duas vezes no projeto.
+- **Publicar** (só rascunho ativo) cria a peça na biblioteca com os dados, **sem valor**, e vincula. É a única forma de
+  povoar a biblioteca pela tela.
+- **Alterar só o valor** não muda nada além do valor. **Alterar algum dado** de uma peça publicada faz dela **outra
+  peça**: volta a rascunho e perde o vínculo; publicada de novo, entra na biblioteca como peça nova. A peça da biblioteca
+  original não muda. O valor continua.
+- **Biblioteca:** só consulta, sem valor. Mostra o **histórico de uso**: os projetos e versões que usam a peça (pelas
+  cópias vinculadas) e o valor em cada projeto.
+- **Composição:** usa só peças ativas **do mesmo projeto**. **Publicar a versão** exige todas as peças dela publicadas; a
+  recusa diz quais estão em rascunho (a tela tem um atalho para cada uma). Duplicar a versão aponta para as mesmas peças.
+- **Permissões:** criar, importar, alterar e publicar com `projetos.editar`; definir o valor com `precificacao.editar`;
+  ver o valor com `precificacao.ler`. O histórico de uso exige `projetos.ler`.
+- **Migration `PecasDoProjeto`:** em cada projeto, cada peça da biblioteca usada numa versão virou uma peça do projeto
+  (publicada, vinculada, com o custo atual como valor); os itens passaram a apontar para elas e a coluna `pecas.custo`
+  saiu. As versões já publicadas não foram conferidas de novo.
+- **Material pela liga:** em todo tipo menos pedra, o material é uma **liga ativa do ateliê** (opcional), e o teor vem
+  dela. A peça guarda o Id da liga e uma **cópia** do nome e do teor do momento da escolha: editar ou desativar a liga
+  depois não muda a peça, e salvar sem trocar a liga mantém a cópia (a liga desativada continua aparecendo como a
+  escolhida). Na **pedra**, o material é texto livre ("Turmalina"), sem liga e sem teor. Publicar leva a liga e a cópia
+  para a biblioteca; importar traz de volta. **Trocar a liga** de uma peça publicada faz dela outra peça.
+- **Migration `LigaDasPecas`:** as peças existentes ficaram com o texto do material e o teor como cópia e sem liga (a
+  liga não foi adivinhada pelo texto).
+- Não se exclui peça do projeto (desativa-se). Fora: despublicar, editar a biblioteca pela tela, atualizar a cópia
+  importada e histórico de valores no projeto.
+
+## Desenho 2D e modelo 3D de cada peça do projeto
+
+Cada peça do projeto tem o **próprio desenho 2D e modelo 3D**, separados das outras peças e da versão: conversa com a IA,
+imagens e histórico de arquivos só dela. Na página da peça, a seção **Ferramentas da peça** abre os dois.
+
+- **IA da peça:** o contexto descreve a peça (tipo, nome, liga e teor, peso informado, descrição) e o briefing do projeto.
+- **Peso medido no 3D:** com modelo 3D, o peso da peça é o medido nele (mesmo medidor e mesma medição guardada da
+  versão), todo **na liga da peça**: volume dos corpos de metal e sem material × densidade da liga ("Pedra", "Apoio" e
+  corpo aberto ficam fora). Sem 3D, vale o peso digitado. Peça com 3D e sem liga (pedra, material livre) fica com o
+  digitado; se não foi possível medir, fica sem peso. A tela da peça diz de onde vem o peso, e o peso total da composição
+  na versão usa esse peso.
+- **Preço da versão:** o cálculo não usava o peso da peça (a composição entra pelo valor no projeto) e continua igual. O
+  peso das peças chega ao preço quando os modelos delas entram no 3D da versão ("Montar a partir das peças", abaixo).
+- **Publicar** leva o 2D e o 3D atuais para a peça da biblioteca; **importar** traz uma cópia (o primeiro arquivo das
+  ferramentas da peça no projeto). A biblioteca mostra o 2D e o 3D só para ver.
+- **Alterar o desenho** (um arquivo novo no 2D ou no 3D: salvar, a IA, desfazer, restaurar, arquivar o atual) de uma peça
+  **publicada** faz dela **outra peça**, como alterar os dados: volta a rascunho, perde o vínculo e, publicada de novo,
+  entra na biblioteca como peça nova. A tela avisa e pede confirmação antes de salvar ou de mandar mensagem à IA.
+- **Montar a partir das peças:** no Modelo 3D da versão, o botão traz uma cópia do modelo de cada peça da composição por
+  unidade (a quantidade), enfileiradas ao longo do X, para a IA ou o joalheiro posicionarem. Os corpos mantêm o material
+  da peça (os sem material recebem a liga dela); vira um arquivo novo, desfazível pelo histórico. Peça sem modelo fica de
+  fora e é listada; até 100 unidades; versão publicada ou arquivada, ou com a IA trabalhando, recusa. A IA da versão sabe
+  quais peças têm modelo e que esses componentes são para posicionar, não remodelar.
+- **Migration `DesenhoDasPecas`:** a conversa da ferramenta pode ser de uma peça do projeto; a biblioteca ganha o desenho
+  copiado ao publicar. As conversas e peças que já existiam não mudam (as peças da biblioteca ficam sem desenho).
 
 ## Preços do projeto (etapa 3)
 
@@ -87,15 +149,16 @@ a 7 trocam pelo peso medido no modelo 3D.
 | Linha | Exemplo |
 |---|---|
 | Por liga: peso + perda = peso a fundir × cotação do puro × pureza | Ouro 18k amarelo: 5,00 g + 8% = 5,40 g × R$ 480,00/g (R$ 640,00 × 0,750) = R$ 2.592,00 |
-| Composição: Σ quantidade × custo da peça | R$ 800,00 |
+| Composição: Σ quantidade × valor da peça no projeto | R$ 800,00 |
 | Mão de obra | 6 h × R$ 90,00 = R$ 540,00 |
 | Serviços | fundição R$ 120 + ródio R$ 60 = R$ 180,00 |
 | **Custo total** | **R$ 4.112,00** |
 | **Preço** = custo × markup × (1 + taxas), arredondado para cima | 4.112 × 1,8 × 1,06 = 7.845,70 → **R$ 7.850,00** |
 
-- **Pendências** (preço **Incompleto**, mas o parcial aparece): peça da composição sem custo, metal sem cotação no
-  projeto, versão sem nenhum metal com peso, liga desativada em uso e mão de obra por horas com o valor da hora do
-  projeto "a definir". A tela tem um atalho para cada uma (abrir a peça, preços do projeto, trocar a liga).
+- **Pendências** (preço **Incompleto**, mas o parcial aparece): peça da composição sem valor no projeto, metal sem
+  cotação no projeto, versão sem nenhum metal com peso, liga desativada em uso e mão de obra por horas com o valor da
+  hora do projeto "a definir". A tela tem um atalho para cada uma (abrir a peça no projeto, preços do projeto, trocar a
+  liga).
 - **Avisos** (não bloqueiam): cotação de um metal usado com mais de 15 dias.
 - O cálculo é **sempre refeito na leitura**: nada é gravado. Congelar o preço é papel da proposta.
 - A IA **não** calcula nem altera preço.
@@ -138,7 +201,8 @@ fecha o modelo híbrido: a IA atribui o material, o Castwork confere e o joalhei
 
 ## Regras
 
-- Valores negativos ou zero são recusados: cotação, densidade, valor da hora e markup.
+- Valores negativos ou zero são recusados: cotação, densidade, valor da hora e markup. O valor da peça no projeto pode
+  ser zero, nunca negativo.
 - Toda mudança de cotação fica no histórico com data e autor.
 - Consultar os preços exige `precificacao.ler`; alterar, `precificacao.editar`. Sem editar, a tela é só leitura;
   sem consultar, ela não aparece.
@@ -146,7 +210,7 @@ fecha o modelo híbrido: a IA atribui o material, o Castwork confere e o joalhei
 ## Próximas etapas (issue #10)
 
 1. Preços do ateliê.
-2. Custo unitário nas peças da biblioteca.
+2. Custo unitário nas peças (na biblioteca; desde a issue #26, valor da peça no projeto).
 3. Projeto herda e edita os preços do ateliê.
 4. Preço da versão com peso manual.
 5. Materiais do ateliê no arquivo 3D e IA atribuindo material.

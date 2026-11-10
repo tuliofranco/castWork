@@ -6,7 +6,7 @@ export type StatusDoPreco = 'COMPLETO' | 'INCOMPLETO';
 export type TipoMaoDeObra = 'POR_HORAS' | 'VALOR_FIXO';
 
 export type TipoDePendencia =
-  | 'PECA_SEM_CUSTO'
+  | 'PECA_SEM_VALOR'
   | 'METAL_SEM_COTACAO'
   | 'SEM_METAL_COM_PESO'
   | 'LIGA_DESATIVADA'
@@ -41,10 +41,11 @@ export interface CustoDoMetalDto {
 }
 
 export interface CustoDaPecaDto {
-  readonly pecaId: number;
+  /** A peça do projeto. */
+  readonly pecaDoProjetoId: number;
   readonly nome: string;
   readonly quantidade: number;
-  /** Nulo: peça sem custo na biblioteca. */
+  /** O valor da peça no projeto; nulo: peça sem valor. */
   readonly custoUnitario: number | null;
   readonly custo: number;
 }
@@ -65,7 +66,8 @@ export interface ServicoExternoDto {
 export interface PendenciaDoPrecoDto {
   readonly tipo: TipoDePendencia;
   readonly descricao: string;
-  readonly pecaId: number | null;
+  /** A peça do projeto sem valor, para abrir no projeto. */
+  readonly pecaDoProjetoId: number | null;
   readonly ligaId: number | null;
   readonly metal: Metal | null;
   /** Corpos do modelo 3D sem material. */

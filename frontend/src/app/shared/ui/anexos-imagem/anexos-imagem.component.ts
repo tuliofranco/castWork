@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, model, viewChild } from '@angular/core';
 import { ToastService } from '@shared/services/toast.service';
 
-import { type ImagemAnexada, prepararImagem } from './preparar-imagem';
+import { ehHeic, type ImagemAnexada, prepararImagem } from './preparar-imagem';
 
 /**
  * Imagens anexadas a uma mensagem antes de enviar: miniaturas com remover, e o seletor de arquivos
@@ -11,7 +11,7 @@ import { type ImagemAnexada, prepararImagem } from './preparar-imagem';
 @Component({
   selector: 'cw-anexos-imagem',
   template: `
-    <input #seletor type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/*" multiple hidden (change)="aoEscolher($event)" />
+    <input #seletor type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif,image/*" multiple hidden (change)="aoEscolher($event)" />
     @if (imagens().length > 0) {
       <ul class="miniaturas">
         @for (imagem of imagens(); track imagem.url; let i = $index) {
@@ -83,7 +83,7 @@ export class AnexosImagemComponent {
 
   /** Arquivos vindos do seletor, de colar (Ctrl+V) ou de arrastar. Ignora o que não for imagem. */
   async adicionar(arquivos: Iterable<File>): Promise<void> {
-    const imagens = [...arquivos].filter((a) => a.type.startsWith('image/'));
+    const imagens = [...arquivos].filter((a) => a.type.startsWith('image/') || ehHeic(a));
     const livres = this.maximo() - this.imagens().length;
     if (imagens.length > livres) {
       this.toast.erro(`Até ${this.maximo()} imagens por mensagem.`);
@@ -102,7 +102,7 @@ export class AnexosImagemComponent {
   /** Para o `(paste)` do campo de texto: imagens coladas viram anexos; texto colado segue normal. */
   colar(evento: ClipboardEvent): void {
     const arquivos = [...(evento.clipboardData?.files ?? [])];
-    if (arquivos.some((a) => a.type.startsWith('image/'))) {
+    if (arquivos.some((a) => a.type.startsWith('image/') || ehHeic(a))) {
       evento.preventDefault();
       void this.adicionar(arquivos);
     }

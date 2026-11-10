@@ -30,6 +30,18 @@ public sealed class ProjetoType : ObjectType<Projeto>
             .Type<NonNullType<PrecosDoProjetoType>>()
             .Resolve(async ctx => await ctx.DataLoader<PrecosPorProjetoDataLoader>().LoadRequiredAsync(ctx.Parent<Projeto>().Id, ctx.RequestAborted));
 
+        // Peças por DataLoader (uma consulta para todos os projetos pedidos). O valor fica protegido no tipo. O "id" opcional
+        // restringe a uma peça (a página da peça pede o peso só dela, que mede o modelo 3D).
+        descriptor.Field("pecas")
+            .Description("Peças do projeto (criadas aqui ou importadas da biblioteca), por nome.")
+            .Argument("id", a => a.Type<LongType>().Description("Só a peça com este Id."))
+            .Type<NonNullType<ListType<NonNullType<PecaDoProjetoType>>>>()
+            .Resolve(async ctx =>
+            {
+                var pecas = (await ctx.DataLoader<PecasPorProjetoDataLoader>().LoadAsync(ctx.Parent<Projeto>().Id, ctx.RequestAborted)) ?? [];
+                return ctx.ArgumentValue<long?>("id") is long id ? [.. pecas.Where(p => p.Id == id)] : pecas;
+            });
+
         // Versões vêm por DataLoader: na lista de projetos, uma consulta para todas as versões de todos eles.
         // O "id" opcional restringe a uma versão (a página da versão pede o preço só dela).
         descriptor.Field("versoes")

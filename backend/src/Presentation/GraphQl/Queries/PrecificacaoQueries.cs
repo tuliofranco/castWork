@@ -23,6 +23,15 @@ public sealed class PrecificacaoQueries
     public Task<PrecosDoAtelieDto> GetPrecosDoAtelie([Service] ISender mediator, CancellationToken cancellationToken)
         => mediator.Send(new GetPrecosDoAtelieQuery(), cancellationToken);
 
+    /// <summary>
+    /// Para escolher a liga das peças do projeto, que quem edita projetos faz sem ver preços: sem cotação nem parâmetros.
+    /// </summary>
+    [Serial]
+    [Authorize(Policy = Politicas.ProjetosLer)]
+    [GraphQLDescription("Ligas ativas do ateliê (para o material das peças).")]
+    public IQueryable<LigaDto> GetLigas([Service] IUnitOfWork unitOfWork)
+        => unitOfWork.GetRepository<Liga>().FindAll().AtivasParaDto();
+
     [Serial]
     [Authorize(Policy = Politicas.PrecificacaoLer)]
     [GraphQLDescription("Histórico de cotações de um metal, da mais recente para a mais antiga, paginado.")]

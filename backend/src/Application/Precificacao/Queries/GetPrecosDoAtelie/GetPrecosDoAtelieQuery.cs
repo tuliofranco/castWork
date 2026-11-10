@@ -28,9 +28,8 @@ public sealed class GetPrecosDoAtelieQueryHandler(IUnitOfWork unitOfWork) : IReq
         }
 
         var ligas = await unitOfWork.GetRepository<Liga>()
-            .FindBy(l => l.Ativo)
-            .OrderBy(l => l.Metal).ThenByDescending(l => l.Teor).ThenBy(l => l.Nome)
-            .Select(l => new LigaDto { Id = l.Id, Nome = l.Nome, Metal = l.Metal, Teor = l.Teor.Milesimos, Densidade = l.Densidade })
+            .FindAll()
+            .AtivasParaDto()
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 

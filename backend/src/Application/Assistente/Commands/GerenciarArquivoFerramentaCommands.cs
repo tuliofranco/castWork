@@ -19,7 +19,8 @@ public sealed class RenomearArquivoFerramentaCommand : ComandoDeArquivo, IReques
 }
 
 /// <summary>
-/// Arquiva o arquivo: some da pasta e do histórico. Se era o atual, o anterior não arquivado passa a ser.
+/// Arquiva o arquivo: some da pasta e do histórico. Se era o atual, o anterior não arquivado passa a ser. O arquivo final
+/// da peça do projeto não arquiva (marque outro antes).
 /// </summary>
 [Permissao(Regras.Projetos.Editar)]
 public sealed class ArquivarArquivoFerramentaCommand : ComandoDeArquivo, IRequest;
@@ -44,28 +45,30 @@ public sealed class GerenciarArquivoFerramentaCommandHandler(IUnitOfWork unitOfW
 {
     public async Task Handle(RenomearArquivoFerramentaCommand request, CancellationToken cancellationToken)
     {
-        var arquivo = await ConversaDaVersao.ObterArquivoAsync(unitOfWork, request, cancellationToken);
+        var arquivo = await ConversaDoEscopo.ObterArquivoAsync(unitOfWork, request, cancellationToken);
         arquivo.Renomear(request.Nome);
         await unitOfWork.SalvarAsync(cancellationToken);
     }
 
     public async Task Handle(ArquivarArquivoFerramentaCommand request, CancellationToken cancellationToken)
     {
-        var arquivo = await ConversaDaVersao.ObterArquivoAsync(unitOfWork, request, cancellationToken);
+        var arquivo = await ConversaDoEscopo.ObterArquivoAsync(unitOfWork, request, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken);
+        conversa!.GarantirQuePodeArquivar(arquivo);
         arquivo.Arquivar(relogio.GetUtcNow());
         await unitOfWork.SalvarAsync(cancellationToken);
     }
 
     public async Task Handle(DesarquivarArquivoFerramentaCommand request, CancellationToken cancellationToken)
     {
-        var arquivo = await ConversaDaVersao.ObterArquivoAsync(unitOfWork, request, cancellationToken);
+        var arquivo = await ConversaDoEscopo.ObterArquivoAsync(unitOfWork, request, cancellationToken);
         arquivo.Desarquivar();
         await unitOfWork.SalvarAsync(cancellationToken);
     }
 
     public async Task Handle(ApagarArquivoFerramentaCommand request, CancellationToken cancellationToken)
     {
-        var arquivo = await ConversaDaVersao.ObterArquivoAsync(unitOfWork, request, cancellationToken);
+        var arquivo = await ConversaDoEscopo.ObterArquivoAsync(unitOfWork, request, cancellationToken);
         arquivo.GarantirQuePodeApagar();
         unitOfWork.GetRepository<ArquivoFerramenta>().Remover(arquivo);
         await unitOfWork.SalvarAsync(cancellationToken);

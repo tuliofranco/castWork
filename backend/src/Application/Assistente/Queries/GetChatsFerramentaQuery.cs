@@ -10,13 +10,15 @@ namespace Castwork.Application.Assistente.Queries;
 /// Os chats da conversa da ferramenta, do mais recente para o mais antigo (o em andamento incluído e marcado).
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
-public sealed class GetChatsFerramentaQuery : IRequest<IReadOnlyList<ChatDaConversaDto>>
+public sealed class GetChatsFerramentaQuery : IRequest<IReadOnlyList<ChatDaConversaDto>>, IEscopoDaFerramenta
 {
     public const int TituloMaxLength = 80;
 
     public long ProjetoId { get; set; }
 
     public long VersaoId { get; set; }
+
+    public long PecaDoProjetoId { get; set; }
 
     public string Ferramenta { get; set; } = string.Empty;
 }
@@ -25,8 +27,8 @@ public sealed class GetChatsFerramentaQueryHandler(IUnitOfWork unitOfWork) : IRe
 {
     public async Task<IReadOnlyList<ChatDaConversaDto>> Handle(GetChatsFerramentaQuery request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        if (await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken) is not { } conversa)
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        if (await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken) is not { } conversa)
         {
             return [];
         }

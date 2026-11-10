@@ -1,6 +1,7 @@
 using System.Reflection;
 
 using Castwork.Domain.Common;
+using Castwork.Domain.Entities.Pecas;
 using Castwork.Domain.Entities.Precificacao;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.Exceptions;
@@ -59,11 +60,11 @@ public class ProjetoTests
     {
         var (projeto, v1) = ProjetoComIds();
 
-        projeto.AdicionarItem(v1, pecaId: 10, quantidade: 8, observacao: null);
-        projeto.AdicionarItem(v1, pecaId: 10, quantidade: 4, observacao: "banho de ródio");
-        projeto.AdicionarItem(v1, pecaId: 20, quantidade: 1, observacao: null);
+        projeto.AdicionarItem(v1, pecaDoProjetoId: 10, quantidade: 8, observacao: null);
+        projeto.AdicionarItem(v1, pecaDoProjetoId: 10, quantidade: 4, observacao: "banho de ródio");
+        projeto.AdicionarItem(v1, pecaDoProjetoId: 20, quantidade: 1, observacao: null);
 
-        Versao(projeto, v1).Itens.Select(i => (i.PecaId, i.Quantidade, i.Observacao))
+        Versao(projeto, v1).Itens.Select(i => (i.PecaDoProjetoId, i.Quantidade, i.Observacao))
             .Should().Equal((10L, 12, "banho de ródio"), (20L, 1, (string?)null));
     }
 
@@ -118,7 +119,7 @@ public class ProjetoTests
 
         var copia = projeto.DuplicarVersao(v1, nome: null);
         copia.Should().BeEquivalentTo(new { Numero = 2, Nome = "Versão 2", Status = StatusVersao.EmDesenvolvimento });
-        copia.Itens.Select(i => (i.PecaId, i.Quantidade, i.Observacao)).Should().Equal((10L, 12, "ródio"), (20L, 1, (string?)null));
+        copia.Itens.Select(i => (i.PecaDoProjetoId, i.Quantidade, i.Observacao)).Should().Equal((10L, 12, "ródio"), (20L, 1, (string?)null));
         copia.Itens.Should().NotIntersectWith(Versao(projeto, v1).Itens, "a cópia tem itens próprios; mexer nela não altera a publicada");
     }
 
@@ -135,7 +136,7 @@ public class ProjetoTests
         projeto.RemoverItem(v1, fecho);
 
         Versao(projeto, v1).Itens.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new { PecaId = 10L, Quantidade = 14, Observacao = "ajustado ao pulso" });
+            .Which.Should().BeEquivalentTo(new { PecaDoProjetoId = 10L, Quantidade = 14, Observacao = "ajustado ao pulso" });
     }
 
     [Test]
@@ -193,6 +194,19 @@ public class ProjetoTests
 
         vinculado.Should().Be(7);
         projeto.ClienteId.Should().BeNull();
+    }
+
+    [Test]
+    public void DeveRenomearOProjetoERecusarNomeVazio()
+    {
+        var projeto = Projeto.Criar("Colar", null, clienteId: null, Atelie, Agora);
+
+        projeto.Renomear("  Colar Raízes  ");
+        var vazio = () => projeto.Renomear(" ");
+
+        projeto.Nome.Should().Be("Colar Raízes");
+        vazio.Should().Throw<ValorInvalidoException>().Which.Campo.Should().Be("Nome");
+        projeto.Nome.Should().Be("Colar Raízes");
     }
 
     [Test]
@@ -290,12 +304,24 @@ public class ProjetoTests
     }
 
     /// <summary>
-    /// Fora do banco os Ids são 0; os testes atribuem Ids como o EF faria ao salvar.
+    /// Fora do banco os Ids são 0; os testes atribuem Ids como o EF faria ao salvar. O projeto tem duas peças importadas
+    /// da biblioteca (publicadas), com Ids 10 e 20.
     /// </summary>
     private static (Projeto Projeto, long V1) ProjetoComIds()
     {
         var projeto = Projeto.Criar("Colar", null, null, Atelie, Agora);
+        DefinirId(projeto.ImportarPeca(PecaDaBiblioteca(1, "Elo oval")), 10);
+        DefinirId(projeto.ImportarPeca(PecaDaBiblioteca(2, "Fecho lagosta")), 20);
         return (projeto, DefinirId(projeto.CriarVersao("Base", null), 100));
+    }
+
+    private static Peca PecaDaBiblioteca(long id, string nome)
+    {
+        var liga = Liga.Criar("Ouro 18k amarelo", Metal.Ouro, TeorMetal.Ouro18k, 15.5m);
+        DefinirId(liga, 2);
+        var peca = Peca.Criar(nome, TipoPeca.Elo, liga, null, Peso.EmGramas(0.35m), null);
+        DefinirId(peca, id);
+        return peca;
     }
 
     private static long DefinirId<T>(T entidade, long id)

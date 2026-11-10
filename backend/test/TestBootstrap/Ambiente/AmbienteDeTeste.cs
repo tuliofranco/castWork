@@ -44,6 +44,16 @@ public static class AmbienteDeTeste
     /// </summary>
     public static EditorDoModeloDeTeste Editor { get; } = new();
 
+    /// <summary>
+    /// O montador do modelo 3D da versão a partir das peças (sem SolidCraft): anota as peças no arquivo.
+    /// </summary>
+    public static MontadorDoModeloDeTeste Montador { get; } = new();
+
+    /// <summary>
+    /// O gerador das imagens guardadas (sem CADCraft nem SolidCraft), chamado em segundo plano a cada arquivo novo.
+    /// </summary>
+    public static GeradorDeImagensDeTeste GeradorDeImagens { get; } = new();
+
     private static string ConnectionString => _container?.GetConnectionString()
         ?? throw new InvalidOperationException("Ambiente de teste não iniciado.");
 
@@ -55,7 +65,7 @@ public static class AmbienteDeTeste
         _container = new PostgreSqlBuilder(ImagemPostgres).Build();
         await _container.StartAsync();
 
-        _factory = new CastworkWebApplicationFactory(ConnectionString, Relogio, Sessao, Medidor, Editor);
+        _factory = new CastworkWebApplicationFactory(ConnectionString, Relogio, Sessao, Medidor, Editor, Montador, GeradorDeImagens);
 
         // Acessar Services executa o Program.cs inteiro, inclusive as migrations.
         _ = _factory.Services;
@@ -100,6 +110,8 @@ public static class AmbienteDeTeste
         Sessao.Reiniciar();
         Medidor.Reiniciar();
         Editor.Reiniciar();
+        Montador.Reiniciar();
+        GeradorDeImagens.Reiniciar();
     }
 
     /// <summary>
@@ -113,7 +125,7 @@ public static class AmbienteDeTeste
     /// Quem chama descarta a factory.
     /// </summary>
     public static CastworkWebApplicationFactory CriarFactory(IReadOnlyDictionary<string, string> configuracao)
-        => new(ConnectionString, Relogio, Sessao, Medidor, Editor, configuracao);
+        => new(ConnectionString, Relogio, Sessao, Medidor, Editor, Montador, GeradorDeImagens, configuracao);
 
     public static T Obter<T>()
         where T : notnull

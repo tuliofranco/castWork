@@ -1,4 +1,3 @@
-using Castwork.Domain.Entities.Pecas;
 using Castwork.Domain.Entities.Projetos;
 
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +18,11 @@ internal sealed class ItemComposicaoConfiguration : IEntityTypeConfiguration<Ite
         builder.Property(i => i.Quantidade).IsRequired();
         builder.Property(i => i.Observacao).HasMaxLength(ItemComposicao.ObservacaoMaxLength);
 
-        // Peça usada em alguma composição não pode ser excluída (vira inativa).
-        builder.HasOne<Peca>().WithMany().HasForeignKey(i => i.PecaId).OnDelete(DeleteBehavior.Restrict);
+        // Peça do projeto usada em alguma composição não pode ser excluída (vira inativa). NO ACTION, e não RESTRICT: o
+        // PostgreSQL confere no fim do comando, então excluir o projeto (cascata para versões, itens e peças) funciona.
+        builder.HasOne<PecaDoProjeto>().WithMany().HasForeignKey(i => i.PecaDoProjetoId).OnDelete(DeleteBehavior.NoAction);
 
         // Uma peça aparece uma vez por versão; repetir soma a quantidade (regra do domínio).
-        builder.HasIndex("VersaoId", nameof(ItemComposicao.PecaId)).IsUnique();
+        builder.HasIndex("VersaoId", nameof(ItemComposicao.PecaDoProjetoId)).IsUnique();
     }
 }

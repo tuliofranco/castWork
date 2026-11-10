@@ -1,11 +1,14 @@
 using Castwork.Application.Projetos.Commands.AdicionarItem;
 using Castwork.Application.Projetos.Commands.AlterarItem;
+using Castwork.Application.Projetos.Commands.AlterarPecaDoProjeto;
 using Castwork.Application.Projetos.Commands.ArquivarVersao;
 using Castwork.Application.Projetos.Commands.CriarVersao;
 using Castwork.Application.Projetos.Commands.DesarquivarVersao;
 using Castwork.Application.Projetos.Commands.DuplicarVersao;
+using Castwork.Application.Projetos.Commands.PublicarPecaDoProjeto;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
 using Castwork.Application.Projetos.Commands.RemoverItem;
+using Castwork.Application.Projetos.Commands.RenomearProjeto;
 using Castwork.Application.Projetos.Commands.VincularCliente;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.Exceptions;
@@ -53,35 +56,65 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     public async Task DeveComporVersaoSomandoQuantidadeDaMesmaPecaAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
-        var elo = await Usar(new PecaBuilder()).BuildAsync();
-        var fecho = await Usar(new PecaBuilder()).BuildAsync();
+        var elo = await PecaAsync(projetoId);
+        var fecho = await PecaAsync(projetoId);
 
         await Adicionar(projetoId, v1, elo, 8);
         await Adicionar(projetoId, v1, elo, 4, "ródio");
         await Adicionar(projetoId, v1, fecho, 1);
 
         var itens = (await LerAsync(projetoId)).Versoes.Single().Itens;
-        itens.OrderBy(i => i.Id).Select(i => (i.PecaId, i.Quantidade, i.Observacao)).Should().Equal((elo, 12, "ródio"), (fecho, 1, (string?)null));
+        itens.OrderBy(i => i.Id).Select(i => (i.PecaDoProjetoId, i.Quantidade, i.Observacao)).Should().Equal((elo, 12, "ródio"), (fecho, 1, (string?)null));
     }
 
     [Test]
     public async Task DeveRejeitarPecaInativaNaComposicaoAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
-        var peca = await Usar(new PecaBuilder()).BuildAsync();
-        await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Pecas.Where(p => p.Id == peca).ExecuteUpdateAsync(s => s.SetProperty(p => p.Ativo, false)));
+        var peca = await PecaAsync(projetoId);
+        await AmbienteDeTeste.SendAsync(new AlterarPecaDoProjetoCommand { ProjetoId = projetoId, PecaDoProjetoId = peca, Nome = "Elo", Tipo = Domain.Entities.Pecas.TipoPeca.Elo, Ativo = false });
 
         var adicionar = () => Adicionar(projetoId, v1, peca, 1);
 
-        (await adicionar.Should().ThrowAsync<ValidationException>()).Which.Errors.Should().ContainSingle().Which.PropertyName.Should().Be("pecaId");
+        (await adicionar.Should().ThrowAsync<ValidationException>()).Which.Errors.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new { PropertyName = "pecaDoProjetoId", ErrorMessage = "Peça não encontrada neste projeto." });
+    }
+
+    [Test]
+    public async Task DeveRejeitarPecaDeOutroProjetoNaComposicaoAsync()
+    {
+        var (projetoId, v1) = await ProjetoAsync();
+        var (outroProjeto, _) = await ProjetoAsync();
+        var pecaDoOutro = await PecaAsync(outroProjeto);
+
+        var adicionar = () => Adicionar(projetoId, v1, pecaDoOutro, 1);
+
+        (await adicionar.Should().ThrowAsync<ValidationException>()).Which.Errors.Should().ContainSingle().Which.PropertyName.Should().Be("pecaDoProjetoId");
+    }
+
+    [Test]
+    public async Task DeveRecusarPublicarVersaoComPecaEmRascunhoAtePublicarAPecaAsync()
+    {
+        var (projetoId, v1) = await ProjetoAsync();
+        var rascunho = await Usar(new PecaDoProjetoBuilder(projetoId)).CustomizeCommand(c => c.Nome = "Elo torcido").CriarAsync();
+        var publicada = await PecaAsync(projetoId);
+        await Adicionar(projetoId, v1, rascunho, 12);
+        await Adicionar(projetoId, v1, publicada, 1);
+
+        var publicar = () => AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
+
+        await publicar.Should().ThrowAsync<RegraDeNegocioException>().WithMessage("*rascunho: Elo torcido.*");
+        await AmbienteDeTeste.SendAsync(new PublicarPecaDoProjetoCommand { ProjetoId = projetoId, PecaDoProjetoId = rascunho });
+        await publicar.Should().NotThrowAsync();
+        (await LerAsync(projetoId)).Versoes.Single().Status.Should().Be(StatusVersao.Publicada);
     }
 
     [Test]
     public async Task DeveAlterarERemoverItensDaComposicaoAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
-        var elo = await Usar(new PecaBuilder()).BuildAsync();
-        var fecho = await Usar(new PecaBuilder()).BuildAsync();
+        var elo = await PecaAsync(projetoId);
+        var fecho = await PecaAsync(projetoId);
         var itemElo = await Adicionar(projetoId, v1, elo, 12);
         var itemFecho = await Adicionar(projetoId, v1, fecho, 1);
 
@@ -89,14 +122,14 @@ public class ProjetoCommandsTests : TesteDeIntegracao
         await AmbienteDeTeste.SendAsync(new RemoverItemCommand { ProjetoId = projetoId, VersaoId = v1, ItemId = itemFecho });
 
         (await LerAsync(projetoId)).Versoes.Single().Itens.Should().ContainSingle()
-            .Which.Should().BeEquivalentTo(new { PecaId = elo, Quantidade = 14, Observacao = "ajuste" });
+            .Which.Should().BeEquivalentTo(new { PecaDoProjetoId = elo, Quantidade = 14, Observacao = "ajuste" });
     }
 
     [Test]
     public async Task DevePublicarCongelarEDuplicarVersaoAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
-        var elo = await Usar(new PecaBuilder()).BuildAsync();
+        var elo = await PecaAsync(projetoId);
         await Adicionar(projetoId, v1, elo, 12);
         AmbienteDeTeste.Relogio.Avancar(TimeSpan.FromHours(1));
 
@@ -110,7 +143,7 @@ public class ProjetoCommandsTests : TesteDeIntegracao
             new { Numero = 1, Nome = "Base", Status = StatusVersao.Publicada, PublicadaEm = (DateTimeOffset?)RelogioDeTeste.Inicio.AddHours(1) },
             new { Numero = 2, Nome = "Versão 2", Status = StatusVersao.EmDesenvolvimento, PublicadaEm = (DateTimeOffset?)null });
         versoes[1].Id.Should().Be(v2);
-        versoes[1].Itens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { PecaId = elo, Quantidade = 12 });
+        versoes[1].Itens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { PecaDoProjetoId = elo, Quantidade = 12 }, "a cópia aponta para a mesma peça do projeto");
     }
 
     [Test]
@@ -151,7 +184,7 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     public async Task DeveRecusarArquivarVersaoPublicadaAsync()
     {
         var (projetoId, v1) = await ProjetoAsync();
-        await Adicionar(projetoId, v1, await Usar(new PecaBuilder()).BuildAsync(), 1);
+        await Adicionar(projetoId, v1, await PecaAsync(projetoId), 1);
         await AmbienteDeTeste.SendAsync(new PublicarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
 
         var arquivar = () => AmbienteDeTeste.SendAsync(new ArquivarVersaoCommand { ProjetoId = projetoId, VersaoId = v1 });
@@ -174,6 +207,27 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     }
 
     [Test]
+    public async Task DeveRenomearProjetoAsync()
+    {
+        var (projetoId, _) = await ProjetoAsync();
+
+        await AmbienteDeTeste.SendAsync(new RenomearProjetoCommand { ProjetoId = projetoId, Nome = "Colar Raízes" });
+
+        (await LerAsync(projetoId)).Nome.Should().Be("Colar Raízes");
+    }
+
+    [Test]
+    public async Task DeveRejeitarNomeVazioAoRenomearAsync()
+    {
+        var (projetoId, _) = await ProjetoAsync();
+
+        var renomear = () => AmbienteDeTeste.SendAsync(new RenomearProjetoCommand { ProjetoId = projetoId, Nome = string.Empty });
+
+        (await renomear.Should().ThrowAsync<ValidationException>()).Which.Errors.Should().ContainSingle()
+            .Which.PropertyName.Should().Be("nome");
+    }
+
+    [Test]
     public async Task DeveRejeitarVinculoComClienteInexistenteAsync()
     {
         var (projetoId, _) = await ProjetoAsync();
@@ -189,7 +243,7 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     {
         var (projetoA, _) = await ProjetoAsync();
         var (_, versaoDoB) = await ProjetoAsync();
-        var peca = await Usar(new PecaBuilder()).BuildAsync();
+        var peca = await PecaAsync(projetoA);
 
         var adicionar = () => Adicionar(projetoA, versaoDoB, peca, 1);
 
@@ -197,7 +251,7 @@ public class ProjetoCommandsTests : TesteDeIntegracao
     }
 
     private static Task<long> Adicionar(long projetoId, long versaoId, long pecaId, int quantidade, string? observacao = null)
-        => AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaId = pecaId, Quantidade = quantidade, Observacao = observacao });
+        => AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaDoProjetoId = pecaId, Quantidade = quantidade, Observacao = observacao });
 
     private static Task<Projeto> LerAsync(long id)
         => AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Include(p => p.Versoes).ThenInclude(v => v.Itens).AsNoTracking().SingleAsync(p => p.Id == id));
@@ -208,4 +262,9 @@ public class ProjetoCommandsTests : TesteDeIntegracao
         var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
         return (id, await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = id, Nome = "Base" }));
     }
+
+    /// <summary>
+    /// Peça do projeto já publicada, para a versão poder ser publicada.
+    /// </summary>
+    private Task<long> PecaAsync(long projetoId) => Usar(new PecaDoProjetoBuilder(projetoId).Publicada()).CriarAsync();
 }

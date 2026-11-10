@@ -9,9 +9,9 @@ public enum StatusDoPreco
 public enum TipoDePendencia
 {
     /// <summary>
-    /// Peça da composição sem custo na biblioteca.
+    /// Peça da composição sem valor no projeto.
     /// </summary>
-    PecaSemCusto = 1,
+    PecaSemValor = 1,
 
     /// <summary>
     /// Metal de uma liga da versão sem cotação no projeto.

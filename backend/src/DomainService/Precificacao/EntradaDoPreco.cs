@@ -6,7 +6,7 @@ namespace Castwork.DomainService.Precificacao;
 
 /// <summary>
 /// Tudo o que entra no preço de uma versão, já lido do banco: os preços do projeto, os metais com peso, a composição
-/// com o custo de cada peça, a mão de obra, os serviços e o markup da versão. <see cref="Agora"/> só decide os avisos.
+/// com o valor de cada peça no projeto, a mão de obra, os serviços e o markup da versão. <see cref="Agora"/> só decide os avisos.
 /// <see cref="Modelo"/>: o modelo 3D medido (os <see cref="Metais"/> já vêm com o peso dele); nulo quando a versão não tem
 /// 3D e vale o peso manual.
 /// </summary>
@@ -33,6 +33,6 @@ public sealed record CotacaoUsada(Metal Metal, Dinheiro Valor, DateTimeOffset Co
 public sealed record MetalUsado(long LigaId, string Liga, Metal Metal, TeorMetal Teor, bool LigaAtiva, Peso PesoEstimado, Peso? PesoReal);
 
 /// <summary>
-/// Uma linha da composição com o custo unitário da peça na biblioteca (nulo: peça sem custo).
+/// Uma linha da composição com o valor da peça no projeto, o custo de uma unidade (nulo: peça sem valor).
 /// </summary>
-public sealed record PecaUsada(long PecaId, string Nome, int Quantidade, Dinheiro? CustoUnitario);
+public sealed record PecaUsada(long PecaDoProjetoId, string Nome, int Quantidade, Dinheiro? CustoUnitario);

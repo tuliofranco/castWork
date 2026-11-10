@@ -33,11 +33,11 @@ public static class CalculadoraDePreco
         AvaliarModelo(entrada.Modelo, pendencias, avisos);
 
         var composicao = entrada.Composicao
-            .Select(p => new CustoDaPeca(p.PecaId, p.Nome, p.Quantidade, p.CustoUnitario, p.CustoUnitario is null ? Dinheiro.Zero : p.CustoUnitario * p.Quantidade))
+            .Select(p => new CustoDaPeca(p.PecaDoProjetoId, p.Nome, p.Quantidade, p.CustoUnitario, p.CustoUnitario is null ? Dinheiro.Zero : p.CustoUnitario * p.Quantidade))
             .ToList();
         pendencias.AddRange(composicao
             .Where(p => p.CustoUnitario is null)
-            .Select(p => new PendenciaDoPreco(TipoDePendencia.PecaSemCusto, $"{p.Nome} está sem custo na biblioteca.", PecaId: p.PecaId)));
+            .Select(p => new PendenciaDoPreco(TipoDePendencia.PecaSemValor, $"{p.Nome} está sem valor no projeto.", PecaDoProjetoId: p.PecaDoProjetoId)));
 
         var maoDeObra = CustoDaMaoDeObra(entrada.MaoDeObra, parametros.ValorHora);
         if (maoDeObra.Tipo == TipoMaoDeObra.PorHoras && parametros.ValorHora == Dinheiro.Zero)

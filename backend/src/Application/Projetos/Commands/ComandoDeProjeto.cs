@@ -15,3 +15,12 @@ public abstract class ComandoDeVersao : ComandoDeProjeto
 {
     public long VersaoId { get; set; }
 }
+
+/// <summary>
+/// Commands sobre uma peça do projeto (<c>/projetos/{projetoId}/pecas/{pecaDoProjetoId}</c>). A existência da peça fica com
+/// o agregado (não encontrada, 404), como a da versão.
+/// </summary>
+public abstract class ComandoDePecaDoProjeto : ComandoDeProjeto
+{
+    public long PecaDoProjetoId { get; set; }
+}

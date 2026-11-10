@@ -107,15 +107,16 @@ public static class MateriaisDoModelo
     /// </summary>
     private static string CorDaLiga(Metal metal, string nome)
     {
+        // Cores base PBR medidas (sRGB), as de physicallybased.info: metal reflete a cor, então ela é clara.
         if (metal == Metal.Prata)
         {
-            return "#c8cbd0";
+            return "#faf8f2";
         }
 
         var texto = SemAcento(nome);
-        return texto.Contains("branco", StringComparison.Ordinal) ? "#e4e1d6"
-            : texto.Contains("rose", StringComparison.Ordinal) || texto.Contains("rosa", StringComparison.Ordinal) || texto.Contains("vermelho", StringComparison.Ordinal) ? "#e2a98e"
-            : "#d9b44a";
+        return texto.Contains("branco", StringComparison.Ordinal) ? "#dcdcde"
+            : texto.Contains("rose", StringComparison.Ordinal) || texto.Contains("rosa", StringComparison.Ordinal) || texto.Contains("vermelho", StringComparison.Ordinal) ? "#f5c6b0"
+            : "#ffe29b";
     }
 
     private static string SemAcento(string texto)

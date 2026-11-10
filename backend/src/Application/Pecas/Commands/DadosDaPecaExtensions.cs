@@ -1,18 +1,20 @@
+using Castwork.Application.Abstractions;
+using Castwork.Domain.Entities.Precificacao;
 using Castwork.Domain.ValueObjects;
 
 namespace Castwork.Application.Pecas.Commands;
 
 /// <summary>
-/// Converte os campos validados de <see cref="DadosDaPeca"/> nos value objects do domínio.
+/// Converte os campos validados de <see cref="IDadosDaPeca"/> no que o domínio recebe.
 /// </summary>
 internal static class DadosDaPecaExtensions
 {
-    public static TeorMetal? TeorDominio(this DadosDaPeca dados)
-        => string.IsNullOrWhiteSpace(dados.Teor) ? null : TeorMetal.Parse(dados.Teor);
-
-    public static Peso? PesoDominio(this DadosDaPeca dados)
+    public static Peso? PesoDominio(this IDadosDaPeca dados)
         => dados.PesoGramas is null ? null : Peso.EmGramas(dados.PesoGramas.Value);
 
-    public static Dinheiro? CustoDominio(this DadosDaPeca dados)
-        => dados.Custo is null ? null : Dinheiro.Criar(dados.Custo.Value);
+    /// <summary>
+    /// A liga informada (ativa ou não: o domínio decide se a aceita), ou nula sem liga.
+    /// </summary>
+    public static async Task<Liga?> ObterLigaAsync(this IDadosDaPeca dados, IUnitOfWork unitOfWork, CancellationToken cancellationToken)
+        => dados.LigaId is long id ? await unitOfWork.GetRepository<Liga>().ObterPorIdOuFalharAsync(id, cancellationToken) : null;
 }

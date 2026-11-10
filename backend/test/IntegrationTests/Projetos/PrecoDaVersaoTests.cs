@@ -1,7 +1,5 @@
 using Castwork.Application.Common.Exceptions;
 using Castwork.Application.Common.Security;
-using Castwork.Application.Pecas.Commands.AlterarPeca;
-using Castwork.Application.Pecas.Commands.CriarPeca;
 using Castwork.Application.Precificacao.Commands.AtualizarCotacao;
 using Castwork.Application.Precificacao.Commands.AtualizarParametrosDePreco;
 using Castwork.Application.Precificacao.Commands.CriarLiga;
@@ -14,6 +12,7 @@ using Castwork.Application.Projetos.Commands.DefinirMaoDeObra;
 using Castwork.Application.Projetos.Commands.DefinirMarkupDaVersao;
 using Castwork.Application.Projetos.Commands.DefinirMetaisDaVersao;
 using Castwork.Application.Projetos.Commands.DefinirServicos;
+using Castwork.Application.Projetos.Commands.DefinirValorDaPecaDoProjeto;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
 using Castwork.Application.Projetos.Commands.RegistrarPesoReal;
 using Castwork.Application.Projetos.Queries.GetPrecoDaVersao;
@@ -110,10 +109,8 @@ public class PrecoDaVersaoTests : TesteDeIntegracao
         await AtualizarAtelieAsync(ouro: 640m);
         var projetoId = await Usar(new ProjetoBuilder()).BuildAsync();
         var versaoId = await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = projetoId, Nome = "Base" });
-        var pecas = Usar(new PecaBuilder());
-        var semCusto = await pecas.BuildCommandAsync();
-        var pecaId = await pecas.SendAsync(semCusto);
-        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaId = pecaId, Quantidade = 2 });
+        var pecaId = await Usar(new PecaDoProjetoBuilder(projetoId)).CriarAsync();
+        await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaDoProjetoId = pecaId, Quantidade = 2 });
         var ligaAntiga = await AmbienteDeTeste.SendAsync(new CriarLigaCommand { Nome = "Ouro 22k antigo", Metal = Metal.Ouro, Teor = "916", Densidade = 17.8m });
 
         var vazia = await AmbienteDeTeste.SendAsync(new GetPrecoDaVersaoQuery { VersaoId = versaoId });
@@ -122,26 +119,17 @@ public class PrecoDaVersaoTests : TesteDeIntegracao
         var comLigas = await AmbienteDeTeste.SendAsync(new GetPrecoDaVersaoQuery { VersaoId = versaoId });
 
         await AmbienteDeTeste.SendAsync(Metais(projetoId, versaoId, (Ouro18kAmarelo, 3m)));
-        await AmbienteDeTeste.SendAsync(new AlterarPecaCommand
-        {
-            PecaId = pecaId,
-            Nome = semCusto.Nome,
-            Tipo = semCusto.Tipo,
-            Material = semCusto.Material,
-            Teor = semCusto.Teor,
-            PesoGramas = semCusto.PesoGramas,
-            Custo = 100m,
-        });
+        await AmbienteDeTeste.SendAsync(new DefinirValorDaPecaDoProjetoCommand { ProjetoId = projetoId, PecaDoProjetoId = pecaId, Valor = 100m });
         var resolvida = await AmbienteDeTeste.SendAsync(new GetPrecoDaVersaoQuery { VersaoId = versaoId });
 
         vazia.Status.Should().Be(StatusDoPreco.Incompleto);
-        vazia.Calculo!.Pendencias.Select(p => (p.Tipo, p.PecaId)).Should()
-            .BeEquivalentTo(new (TipoDePendencia, long?)[] { (TipoDePendencia.SemMetalComPeso, null), (TipoDePendencia.PecaSemCusto, pecaId) });
+        vazia.Calculo!.Pendencias.Select(p => (p.Tipo, p.PecaDoProjetoId)).Should()
+            .BeEquivalentTo(new (TipoDePendencia, long?)[] { (TipoDePendencia.SemMetalComPeso, null), (TipoDePendencia.PecaSemValor, pecaId) });
         comLigas.Calculo!.Pendencias.Select(p => (p.Tipo, p.LigaId, p.Metal)).Should().BeEquivalentTo(new (TipoDePendencia, long?, Metal?)[]
         {
             (TipoDePendencia.LigaDesativada, ligaAntiga, null),
             (TipoDePendencia.MetalSemCotacao, null, Metal.Prata),
-            (TipoDePendencia.PecaSemCusto, null, null),
+            (TipoDePendencia.PecaSemValor, null, null),
         });
         (resolvida.Status, resolvida.Calculo!.Pendencias.Count).Should().Be((StatusDoPreco.Completo, 0));
         resolvida.Calculo.CustoDaComposicao.Should().Be(200m);
@@ -266,13 +254,10 @@ public class PrecoDaVersaoTests : TesteDeIntegracao
         await AtualizarAtelieAsync(ouro: 640m);
         var projetoId = await Usar(new ProjetoBuilder()).BuildAsync();
         var versaoId = await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = projetoId, Nome = "Base" });
-        var pecas = Usar(new PecaBuilder());
-        foreach (var (custo, quantidade) in new[] { (500m, 1), (150m, 2) })
+        foreach (var (valor, quantidade) in new[] { (500m, 1), (150m, 2) })
         {
-            var peca = await pecas.BuildCommandAsync();
-            peca.Custo = custo;
-            var pecaId = await pecas.SendAsync(peca);
-            await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaId = pecaId, Quantidade = quantidade });
+            var pecaId = await Usar(new PecaDoProjetoBuilder(projetoId).ComValor(valor).Publicada()).CriarAsync();
+            await AmbienteDeTeste.SendAsync(new AdicionarItemCommand { ProjetoId = projetoId, VersaoId = versaoId, PecaDoProjetoId = pecaId, Quantidade = quantidade });
         }
 
         await AmbienteDeTeste.SendAsync(Metais(projetoId, versaoId, (Ouro18kAmarelo, 5m)));

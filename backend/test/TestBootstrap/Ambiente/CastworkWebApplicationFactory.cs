@@ -13,7 +13,7 @@ namespace Castwork.TestBootstrap.Ambiente;
 
 /// <summary>
 /// Sobe a API de verdade (o mesmo Program.cs), trocando só o banco (container), o relógio, o usuário logado
-/// e os serviços externos do briefing (IA e gerador de PDF), a prévia, o medidor e o editor do modelo 3D.
+/// e os serviços externos do briefing (IA e gerador de PDF), a prévia, o gerador das imagens guardadas, o medidor, o editor e o montador do modelo 3D.
 /// As migrations rodam no startup, como em produção.
 /// </summary>
 public sealed class CastworkWebApplicationFactory(
@@ -22,6 +22,8 @@ public sealed class CastworkWebApplicationFactory(
     SessaoDeTeste sessao,
     MedidorDoModeloDeTeste medidor,
     EditorDoModeloDeTeste editor,
+    MontadorDoModeloDeTeste montador,
+    GeradorDeImagensDeTeste geradorDeImagens,
     IReadOnlyDictionary<string, string>? configuracaoExtra = null)
     : WebApplicationFactory<Program>
 {
@@ -52,14 +54,20 @@ public sealed class CastworkWebApplicationFactory(
             // Serviços externos (IA paga, binários do WordCraft e do CADCraft) ficam de fora dos testes.
             services.RemoveAll<IGeradorDocumentoBriefing>();
             services.AddScoped<IGeradorDocumentoBriefing, GeradorDocumentoBriefingDeTeste>();
+            services.RemoveAll<IGeradorFichaTecnica>();
+            services.AddScoped<IGeradorFichaTecnica, GeradorFichaTecnicaDeTeste>();
             services.RemoveAll<IAssistenteFerramenta>();
             services.AddScoped<IAssistenteFerramenta, AssistenteFerramentaDeTeste>();
             services.RemoveAll<IPreviaFerramenta>();
             services.AddSingleton<IPreviaFerramenta, PreviaFerramentaDeTeste>();
+            services.RemoveAll<IGeradorDeImagens>();
+            services.AddSingleton<IGeradorDeImagens>(geradorDeImagens);
             services.RemoveAll<IMedidorDoModelo>();
             services.AddSingleton<IMedidorDoModelo>(medidor);
             services.RemoveAll<IEditorDoModelo>();
             services.AddSingleton<IEditorDoModelo>(editor);
+            services.RemoveAll<IMontadorDoModelo>();
+            services.AddSingleton<IMontadorDoModelo>(montador);
 
             // Requisição HTTP autenticada: sessão real, lida do JWT. Fora disso (SendAsync): sessão de teste.
             services.RemoveAll<ISessaoService>();

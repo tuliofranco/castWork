@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloTestingController, ApolloTestingModule } from 'apollo-angular/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { GET_HISTORICO_DE_COTACOES, PrecosService } from './precos.service';
+import { GET_HISTORICO_DE_COTACOES, GET_LIGAS, PrecosService } from './precos.service';
 
 describe('PrecosService', () => {
   function configurar() {
@@ -21,6 +21,16 @@ describe('PrecosService', () => {
     await promessa;
 
     expect(op.operation.variables).toEqual({ metal: 'OURO', primeiros: 10, apos: null });
+  });
+
+  it('deve ler as ligas ativas pela consulta própria, sem os preços', async () => {
+    const { service, apollo } = configurar();
+    const ligas = [{ id: 2, nome: 'Ouro 18k amarelo', metal: 'OURO', teor: 750, densidade: 15.5 }];
+
+    const promessa = firstValueFrom(service.getLigas());
+    apollo.expectOne(GET_LIGAS).flush({ data: { ligas } });
+
+    expect(await promessa).toEqual(ligas);
   });
 
   it('deve escrever cotação, ligas e parâmetros pelo REST', () => {

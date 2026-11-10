@@ -35,8 +35,8 @@ describe('PrecoVersaoComponent', () => {
     metais: [ouro],
     custoDosMetais: 2592,
     composicao: [
-      { pecaId: 10, nome: 'Turmalina', quantidade: 1, custoUnitario: 500, custo: 500 },
-      { pecaId: 11, nome: 'Fecho', quantidade: 2, custoUnitario: 150, custo: 300 },
+      { pecaDoProjetoId: 10, nome: 'Turmalina', quantidade: 1, custoUnitario: 500, custo: 500 },
+      { pecaDoProjetoId: 11, nome: 'Fecho', quantidade: 2, custoUnitario: 150, custo: 300 },
     ],
     custoDaComposicao: 800,
     maoDeObra: { tipo: 'POR_HORAS', horas: 6, valorHora: 90, custo: 540 },
@@ -159,9 +159,9 @@ describe('PrecoVersaoComponent', () => {
           ...calculo,
           pendencias: [
             {
-              tipo: 'PECA_SEM_CUSTO',
-              descricao: 'Turmalina está sem custo na biblioteca.',
-              pecaId: 10,
+              tipo: 'PECA_SEM_VALOR',
+              descricao: 'Turmalina está sem valor no projeto.',
+              pecaDoProjetoId: 10,
               ligaId: null,
               metal: null,
               corpos: [],
@@ -169,7 +169,7 @@ describe('PrecoVersaoComponent', () => {
             {
               tipo: 'METAL_SEM_COTACAO',
               descricao: 'O projeto não tem cotação de prata.',
-              pecaId: null,
+              pecaDoProjetoId: null,
               ligaId: null,
               metal: 'PRATA',
               corpos: [],
@@ -177,7 +177,7 @@ describe('PrecoVersaoComponent', () => {
             {
               tipo: 'LIGA_DESATIVADA',
               descricao: 'A liga Ouro 22k foi desativada: troque por outra.',
-              pecaId: null,
+              pecaDoProjetoId: null,
               ligaId: 1000,
               metal: null,
               corpos: [],
@@ -198,11 +198,11 @@ describe('PrecoVersaoComponent', () => {
     expect(texto(el.querySelector('cw-selo'))).toBe('Incompleto');
     const pendencias = [...el.querySelectorAll('.pendencias li')];
     expect(pendencias.map((li) => texto(li.querySelector('span')))).toEqual([
-      'Turmalina está sem custo na biblioteca.',
+      'Turmalina está sem valor no projeto.',
       'O projeto não tem cotação de prata.',
       'A liga Ouro 22k foi desativada: troque por outra.',
     ]);
-    expect(pendencias[0].querySelector('a')!.getAttribute('href')).toBe('/pecas/10/editar');
+    expect(pendencias[0].querySelector('a')!.getAttribute('href')).toBe('/projetos/1/pecas/10');
     expect(pendencias[1].querySelector('a')!.getAttribute('href')).toBe('/projetos/1');
     expect(texto(el.querySelector('.aviso-preco'))).toContain('20 dias');
 
@@ -282,7 +282,7 @@ describe('PrecoVersaoComponent', () => {
             {
               tipo: 'CORPOS_SEM_MATERIAL',
               descricao: '2 corpos sem material no modelo 3D: Garra, Pino.',
-              pecaId: null,
+              pecaDoProjetoId: null,
               ligaId: null,
               metal: null,
               corpos: ['Garra', 'Pino'],
@@ -290,7 +290,7 @@ describe('PrecoVersaoComponent', () => {
             {
               tipo: 'SEM_METAL_COM_PESO',
               descricao: 'O modelo 3D não tem nenhum corpo de metal com peso.',
-              pecaId: null,
+              pecaDoProjetoId: null,
               ligaId: null,
               metal: null,
               corpos: [],

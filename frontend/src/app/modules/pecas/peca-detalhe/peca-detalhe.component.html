@@ -1,0 +1,101 @@
+@if (peca.error()) {
+  <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar a peça." (tentarDeNovo)="peca.reload()" />
+} @else if (peca.value() === null) {
+  <cw-cabecalho-pagina titulo="Peça não encontrada" voltarPara="/pecas" voltarRotulo="Peças" subtitulo="O endereço pode estar incompleto." />
+} @else if (peca.value(); as p) {
+  <cw-cabecalho-pagina [titulo]="p.nome" voltarPara="/pecas" voltarRotulo="Peças" subtitulo="Peça da biblioteca: só consulta. Para usar, importe-a num projeto.">
+    <ng-container acoes>
+      @if (!p.ativo) {
+        <cw-selo icone="pause-circle">Inativa</cw-selo>
+      }
+    </ng-container>
+  </cw-cabecalho-pagina>
+
+  <dl class="dados">
+    <div>
+      <dt>Tipo</dt>
+      <dd><i class="bi" [class]="'bi-' + iconeTipo(p.tipo)" aria-hidden="true"></i> {{ rotuloTipo(p.tipo) }}</dd>
+    </div>
+    @if (p.tipo === 'PEDRA') {
+      <div>
+        <dt>Material</dt>
+        <dd>{{ p.material ?? '—' }}</dd>
+      </div>
+    } @else {
+      <!-- Nome e teor copiados da liga quando ela foi escolhida. -->
+      <div>
+        <dt>Liga</dt>
+        <dd>{{ p.material ?? '—' }}</dd>
+      </div>
+      <div>
+        <dt>Teor</dt>
+        <dd>{{ formatarTeor(p.teor) }}</dd>
+      </div>
+    }
+    <div>
+      <dt>Peso</dt>
+      <dd>{{ p.pesoGramas === null ? '—' : (p.pesoGramas | number: '1.3-3') + ' g' }}</dd>
+    </div>
+    @if (p.descricao) {
+      <div class="descricao">
+        <dt>Descrição</dt>
+        <dd>{{ p.descricao }}</dd>
+      </div>
+    }
+  </dl>
+
+  <!-- O desenho 2D e o modelo 3D copiados do projeto ao publicar: só para ver (ou baixar). -->
+  <section class="desenho" aria-labelledby="titulo-desenho">
+    <h2 id="titulo-desenho">Desenho</h2>
+    @if (p.desenhos.length) {
+      <div class="lista-ferramentas">
+        @for (d of p.desenhos; track d.ferramenta) {
+          <a class="ferramenta" [routerLink]="['/pecas', p.id, 'desenhos', d.ferramenta]">
+            <i class="bi" [class]="'bi-' + (d.ferramenta === 'modelo-3d' ? 'box' : 'vector-pen')" aria-hidden="true"></i>
+            <span>
+              <strong>{{ nomeDaFerramenta(d.ferramenta) }}</strong>
+              <small>Só para ver · publicado em {{ d.copiadoEm | date: 'dd/MM/yyyy' }}</small>
+            </span>
+          </a>
+        }
+      </div>
+    } @else {
+      <p class="sem-uso">A peça foi publicada sem desenho 2D nem modelo 3D.</p>
+    }
+  </section>
+
+  @if (podeVerHistorico) {
+    <section aria-labelledby="titulo-historico">
+      <h2 id="titulo-historico">Histórico de uso</h2>
+      @if (p.historicoDeUso?.length) {
+        <ul class="cw-lista">
+          @for (uso of p.historicoDeUso; track uso.pecaDoProjetoId) {
+            <li class="cw-linha uso">
+              <span class="principal">
+                <a class="nome" [routerLink]="['/projetos', uso.projetoId]">{{ uso.projeto }}</a>
+                @if (uso.versoes.length) {
+                  <ul class="versoes">
+                    @for (v of uso.versoes; track v.versaoId) {
+                      <li>
+                        <a [routerLink]="['/projetos', uso.projetoId, 'versoes', v.versaoId]">{{ v.numero }}. {{ v.nome }}</a> · {{ v.quantidade }}×
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <span class="meta">Importada, ainda sem uso nas versões</span>
+                }
+              </span>
+              @if (podeVerValor) {
+                <span class="valor" title="Valor no projeto (custo por unidade)">{{ uso.valor === null || uso.valor === undefined ? 'Sem valor' : (uso.valor | currency: 'BRL') }}</span>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="sem-uso">Nenhum projeto usa esta peça ainda.</p>
+      }
+    </section>
+  }
+} @else {
+  <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="3" />
+}

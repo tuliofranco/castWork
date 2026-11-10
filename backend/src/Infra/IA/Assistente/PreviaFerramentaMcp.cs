@@ -23,7 +23,7 @@ internal sealed partial class PreviaFerramentaMcp(IEnumerable<IFerramentaNaIa> r
 
     public async Task<byte[]?> GerarAsync(string ferramenta, byte[] arquivo, CancellationToken cancellationToken)
     {
-        if (!_definicoes.TryGetValue(ferramenta, out var definicao) || definicao.ExportarPrevia is null
+        if (!_definicoes.TryGetValue(ferramenta, out var definicao) || (definicao.ExportarPrevia is null && definicao.VistaParaOJoalheiro is null)
             || string.IsNullOrWhiteSpace(definicao.Executavel) || !File.Exists(definicao.Executavel))
         {
             return null;
@@ -46,13 +46,30 @@ internal sealed partial class PreviaFerramentaMcp(IEnumerable<IFerramentaNaIa> r
                 return null;
             }
 
-            var svg = Path.Combine(pasta.FullName, "previa.svg");
-            if (!await ChamarAsync(mcp, definicao.ExportarPrevia(svg), cancellationToken) || !File.Exists(svg))
+            byte[] previa;
+            if (definicao.ExportarPrevia is not null)
             {
-                return null;
+                var svg = Path.Combine(pasta.FullName, "previa.svg");
+                if (!await ChamarAsync(mcp, definicao.ExportarPrevia(svg), cancellationToken) || !File.Exists(svg))
+                {
+                    return null;
+                }
+
+                previa = await File.ReadAllBytesAsync(svg, cancellationToken);
+            }
+            else
+            {
+                // Sem exportação vetorial (o 3D): a mesma vista em PNG que o joalheiro vê com a resposta da IA.
+                var (nome, argumentos) = definicao.VistaParaOJoalheiro!.Value;
+                var resultado = await mcp.ChamarFerramentaAsync(nome, JsonDocument.Parse(argumentos).RootElement, cancellationToken);
+                if (resultado.Erro || resultado.Conteudo.FirstOrDefault(c => c.Imagem is not null)?.Imagem is not { } imagem)
+                {
+                    return null;
+                }
+
+                previa = imagem;
             }
 
-            var previa = await File.ReadAllBytesAsync(svg, cancellationToken);
             cache.Set(chave, previa, Validade);
             return previa;
         }

@@ -44,4 +44,14 @@ public class EdicaoNoArquivoTests
         EdicaoNoArquivo.Descricao(new UniaoDeCorpos("Aro", ["Chaton"])).Should().Be("unir os corpos");
         EdicaoNoArquivo.Descricao(new DefinicaoDeMateriais([])).Should().Be("definir o material dos corpos");
     }
+
+    [Test]
+    public void DeveRenomearOsCorposNumBatchNaOrdem()
+    {
+        var (nome, argumentos) = EdicaoNoArquivo.Chamada(new RenomeacaoDeCorpos([("Corpo1", "Elo"), ("Corpo2", "Elo (2)")]));
+
+        nome.Should().Be("batch");
+        argumentos.Should().Be(
+            """{"commands":[{"command":"body.rename","params":{"body":"Corpo1","name":"Elo"}},{"command":"body.rename","params":{"body":"Corpo2","name":"Elo (2)"}}]}""");
+    }
 }

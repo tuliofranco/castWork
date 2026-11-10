@@ -160,6 +160,6 @@ public class MateriaisDoModelo3dTests : TesteDeIntegracao
         var versaoId = await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = projetoId, Nome = "Base" });
         return await AmbienteDeTeste.ExecutarNoEscopoAsync(sp => sp.GetServices<IFerramentaComIa>()
             .Single(f => f.Codigo == Modelo3dNoAssistente.Codigo)
-            .PrepararAsync(projetoId, versaoId, CancellationToken.None));
+            .PrepararAsync(EscopoDaFerramenta.DaVersao(projetoId, versaoId), CancellationToken.None));
     }
 }

@@ -13,16 +13,19 @@ import { EstadoListaComponent } from '@shared/ui/estado-lista.component';
 import { SeloComponent } from '@shared/ui/selo.component';
 import { type Observable, finalize } from 'rxjs';
 
+import { PecasEmRascunhoComponent, pecasEmRascunho } from '../pecas-em-rascunho.component';
 import { STATUS_VERSAO } from '../status-versao';
+import { PecasProjetoComponent } from './pecas-projeto.component';
 import { PrecosProjetoComponent } from './precos-projeto.component';
 
 /**
- * Página do projeto: as versões (criar, publicar, arquivar) e os preços do projeto (só com `precificacao.ler`).
+ * Página do projeto: os preços do projeto (só com `precificacao.ler`), as peças do projeto e as versões (criar,
+ * publicar, arquivar). Publicar uma versão com peça em rascunho mostra as peças que impedem, com atalho para cada uma.
  * Cliente e briefing ficam nas configurações; aqui só a etiqueta do cliente e um lembrete enquanto o briefing não existe.
  */
 @Component({
   selector: 'cw-projeto-detalhe',
-  imports: [DatePipe, FormsModule, RouterLink, CabecalhoPaginaComponent, EstadoListaComponent, PrecosProjetoComponent, SeloComponent],
+  imports: [DatePipe, FormsModule, RouterLink, CabecalhoPaginaComponent, EstadoListaComponent, PecasEmRascunhoComponent, PecasProjetoComponent, PrecosProjetoComponent, SeloComponent],
   templateUrl: './projeto-detalhe.component.html',
   styleUrl: './projeto-detalhe.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +44,8 @@ export class ProjetoDetalheComponent {
   /** Sem `precificacao.ler` o bloco de preços nem entra na página (os valores não são pedidos ao servidor). */
   protected readonly podeVerPrecos = this.permissao.temAlguma(['precificacao.ler']);
   protected readonly podeEditarPrecos = this.permissao.temAlguma(['precificacao.editar']);
+  /** A busca do "Importar da biblioteca" lê a biblioteca. */
+  protected readonly podeImportarPecas = this.permissao.temAlguma(['pecas.ler']);
   protected readonly status = STATUS_VERSAO;
   protected readonly salvando = signal(false);
   protected readonly mostrarArquivadas = signal(false);
@@ -85,7 +90,17 @@ export class ProjetoDetalheComponent {
       });
   }
 
+  /** A versão cuja publicação foi recusada por peça em rascunho (o aviso aparece embaixo dela). */
+  protected readonly bloqueada = signal<number | null>(null);
+  protected readonly rascunhos = pecasEmRascunho;
+
   protected publicar(versao: VersaoProjetoDto): void {
+    // O servidor também recusa; aqui o aviso mostra as peças com atalho, sem ir ao servidor.
+    if (pecasEmRascunho(versao).length > 0) {
+      this.bloqueada.set(versao.id);
+      return;
+    }
+    this.bloqueada.set(null);
     this.executar(this.projetosService.postPublicarVersao(this.projetoId(), versao.id), `Versão ${versao.numero} publicada.`);
   }
 
