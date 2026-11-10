@@ -6,6 +6,7 @@ import { dadosGql } from '@shared/operators/dados-gql.operator';
 import { Apollo, gql } from 'apollo-angular';
 import { type Observable, map } from 'rxjs';
 
+import type { PrecoDaVersaoDto, PutMaoDeObraDto, PutMarkupDaVersaoDto, PutMetaisDaVersaoDto, PutPesoRealDto, PutServicosDto, TipoMaoDeObra } from './dto/preco-da-versao.dto';
 import type { PostItemDto, PostProjetoDto, PostVersaoDto, PutItemDto, PutPrecosDoProjetoDto } from './dto/projeto-comandos.dto';
 import type { PrecosDoProjetoDto, ProjetoDto, ProjetoResumoDto } from './dto/projeto.dto';
 
@@ -94,12 +95,92 @@ export const GET_PRECOS_DO_PROJETO = gql`
   }
 `;
 
+/**
+ * Preço de uma versão, calculado a cada leitura. O `calculo` (custos, markup, cotações, pendências) exige
+ * `precificacao.ler`: sem a regra, `comCalculo` é false e o campo nem é pedido.
+ */
+export const GET_PRECO_DA_VERSAO = gql`
+  query GetPrecoDaVersao($id: Long!, $versaoId: Long!, $comCalculo: Boolean!) {
+    projeto(id: $id) {
+      id
+      versoes(id: $versaoId) {
+        id
+        preco {
+          preco
+          status
+          calculo @include(if: $comCalculo) {
+            metais {
+              ligaId
+              liga
+              metal
+              teor
+              ligaAtiva
+              pesoEstimado
+              pesoAFundir
+              cotacaoDoPuro
+              valorPorGrama
+              custo
+              pesoReal
+              diferencaDoPesoReal
+            }
+            custoDosMetais
+            composicao {
+              pecaId
+              nome
+              quantidade
+              custoUnitario
+              custo
+            }
+            custoDaComposicao
+            maoDeObra {
+              tipo
+              horas
+              valorHora
+              custo
+            }
+            servicos {
+              nome
+              valor
+            }
+            custoDosServicos
+            custoTotal
+            perdaPercentual
+            markup
+            markupDaVersao
+            taxasPercentual
+            arredondarPara
+            precoSemArredondar
+            pendencias {
+              tipo
+              descricao
+              pecaId
+              ligaId
+              metal
+            }
+            avisos {
+              tipo
+              descricao
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+/** O REST lê o enum pelo nome do C# (PorHoras), não pelo do GraphQL (POR_HORAS). */
+const TIPO_MAO_DE_OBRA_REST: Readonly<Record<TipoMaoDeObra, string>> = { POR_HORAS: 'PorHoras', VALOR_FIXO: 'ValorFixo' };
+
 interface GetProjetosResposta {
   readonly projetos: PaginaDto<ProjetoResumoDto>;
 }
 
 interface GetProjetoResposta {
   readonly projeto: ProjetoDto | null;
+}
+
+interface GetPrecoDaVersaoResposta {
+  readonly projeto: { readonly id: number; readonly versoes: readonly { readonly id: number; readonly preco: PrecoDaVersaoDto }[] } | null;
 }
 
 interface GetPrecosDoProjetoResposta {
@@ -148,6 +229,37 @@ export class ProjetosService {
   /** "Atualizar para os valores atuais": cotações e parâmetros de hoje do ateliê. */
   postAtualizarPrecos(projetoId: number): Observable<void> {
     return this.http.post(`projetos/${projetoId}/precos/atualizar`, {}).pipe(map(() => undefined));
+  }
+
+  getPrecoDaVersao(projetoId: number, versaoId: number, comCalculo: boolean): Observable<PrecoDaVersaoDto | null> {
+    // Sempre do servidor: o preço muda com a composição, os preços do projeto e o custo das peças.
+    return this.apollo
+      .query<GetPrecoDaVersaoResposta>({ query: GET_PRECO_DA_VERSAO, variables: { id: projetoId, versaoId, comCalculo }, fetchPolicy: 'network-only' })
+      .pipe(
+        dadosGql(),
+        map((dados) => dados.projeto?.versoes[0]?.preco ?? null),
+      );
+  }
+
+  putMetaisDaVersao(projetoId: number, versaoId: number, dto: PutMetaisDaVersaoDto): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/versoes/${versaoId}/metais`, dto).pipe(map(() => undefined));
+  }
+
+  putMaoDeObra(projetoId: number, versaoId: number, dto: PutMaoDeObraDto): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/versoes/${versaoId}/mao-de-obra`, { ...dto, tipo: TIPO_MAO_DE_OBRA_REST[dto.tipo] }).pipe(map(() => undefined));
+  }
+
+  putServicos(projetoId: number, versaoId: number, dto: PutServicosDto): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/versoes/${versaoId}/servicos`, dto).pipe(map(() => undefined));
+  }
+
+  putMarkupDaVersao(projetoId: number, versaoId: number, dto: PutMarkupDaVersaoDto): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/versoes/${versaoId}/markup`, dto).pipe(map(() => undefined));
+  }
+
+  /** Vale em qualquer status da versão (a publicada é a que vai para a bancada). */
+  putPesoReal(projetoId: number, versaoId: number, ligaId: number, dto: PutPesoRealDto): Observable<void> {
+    return this.http.put(`projetos/${projetoId}/versoes/${versaoId}/metais/${ligaId}/peso-real`, dto).pipe(map(() => undefined));
   }
 
   postProjeto(dto: PostProjetoDto): Observable<IdCriadoDto> {

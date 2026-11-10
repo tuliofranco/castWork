@@ -6,6 +6,7 @@ import { Router, provideRouter } from '@angular/router';
 import { PermissaoService } from '@core/services/permissao.service';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
 import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
+import { PrecosService } from '@data/precificacao/precos/precos.service';
 import type { ProjetoDto } from '@data/projetos/projetos/dto/projeto.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
@@ -42,6 +43,7 @@ describe('VersaoDetalheComponent', () => {
     postItem: vi.fn(() => of({ id: 101 })),
     postArquivarVersao: vi.fn(() => of(undefined)),
     postDuplicarVersao: vi.fn(() => of({ id: 30 })),
+    getPrecoDaVersao: vi.fn(() => of({ preco: 0, status: 'INCOMPLETO' as const, calculo: null })),
   };
 
   async function abrir(versaoId: string, podeEditar = true) {
@@ -59,6 +61,7 @@ describe('VersaoDetalheComponent', () => {
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
         { provide: ToastService, useValue: { sucesso: vi.fn() } },
         { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
+        { provide: PrecosService, useValue: { getPrecos: () => of(null) } },
       ],
     });
     const fixture = TestBed.createComponent(VersaoDetalheComponent);

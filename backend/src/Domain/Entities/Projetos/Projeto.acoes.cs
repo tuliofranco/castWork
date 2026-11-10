@@ -78,6 +78,8 @@ public sealed partial class Projeto
             copia.AdicionarItem(item.PecaId, item.Quantidade, item.Observacao);
         }
 
+        copia.CopiarOrcamentoDe(origem);
+
         _versoes.Add(copia);
         return copia;
     }
@@ -91,6 +93,20 @@ public sealed partial class Projeto
         => ObterVersao(versaoId).AlterarItem(itemId, quantidade, observacao);
 
     public void RemoverItem(long versaoId, long itemId) => ObterVersao(versaoId).RemoverItem(itemId);
+
+    /// <summary>
+    /// Orçamento da versão: as ligas e o peso estimado de cada uma (substitui a lista).
+    /// </summary>
+    public void DefinirMetaisDaVersao(long versaoId, IEnumerable<(long LigaId, Peso PesoEstimado)> metais)
+        => ObterVersao(versaoId).DefinirMetais(metais);
+
+    public void DefinirMaoDeObraDaVersao(long versaoId, MaoDeObra? maoDeObra) => ObterVersao(versaoId).DefinirMaoDeObra(maoDeObra);
+
+    public void DefinirServicosDaVersao(long versaoId, IEnumerable<ServicoExterno> servicos) => ObterVersao(versaoId).DefinirServicos(servicos);
+
+    public void DefinirMarkupDaVersao(long versaoId, decimal? markup) => ObterVersao(versaoId).DefinirMarkup(markup);
+
+    public void RegistrarPesoReal(long versaoId, long ligaId, Peso? pesoReal) => ObterVersao(versaoId).RegistrarPesoReal(ligaId, pesoReal);
 
     private void HerdarPrecos(PrecosDoAtelie precosDoAtelie, DateTimeOffset agora)
     {

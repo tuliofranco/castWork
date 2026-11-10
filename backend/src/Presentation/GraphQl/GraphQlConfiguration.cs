@@ -3,6 +3,7 @@ using Castwork.Application.Common.Enderecos;
 using Castwork.Application.Precificacao.Queries;
 using Castwork.Application.Precificacao.Queries.GetPrecosDoAtelie;
 using Castwork.Application.Projetos.Queries;
+using Castwork.Application.Projetos.Queries.GetPrecoDaVersao;
 using Castwork.GraphQl.DataLoaders;
 using Castwork.GraphQl.Erros;
 using Castwork.GraphQl.Queries;
@@ -49,6 +50,13 @@ public static class GraphQlConfiguration
             .AddType(new ObjectType<LigaDto>(d => d.Name("Liga")))
             .AddType(new ObjectType<ParametrosDePrecoDto>(d => d.Name("ParametrosDePreco")))
             .AddType(new ObjectType<CotacaoDoProjetoDto>(d => d.Name("CotacaoDoProjeto")))
+            .AddType(new ObjectType<CalculoDoPrecoDto>(d => d.Name("CalculoDoPreco")))
+            .AddType(new ObjectType<CustoDoMetalDto>(d => d.Name("CustoDoMetal")))
+            .AddType(new ObjectType<CustoDaPecaDto>(d => d.Name("CustoDaPeca")))
+            .AddType(new ObjectType<CustoDaMaoDeObraDto>(d => d.Name("CustoDaMaoDeObra")))
+            .AddType(new ObjectType<ServicoExternoDto>(d => d.Name("ServicoExterno")))
+            .AddType(new ObjectType<PendenciaDoPrecoDto>(d => d.Name("PendenciaDoPreco")))
+            .AddType(new ObjectType<AvisoDoPrecoDto>(d => d.Name("AvisoDoPreco")))
             .AddType(new ObjectType<EnderecoDto>(d =>
             {
                 d.Name("Endereco");
@@ -64,6 +72,7 @@ public static class GraphQlConfiguration
             .AddDataLoader<VersoesPorProjetoDataLoader>()
             .AddDataLoader<ItensPorVersaoDataLoader>()
             .AddDataLoader<PrecosPorProjetoDataLoader>()
+            .AddDataLoader<PrecoPorVersaoDataLoader>()
             .AddDataLoader<ProjetosPorClienteDataLoader>()
             .AddErrorFilter<ErrorFilter>()
             .ModifyPagingOptions(o =>

@@ -22,5 +22,11 @@ public sealed class VersaoProjetoType : ObjectType<VersaoProjeto>
             .Type<NonNullType<ListType<NonNullType<ItemComposicaoType>>>>()
             .Resolve(async ctx =>
                 (await ctx.DataLoader<ItensPorVersaoDataLoader>().LoadAsync(ctx.Parent<VersaoProjeto>().Id, ctx.RequestAborted)) ?? []);
+
+        // Calculado a cada leitura (nada é gravado): pensado para a página da versão, não para listas.
+        descriptor.Field("preco")
+            .Description("Preço da versão calculado agora com os preços do projeto. O cálculo detalhado exige precificacao.ler.")
+            .Type<NonNullType<PrecoDaVersaoType>>()
+            .Resolve(async ctx => await ctx.DataLoader<PrecoPorVersaoDataLoader>().LoadRequiredAsync(ctx.Parent<VersaoProjeto>().Id, ctx.RequestAborted));
     }
 }

@@ -72,6 +72,37 @@ ateliê atualiza o preço do ouro.
 - Nada é congelado aqui: a proposta (item 2 do roadmap) é que congela o preço calculado.
 - Ver os valores exige `precificacao.ler` (sem a regra, o bloco nem aparece); editar e atualizar, `precificacao.editar`.
 
+## Preço da versão (etapa 4)
+
+Cada versão tem o **preço calculado**, linha a linha. Nesta etapa o peso do metal é **digitado** (estimado); as etapas 5
+a 7 trocam pelo peso medido no modelo 3D.
+
+- **Metais da versão:** liga + peso estimado da peça pronta (g). Pode haver mais de uma liga (ouro amarelo e branco).
+- **Mão de obra:** por horas (horas × valor da hora do projeto) ou valor fixo.
+- **Serviços externos:** lista livre de nome + valor (fundição, cravação, ródio, gravação).
+- **Markup da versão:** opcional; sem ele, vale o do projeto.
+- **Peso real** (por liga): preenchido depois de pesar a peça pronta. Não muda o preço; a tela mostra
+  "estimado 5,00 g · real 5,20 g · +4%".
+
+| Linha | Exemplo |
+|---|---|
+| Por liga: peso + perda = peso a fundir × cotação do puro × pureza | Ouro 18k amarelo: 5,00 g + 8% = 5,40 g × R$ 480,00/g (R$ 640,00 × 0,750) = R$ 2.592,00 |
+| Composição: Σ quantidade × custo da peça | R$ 800,00 |
+| Mão de obra | 6 h × R$ 90,00 = R$ 540,00 |
+| Serviços | fundição R$ 120 + ródio R$ 60 = R$ 180,00 |
+| **Custo total** | **R$ 4.112,00** |
+| **Preço** = custo × markup × (1 + taxas), arredondado para cima | 4.112 × 1,8 × 1,06 = 7.845,70 → **R$ 7.850,00** |
+
+- **Pendências** (preço **Incompleto**, mas o parcial aparece): peça da composição sem custo, metal sem cotação no
+  projeto, versão sem nenhum metal com peso, liga desativada em uso e mão de obra por horas com o valor da hora do
+  projeto "a definir". A tela tem um atalho para cada uma (abrir a peça, preços do projeto, trocar a liga).
+- **Avisos** (não bloqueiam): cotação de um metal usado com mais de 15 dias.
+- O cálculo é **sempre refeito na leitura**: nada é gravado. Congelar o preço é papel da proposta.
+- A IA **não** calcula nem altera preço.
+- Versão publicada ou arquivada não aceita alterar o orçamento; só registrar o peso real. Duplicar copia o orçamento
+  (sem o peso real).
+- Sem `precificacao.ler`, a versão mostra **só o preço final e o status**; montar o orçamento exige `precificacao.editar`.
+
 ## Regras
 
 - Valores negativos ou zero são recusados: cotação, densidade, valor da hora e markup.
@@ -91,5 +122,5 @@ ateliê atualiza o preço do ouro.
 
 ## Fora desta etapa
 
-Usar os valores no preço da versão (etapa 4), atualizar vários projetos de uma vez, cotação automática de mercado,
-platina e outros metais.
+Peso vindo do 3D (etapas 5 a 7), proposta, PDF e congelamento do preço, atualizar vários projetos de uma vez, cotação
+automática de mercado, platina e outros metais.

@@ -114,6 +114,31 @@ type Query {
     @cost(weight: "10")
 }
 
+type AvisoDoPreco {
+  tipo: TipoDeAviso!
+  descricao: String!
+  metal: Metal
+}
+
+type CalculoDoPreco {
+  metais: [CustoDoMetal!]!
+  custoDosMetais: Decimal!
+  composicao: [CustoDaPeca!]!
+  custoDaComposicao: Decimal!
+  maoDeObra: CustoDaMaoDeObra!
+  servicos: [ServicoExterno!]!
+  custoDosServicos: Decimal!
+  custoTotal: Decimal!
+  perdaPercentual: Decimal!
+  markup: Decimal!
+  markupDaVersao: Decimal
+  taxasPercentual: Decimal!
+  arredondarPara: Decimal!
+  precoSemArredondar: Decimal!
+  pendencias: [PendenciaDoPreco!]!
+  avisos: [AvisoDoPreco!]!
+}
+
 type Cliente {
   id: Long!
   nome: String!
@@ -177,6 +202,36 @@ type CotacaoDoProjeto {
 type CotacaoVigente {
   metal: Metal!
   atual: Cotacao
+}
+
+type CustoDaMaoDeObra {
+  tipo: TipoMaoDeObra
+  horas: Decimal
+  valorHora: Decimal
+  custo: Decimal!
+}
+
+type CustoDaPeca {
+  pecaId: Long!
+  nome: String!
+  quantidade: Int!
+  custoUnitario: Decimal
+  custo: Decimal!
+}
+
+type CustoDoMetal {
+  ligaId: Long!
+  liga: String!
+  metal: Metal!
+  teor: Int!
+  ligaAtiva: Boolean!
+  pesoEstimado: Decimal!
+  pesoAFundir: Decimal!
+  cotacaoDoPuro: Decimal
+  valorPorGrama: Decimal
+  custo: Decimal!
+  pesoReal: Decimal
+  diferencaDoPesoReal: Decimal
 }
 
 type Endereco {
@@ -280,6 +335,23 @@ type PecasEdge {
   node: Peca!
 }
 
+type PendenciaDoPreco {
+  tipo: TipoDePendencia!
+  descricao: String!
+  pecaId: Long
+  ligaId: Long
+  metal: Metal
+}
+
+type PrecoDaVersao {
+  "Preço final (R$), arredondado para cima. Parcial quando o status é INCOMPLETO."
+  preco: Decimal!
+  "COMPLETO, ou INCOMPLETO enquanto houver pendência."
+  status: StatusDoPreco!
+  "O cálculo linha a linha e os dados do orçamento da versão."
+  calculo: CalculoDoPreco @authorize(policy: "precificacao.ler")
+}
+
 type PrecosDoAtelie {
   cotacoes: [CotacaoVigente!]!
   ligas: [Liga!]!
@@ -308,7 +380,8 @@ type Projeto {
   "Preços deste projeto: cópia dos do ateliê, editável só aqui."
   precos: PrecosDoProjeto! @cost(weight: "10")
   "Versões da arte, da mais recente para a mais antiga."
-  versoes: [VersaoProjeto!]! @cost(weight: "10")
+  versoes("Só a versão com este Id." id: Long): [VersaoProjeto!]!
+    @cost(weight: "10")
 }
 
 "A connection to a list of items."
@@ -331,6 +404,11 @@ type ProjetosEdge {
   node: Projeto!
 }
 
+type ServicoExterno {
+  nome: String!
+  valor: Decimal!
+}
+
 type VersaoProjeto {
   id: Long!
   numero: Int!
@@ -340,6 +418,8 @@ type VersaoProjeto {
   publicadaEm: DateTime
   "Composição: as peças da versão e a quantidade de cada uma."
   itens: [ItemComposicao!]! @cost(weight: "10")
+  "Preço da versão calculado agora com os preços do projeto. O cálculo detalhado exige precificacao.ler."
+  preco: PrecoDaVersao! @cost(weight: "10")
 }
 
 input BooleanOperationFilterInput {
@@ -461,10 +541,32 @@ enum SortEnumType {
   DESC
 }
 
+enum StatusDoPreco {
+  COMPLETO
+  INCOMPLETO
+}
+
 enum StatusVersao {
   EM_DESENVOLVIMENTO
   PUBLICADA
   ARQUIVADA
+}
+
+enum TipoDeAviso {
+  COTACAO_ANTIGA
+}
+
+enum TipoDePendencia {
+  PECA_SEM_CUSTO
+  METAL_SEM_COTACAO
+  SEM_METAL_COM_PESO
+  LIGA_DESATIVADA
+  VALOR_HORA_A_DEFINIR
+}
+
+enum TipoMaoDeObra {
+  POR_HORAS
+  VALOR_FIXO
 }
 
 enum TipoPeca {

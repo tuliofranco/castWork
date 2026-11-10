@@ -5,9 +5,14 @@ using Castwork.Application.Projetos.Commands.ArquivarVersao;
 using Castwork.Application.Projetos.Commands.AtualizarPrecosDoProjeto;
 using Castwork.Application.Projetos.Commands.CriarProjeto;
 using Castwork.Application.Projetos.Commands.CriarVersao;
+using Castwork.Application.Projetos.Commands.DefinirMaoDeObra;
+using Castwork.Application.Projetos.Commands.DefinirMarkupDaVersao;
+using Castwork.Application.Projetos.Commands.DefinirMetaisDaVersao;
+using Castwork.Application.Projetos.Commands.DefinirServicos;
 using Castwork.Application.Projetos.Commands.DesarquivarVersao;
 using Castwork.Application.Projetos.Commands.DuplicarVersao;
 using Castwork.Application.Projetos.Commands.PublicarVersao;
+using Castwork.Application.Projetos.Commands.RegistrarPesoReal;
 using Castwork.Application.Projetos.Commands.RemoverItem;
 using Castwork.Application.Projetos.Commands.VincularCliente;
 
@@ -16,7 +21,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Castwork.WebAPI.Controllers.Projetos;
 
 /// <summary>
-/// Escrita de projetos, versões e composição. Os Ids da rota têm precedência sobre os do corpo.
+/// Escrita de projetos, versões, composição e orçamento da versão. Os Ids da rota têm precedência sobre os do corpo.
 /// </summary>
 [Route("api/projetos")]
 [Tags("Projetos")]
@@ -148,6 +153,86 @@ public sealed class ProjetosController : ApiController
     public async Task<IActionResult> RemoverItem([FromRoute] long projetoId, [FromRoute] long versaoId, [FromRoute] long itemId, CancellationToken cancellationToken)
     {
         await Mediator.Send(new RemoverItemCommand { ProjetoId = projetoId, VersaoId = versaoId, ItemId = itemId }, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{projetoId:long}/versoes/{versaoId:long}/metais")]
+    [EndpointSummary("Define as ligas da versão e o peso estimado de cada uma (substitui a lista).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DefinirMetais(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromBody] DefinirMetaisDaVersaoCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId) = (projetoId, versaoId);
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{projetoId:long}/versoes/{versaoId:long}/metais/{ligaId:long}/peso-real")]
+    [EndpointSummary("Registra o peso medido na peça pronta para uma liga da versão (nulo apaga). Vale em qualquer status.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RegistrarPesoReal(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromRoute] long ligaId,
+        [FromBody] RegistrarPesoRealCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId, command.LigaId) = (projetoId, versaoId, ligaId);
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{projetoId:long}/versoes/{versaoId:long}/mao-de-obra")]
+    [EndpointSummary("Define a mão de obra da versão: por horas (× valor da hora do projeto) ou valor fixo.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DefinirMaoDeObra(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromBody] DefinirMaoDeObraCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId) = (projetoId, versaoId);
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{projetoId:long}/versoes/{versaoId:long}/servicos")]
+    [EndpointSummary("Define os serviços externos da versão (substitui a lista).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DefinirServicos(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromBody] DefinirServicosCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId) = (projetoId, versaoId);
+        await Mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{projetoId:long}/versoes/{versaoId:long}/markup")]
+    [EndpointSummary("Define o markup só desta versão (nulo volta a valer o do projeto).")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DefinirMarkup(
+        [FromRoute] long projetoId,
+        [FromRoute] long versaoId,
+        [FromBody] DefinirMarkupDaVersaoCommand command,
+        CancellationToken cancellationToken)
+    {
+        (command.ProjetoId, command.VersaoId) = (projetoId, versaoId);
+        await Mediator.Send(command, cancellationToken);
         return NoContent();
     }
 
