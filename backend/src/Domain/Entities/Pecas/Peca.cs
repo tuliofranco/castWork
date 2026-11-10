@@ -35,6 +35,11 @@ public sealed partial class Peca : BaseEntity<long>, IAggregateRoot, IAuditavel,
 
     public string? Descricao { get; private set; }
 
+    /// <summary>
+    /// Custo de compra ou produção de uma unidade (não é o preço de venda). Peça sem custo deixa o preço da versão incompleto.
+    /// </summary>
+    public Dinheiro? Custo { get; private set; }
+
     public bool Ativo { get; private set; }
 
     public DateTimeOffset CriadoEm { get; private set; }

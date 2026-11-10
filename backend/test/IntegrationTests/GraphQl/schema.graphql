@@ -250,6 +250,8 @@ type Peca {
   "Teor em milésimos (750 = 18k), quando a peça é de metal."
   teor: Int @cost(weight: "10")
   pesoGramas: Decimal @cost(weight: "10")
+  "Custo de compra ou produção de uma unidade (R$), não o preço de venda. Null quando a peça ainda não tem custo."
+  custo: Decimal @authorize(policy: "precificacao.ler") @cost(weight: "10")
 }
 
 "A connection to a list of items."

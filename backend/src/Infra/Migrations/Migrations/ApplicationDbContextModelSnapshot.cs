@@ -1054,6 +1054,11 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("criado_por");
 
+                    b.Property<decimal?>("Custo")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("custo");
+
                     b.Property<string>("Descricao")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")

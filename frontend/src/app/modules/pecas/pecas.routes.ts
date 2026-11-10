@@ -10,4 +10,9 @@ export const PECAS_ROUTES: CastworkRoute[] = [
     loadComponent: () => import('./nova-peca/nova-peca.component').then((m) => m.NovaPecaComponent),
     data: { title: 'Nova peça', permissoes: ['pecas.criar'] },
   },
+  {
+    path: ':id/editar',
+    loadComponent: () => import('./nova-peca/nova-peca.component').then((m) => m.NovaPecaComponent),
+    data: { title: 'Editar peça', permissoes: ['pecas.editar'] },
+  },
 ];

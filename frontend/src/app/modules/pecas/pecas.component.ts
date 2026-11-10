@@ -1,4 +1,4 @@
-import { DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
@@ -19,14 +19,21 @@ const POR_PAGINA = 20;
 /** Biblioteca de peças: componentes reutilizáveis nas versões de qualquer projeto. */
 @Component({
   selector: 'cw-pecas',
-  imports: [RouterLink, DecimalPipe, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PaginacaoComponent, SeloComponent],
+  imports: [RouterLink, DecimalPipe, CurrencyPipe, NgTemplateOutlet, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PaginacaoComponent, SeloComponent],
   templateUrl: './pecas.component.html',
-  styles: '.peso { color: var(--cw-ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }',
+  styles: `
+    .peso { color: var(--cw-ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .custo { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; min-width: 6.5rem; text-align: right; }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PecasComponent {
   private readonly pecasService = inject(PecasService);
-  protected readonly podeCriar = inject(PermissaoService).temAlguma(['pecas.criar']);
+  private readonly permissoes = inject(PermissaoService);
+  protected readonly podeCriar = this.permissoes.temAlguma(['pecas.criar']);
+  protected readonly podeEditar = this.permissoes.temAlguma(['pecas.editar']);
+  /** Custo é dado de precificação: sem `precificacao.ler` nem é pedido ao servidor. */
+  protected readonly podeVerCusto = this.permissoes.temAlguma(['precificacao.ler']);
   protected readonly paginacao = new PaginacaoCursor();
   protected readonly rotuloTipo = rotuloTipoPeca;
   protected readonly iconeTipo = iconeTipoPeca;
@@ -44,7 +51,7 @@ export class PecasComponent {
   );
 
   protected readonly pecas = rxResource({
-    params: () => ({ termo: this.termo() || null, apos: this.paginacao.apos(), primeiros: POR_PAGINA }),
+    params: () => ({ termo: this.termo() || null, apos: this.paginacao.apos(), primeiros: POR_PAGINA, comCusto: this.podeVerCusto }),
     stream: ({ params }) => this.pecasService.getPecas(params),
   });
 }

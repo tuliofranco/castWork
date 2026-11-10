@@ -9,10 +9,11 @@ namespace Castwork.Domain.Entities.Pecas;
 /// </summary>
 public sealed partial class Peca
 {
-    public static Peca Criar(string nome, TipoPeca tipo, string? material, TeorMetal? teor, Peso? peso, string? descricao)
+    public static Peca Criar(string nome, TipoPeca tipo, string? material, TeorMetal? teor, Peso? peso, string? descricao, Dinheiro? custo)
     {
         var peca = new Peca { Ativo = true };
         peca.Atualizar(nome, tipo, material, teor, peso, descricao);
+        peca.DefinirCusto(custo);
         return peca;
     }
 
@@ -25,6 +26,12 @@ public sealed partial class Peca
         Peso = peso;
         Descricao = Guard.Opcional(descricao, nameof(Descricao), DescricaoMaxLength);
     }
+
+    /// <summary>
+    /// Custo por unidade (nulo = ainda sem custo). Separado de <see cref="Atualizar"/> porque só quem consulta a
+    /// precificação pode vê-lo e, portanto, alterá-lo.
+    /// </summary>
+    public void DefinirCusto(Dinheiro? custo) => Custo = custo;
 
     public void Desativar() => Ativo = false;
 

@@ -10,6 +10,6 @@ data/<dominio>/<recurso>/
   mocks/                   # fábricas com @faker-js/faker
 ```
 
-Domínios: `clientes`, `pecas`, `precificacao` (`precos`: cotações, ligas e parâmetros do ateliê), `documentos`, `portfolio`. O que é compartilhado entre domínios vai em `common/`.
+Domínios: `clientes`, `pecas` (o `custo` só é pedido com `comCusto`, para quem tem `precificacao.ler`), `precificacao` (`precos`: cotações, ligas e parâmetros do ateliê), `documentos`, `portfolio`. O que é compartilhado entre domínios vai em `common/`.
 
 **Proibido:** guardar estado (signals/BehaviorSubject), nomes genéricos (`Dados`) ou voltados à UI (`FormularioPeca`).
