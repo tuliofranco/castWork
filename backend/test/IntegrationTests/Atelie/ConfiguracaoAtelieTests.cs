@@ -18,7 +18,6 @@ public class ConfiguracaoAtelieTests : TesteDeIntegracao
         configuracao.Should().BeEquivalentTo(new ConfiguracaoAtelieDto
         {
             Nome = "Meu ateliê",
-            ValorHoraPadrao = 0m,
             PossuiLogo = false,
             CorMarca = ConfiguracaoAtelie.CorPadrao,
             AvisoBriefing = ConfiguracaoAtelie.AvisoPadrao,
@@ -35,7 +34,6 @@ public class ConfiguracaoAtelieTests : TesteDeIntegracao
             Nome = "Ateliê Lima",
             Documento = "11222333000181",
             Email = "Contato@AtelieLima.com",
-            ValorHoraPadrao = 85.5m,
             Endereco = endereco,
         });
 
@@ -45,7 +43,6 @@ public class ConfiguracaoAtelieTests : TesteDeIntegracao
             Nome = "Ateliê Lima",
             Documento = "11.222.333/0001-81",
             Email = "contato@atelielima.com",
-            ValorHoraPadrao = 85.5m,
             Endereco = new { Cep = "80010000", Uf = "PR", Cidade = "Curitiba" },
         });
     }

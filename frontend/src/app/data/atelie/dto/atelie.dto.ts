@@ -13,7 +13,6 @@ export interface ConfiguracaoAtelieDto {
   readonly documento: string | null;
   readonly email: string | null;
   readonly telefone: string | null;
-  readonly valorHoraPadrao: number;
   readonly endereco: EnderecoDto | null;
   readonly assinatura: string | null;
   readonly corMarca: string;
@@ -28,7 +27,6 @@ export interface PutAtelieDto {
   readonly documento: string | null;
   readonly email: string | null;
   readonly telefone: string | null;
-  readonly valorHoraPadrao: number;
   readonly endereco: EnderecoDto | null;
   readonly assinatura: string | null;
   readonly corMarca: string | null;

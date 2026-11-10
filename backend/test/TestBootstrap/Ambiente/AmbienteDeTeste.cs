@@ -1,7 +1,11 @@
+using Castwork.Domain.Entities.Precificacao;
 using Castwork.Infra.Data;
 
 using MediatR;
 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
 using Npgsql;
@@ -53,7 +57,7 @@ public static class AmbienteDeTeste
             DbAdapter = DbAdapter.Postgres,
             SchemasToInclude = ["public"],
 
-            // regras: catálogo sincronizado na inicialização; configuracao_atelie: linha única recriada no reset.
+            // regras: catálogo sincronizado na inicialização. configuracao_atelie e ligas: seeds recriados no reset.
             TablesToIgnore = [new Table("__EFMigrationsHistory"), new Table("regras")],
         });
     }
@@ -80,6 +84,7 @@ public static class AmbienteDeTeste
         await conexao.OpenAsync();
         await _respawner!.ResetAsync(conexao);
         await RecriarConfiguracaoAtelieAsync(conexao);
+        await RecriarSeedAsync<Liga>();
 
         Relogio.Reiniciar();
         Sessao.Reiniciar();
@@ -137,6 +142,28 @@ public static class AmbienteDeTeste
         {
             await acao(context);
             return true;
+        });
+
+    /// <summary>
+    /// Devolve as linhas do <c>HasData</c> da entidade, lidas do modelo do EF: o seed tem uma fonte só (a configuration).
+    /// </summary>
+    private static Task RecriarSeedAsync<TEntidade>()
+        => ExecutarNoBancoAsync(async context =>
+        {
+            var tipo = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(TEntidade))
+                ?? throw new InvalidOperationException($"{typeof(TEntidade).Name} não está no modelo.");
+
+            foreach (var linha in tipo.GetSeedData())
+            {
+                var campos = linha.Where(c => c.Value is not null).Select(c => (Propriedade: tipo.FindProperty(c.Key)!, Valor: c.Value!)).ToList();
+                var colunas = string.Join(", ", campos.Select(c => c.Propriedade.GetColumnName()));
+                var parametros = string.Join(", ", campos.Select((_, i) => $"{{{i}}}"));
+                var valores = campos.Select(c => (c.Propriedade.GetValueConverter() ?? c.Propriedade.FindTypeMapping()?.Converter)?.ConvertToProvider(c.Valor) ?? c.Valor);
+
+#pragma warning disable EF1002 // Tabela e colunas vêm do modelo do EF; os valores vão como parâmetros.
+                await context.Database.ExecuteSqlRawAsync($"INSERT INTO {tipo.GetTableName()} ({colunas}) VALUES ({parametros})", valores);
+#pragma warning restore EF1002
+            }
         });
 
     private static async Task RecriarConfiguracaoAtelieAsync(NpgsqlConnection conexao)

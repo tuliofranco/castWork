@@ -49,10 +49,10 @@ public static class Regras
 
     public static class Precificacao
     {
-        [Regra("precificacao.ler", "Consultar orçamentos e custos")]
+        [Regra("precificacao.ler", "Consultar preços do ateliê, orçamentos e custos")]
         public const string Consultar = "4a1c7e9b-2d38-4f6a-a5b1-8c9d0e1f2a01";
 
-        [Regra("precificacao.editar", "Montar e alterar orçamentos")]
+        [Regra("precificacao.editar", "Alterar preços do ateliê e montar orçamentos")]
         public const string Editar = "4a1c7e9b-2d38-4f6a-a5b1-8c9d0e1f2a02";
     }
 

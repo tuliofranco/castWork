@@ -653,11 +653,6 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("telefone");
 
-                    b.Property<decimal>("ValorHoraPadrao")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("valor_hora_padrao");
-
                     b.Property<uint>("Versao")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -710,6 +705,46 @@ namespace Castwork.Infra.Migrations
                                 .IsFixedLength();
                         });
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "ParametrosDePreco", "Castwork.Domain.Entities.Atelie.ConfiguracaoAtelie.ParametrosDePreco#ParametrosDePreco", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("ArredondarPara")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasDefaultValue(10m)
+                                .HasColumnName("arredondar_para");
+
+                            b1.Property<decimal>("Markup")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasDefaultValue(1.8m)
+                                .HasColumnName("markup");
+
+                            b1.Property<decimal>("PerdaPercentual")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasDefaultValue(8m)
+                                .HasColumnName("perda_percentual");
+
+                            b1.Property<decimal>("TaxasPercentual")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasDefaultValue(0m)
+                                .HasColumnName("taxas_percentual");
+
+                            b1.Property<decimal>("ValorHora")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasDefaultValue(0m)
+                                .HasColumnName("valor_hora_padrao");
+                        });
+
                     b.HasKey("Id")
                         .HasName("pk_configuracao_atelie");
 
@@ -722,8 +757,7 @@ namespace Castwork.Infra.Migrations
                             AvisoBriefing = "Peça feita à mão: textura, tonalidade e proporções podem variar levemente em relação às referências.",
                             CorMarca = "#2E6E68",
                             CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Nome = "Meu ateliê",
-                            ValorHoraPadrao = 0m
+                            Nome = "Meu ateliê"
                         });
                 });
 
@@ -1067,6 +1101,182 @@ namespace Castwork.Infra.Migrations
                         .HasDatabaseName("ix_pecas_tipo");
 
                     b.ToTable("pecas", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Precificacao.CotacaoMetal", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Metal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metal");
+
+                    b.Property<DateTimeOffset>("RegistradaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("registrada_em");
+
+                    b.Property<long?>("RegistradaPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("registrada_por");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cotacoes_metal");
+
+                    b.HasIndex("Metal", "RegistradaEm")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_cotacoes_metal_metal_registrada_em");
+
+                    b.ToTable("cotacoes_metal", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Precificacao.Liga", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.HasIdentityOptions(b.Property<long>("Id"), 1000L, null, null, null, null, null);
+
+                    b.Property<DateTimeOffset?>("AlteradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("alterado_em");
+
+                    b.Property<long?>("AlteradoPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("alterado_por");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<long?>("CriadoPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("criado_por");
+
+                    b.Property<decimal>("Densidade")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)")
+                        .HasColumnName("densidade");
+
+                    b.Property<string>("Metal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metal");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("nome");
+
+                    b.Property<int>("Teor")
+                        .HasColumnType("integer")
+                        .HasColumnName("teor");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ligas");
+
+                    b.HasIndex("Nome")
+                        .HasDatabaseName("ix_ligas_nome");
+
+                    b.ToTable("ligas", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 19.3m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 24k",
+                            Teor = 999
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 15.5m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 18k amarelo",
+                            Teor = 750
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 15.0m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 18k branco",
+                            Teor = 750
+                        },
+                        new
+                        {
+                            Id = 4L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 15.1m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 18k rosé",
+                            Teor = 750
+                        },
+                        new
+                        {
+                            Id = 5L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 13.4m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 14k amarelo",
+                            Teor = 585
+                        },
+                        new
+                        {
+                            Id = 6L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 10.4m,
+                            Metal = "Prata",
+                            Nome = "Prata 950",
+                            Teor = 950
+                        },
+                        new
+                        {
+                            Id = 7L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 10.36m,
+                            Metal = "Prata",
+                            Nome = "Prata 925",
+                            Teor = 925
+                        });
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>

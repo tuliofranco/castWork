@@ -11,7 +11,7 @@ using MediatR;
 namespace Castwork.Application.Atelie.Queries.GetConfiguracaoAtelie;
 
 /// <summary>
-/// Qualquer usuário logado lê os dados do ateliê (cabeçalho, PDFs, valor/hora sugerido).
+/// Qualquer usuário logado lê os dados do ateliê (cabeçalho e PDFs).
 /// </summary>
 [SomenteAutenticado]
 public sealed class GetConfiguracaoAtelieQuery : IRequest<ConfiguracaoAtelieDto>;

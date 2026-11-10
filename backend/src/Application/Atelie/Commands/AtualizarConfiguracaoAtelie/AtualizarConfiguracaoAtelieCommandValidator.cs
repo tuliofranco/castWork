@@ -10,8 +10,6 @@ namespace Castwork.Application.Atelie.Commands.AtualizarConfiguracaoAtelie;
 
 public sealed class AtualizarConfiguracaoAtelieCommandValidator : ValidatorBase<AtualizarConfiguracaoAtelieCommand>
 {
-    public const decimal ValorHoraMaximo = 10_000m;
-
     public AtualizarConfiguracaoAtelieCommandValidator(IUnitOfWork unitOfWork)
         : base(unitOfWork)
     {
@@ -35,11 +33,6 @@ public sealed class AtualizarConfiguracaoAtelieCommandValidator : ValidatorBase<
         RuleFor(c => c.Instagram).MaximumLength(ConfiguracaoAtelie.InstagramMaxLength).WithName("Instagram");
         RuleFor(c => c.Site).MaximumLength(ConfiguracaoAtelie.SiteMaxLength).WithName("Site");
         RuleFor(c => c.AvisoBriefing).MaximumLength(ConfiguracaoAtelie.AvisoMaxLength).WithName("Aviso do briefing");
-
-        RuleFor(c => c.ValorHoraPadrao)
-            .InclusiveBetween(0, ValorHoraMaximo)
-            .PrecisionScale(18, 2, ignoreTrailingZeros: true)
-            .WithName("Valor da hora");
 
         RuleFor(c => c.Endereco!).SetValidator(new EnderecoDtoValidator()).When(c => c.Endereco is not null);
     }

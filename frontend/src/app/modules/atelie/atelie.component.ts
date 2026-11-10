@@ -35,7 +35,7 @@ export class AtelieComponent {
   protected readonly logoUrl = signal<string | null>(null);
 
   /** Campos que esta tela não edita, devolvidos como estão ao salvar. */
-  private preservado: Pick<ConfiguracaoAtelieDto, 'valorHoraPadrao' | 'endereco'> | null = null;
+  private preservado: Pick<ConfiguracaoAtelieDto, 'endereco'> | null = null;
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.maxLength(150)]],
@@ -62,7 +62,7 @@ export class AtelieComponent {
       .pipe(finalize(() => this.carregando.set(false)))
       .subscribe({
         next: (c) => {
-          this.preservado = { valorHoraPadrao: c.valorHoraPadrao, endereco: c.endereco };
+          this.preservado = { endereco: c.endereco };
           this.form.setValue({
             nome: c.nome,
             assinatura: c.assinatura ?? '',
@@ -140,7 +140,6 @@ export class AtelieComponent {
         site: v.site || null,
         documento: v.documento || null,
         avisoBriefing: v.avisoBriefing || null,
-        valorHoraPadrao: this.preservado?.valorHoraPadrao ?? 0,
         endereco: this.preservado?.endereco ?? null,
       })
       .pipe(finalize(() => this.salvando.set(false)))

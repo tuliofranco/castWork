@@ -8,6 +8,10 @@ using MediatR;
 
 namespace Castwork.Application.Atelie.Commands.AtualizarConfiguracaoAtelie;
 
+/// <summary>
+/// Dados e marca do ateliê. Os padrões de preço (valor da hora e demais parâmetros) ficam na tela de preços,
+/// com a regra de precificação.
+/// </summary>
 [Permissao(Regras.Atelie.Configurar)]
 public sealed class AtualizarConfiguracaoAtelieCommand : IRequest
 {
@@ -20,8 +24,6 @@ public sealed class AtualizarConfiguracaoAtelieCommand : IRequest
     public string? Telefone { get; set; }
 
     public EnderecoDto? Endereco { get; set; }
-
-    public decimal ValorHoraPadrao { get; set; }
 
     public string? Assinatura { get; set; }
 
@@ -50,8 +52,7 @@ public sealed class AtualizarConfiguracaoAtelieCommandHandler(IUnitOfWork unitOf
             string.IsNullOrWhiteSpace(request.Documento) ? null : Documento.Criar(request.Documento),
             request.Email,
             request.Telefone,
-            request.Endereco?.ParaValueObject(),
-            Dinheiro.Criar(request.ValorHoraPadrao));
+            request.Endereco?.ParaValueObject());
         configuracao.AtualizarMarca(request.Assinatura, request.CorMarca, request.Instagram, request.Site, request.AvisoBriefing);
 
         await unitOfWork.SalvarAsync(cancellationToken);
