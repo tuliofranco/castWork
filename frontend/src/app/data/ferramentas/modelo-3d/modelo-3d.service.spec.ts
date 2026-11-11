@@ -45,6 +45,6 @@ describe('Modelo3dService', () => {
 
     const montar = http.expectOne((r) => r.method === 'POST' && r.url === 'projetos/1/versoes/2/modelo-3d/montar-a-partir-das-pecas');
     montar.flush({ arquivoId: 12, arquivoAnteriorId: null, pecas: [], pecasSemModelo: [] });
-    http.verify();
+    expect(() => http.verify()).not.toThrow();
   });
 });

@@ -20,7 +20,7 @@ describe('FerramentasService', () => {
     http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/versoes/2/ferramentas/desenho-2d/arquivo').flush({ id: 10 });
     http.expectOne((r) => r.method === 'PUT' && r.url === 'projetos/1/pecas/5/ferramentas/modelo-3d/arquivo').flush({ id: 11 });
     http.expectOne('projetos/1/ferramentas/briefing/conversa').flush({ mensagens: [], arquivoId: null, processando: false, chat: 1, chatsAnteriores: 0 });
-    http.verify();
+    expect(() => http.verify()).not.toThrow();
   });
 
   it('deve montar o caminho da imagem pelo escopo', () => {

@@ -4,7 +4,7 @@ import type { TokenPayload } from '@core/models/token-payload.model';
 import { codificarTokenMock } from './codificar-token.mock';
 
 /** Payload aleatório para testes; sobrescreva só o que importa para o cenário. */
-export function criarTokenPayloadMock(sobrescrever: Partial<TokenPayload> = {}): TokenPayload {
+function criarTokenPayloadMock(sobrescrever: Partial<TokenPayload> = {}): TokenPayload {
   return {
     sub: faker.string.uuid(),
     nome: faker.person.fullName(),

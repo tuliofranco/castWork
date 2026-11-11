@@ -12,7 +12,7 @@ import type { PrecoDaVersaoDto, PutMaoDeObraDto, PutMarkupDaVersaoDto, PutMetais
 import type { PostItemDto, PostProjetoDto, PostVersaoDto, PutItemDto, PutPrecosDoProjetoDto } from './dto/projeto-comandos.dto';
 import type { PrecosDoProjetoDto, ProjetoDto, ProjetoResumoDto } from './dto/projeto.dto';
 
-export const GET_PROJETOS = gql`
+const GET_PROJETOS = gql`
   query GetProjetos($termo: String, $primeiros: Int, $apos: String) {
     projetos(termo: $termo, first: $primeiros, after: $apos) {
       totalCount
@@ -125,7 +125,7 @@ export const GET_PESO_DA_PECA = gql`
 `;
 
 /** O arquivo final de cada ferramenta da peça (o desenho que vale para o peso, a montagem e a publicação). */
-export const GET_ARQUIVOS_FINAIS_DA_PECA = gql`
+const GET_ARQUIVOS_FINAIS_DA_PECA = gql`
   query GetArquivosFinaisDaPeca($id: Long!, $pecaId: Long!) {
     projeto(id: $id) {
       id

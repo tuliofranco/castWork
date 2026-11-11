@@ -61,7 +61,8 @@ export class PecaDetalheComponent {
   protected readonly formatarTeor = formatarTeor;
 
   protected nomeDaFerramenta(ferramenta: string): string {
-    return ferramenta === 'modelo-3d' ? 'Modelo 3D' : ferramenta === 'desenho-2d' ? 'Desenho 2D' : ferramenta;
+    const nomes: Record<string, string> = { 'modelo-3d': 'Modelo 3D', 'desenho-2d': 'Desenho 2D' };
+    return nomes[ferramenta] ?? ferramenta;
   }
 
   protected readonly peca = rxResource({

@@ -15,12 +15,12 @@ import { type Observable, firstValueFrom } from 'rxjs';
 const FERRAMENTA = 'modelo-3d';
 
 /** 5 → "5,00 g"; 0.053 → "0,053 g". */
-export function gramas(valor: number): string {
+function gramas(valor: number): string {
   return `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} g`;
 }
 
 /** 322.581 → "322,6 mm³". */
-export function milimetrosCubicos(valor: number): string {
+function milimetrosCubicos(valor: number): string {
   return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mm³`;
 }
 

@@ -5,7 +5,7 @@ interface CorpoMedido {
 }
 
 /** O material que o SolidCraft dá a todo corpo (1,29 g/cm³, plástico): para o Castwork, corpo sem material. */
-export const MATERIAL_PADRAO_DO_SOLIDCRAFT = 'Default';
+const MATERIAL_PADRAO_DO_SOLIDCRAFT = 'Default';
 
 /**
  * Os corpos sem material a partir do `inspect.measure` do SolidCraft: os que ficaram com o "Default" (ou sem

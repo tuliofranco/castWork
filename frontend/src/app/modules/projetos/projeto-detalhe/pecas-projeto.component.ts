@@ -161,7 +161,7 @@ export class PecasProjetoComponent {
   /** `precificacao.editar`: definir o valor. */
   readonly podeEditarValor = input(false);
   /** Alguma peça mudou (importada, publicada...): a página relê o projeto (a publicação da versão depende do status). */
-  readonly alterado = output<void>();
+  readonly alterado = output();
 
   protected readonly status = STATUS_PECA_DO_PROJETO;
   protected readonly iconeTipo = iconeTipoPeca;
