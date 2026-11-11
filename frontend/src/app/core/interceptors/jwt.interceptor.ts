@@ -1,7 +1,7 @@
 import { HttpErrorResponse, type HttpHandlerFn, type HttpInterceptorFn, type HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService, refreshFalhouDeVez } from '@core/services/auth.service';
 import { AMBIENTE } from '@shared/injection-tokens/ambiente.token';
 import { BYPASS_AUTH } from '@shared/injection-tokens/http-context.tokens';
 import { catchError, switchMap, throwError } from 'rxjs';
@@ -15,7 +15,8 @@ function comToken(req: HttpRequest<unknown>, token: string): HttpRequest<unknown
  *
  * Fluxo:
  *   requisição → 401 → renovarToken() (compartilhado) → repete com o token novo
- *                                      └─ falhou → limpa sessão, vai ao login, propaga o 401
+ *                                      ├─ refresh recusado (400/401/403) → limpa sessão, vai ao login, propaga o 401
+ *                                      └─ rede, 429 ou 5xx → mantém a sessão e propaga o erro do refresh
  *
  * Só envia o token para a nossa API: mandar o Bearer para uma URL de terceiro vazaria a credencial.
  */
@@ -47,8 +48,10 @@ function renovarERepetir(
   router: Router,
 ) {
   return auth.renovarToken().pipe(
-    catchError(() => {
-      auth.logout(router.url);
+    catchError((erroDoRefresh: unknown) => {
+      // Falha passageira: a sessão continua valendo e quem chamou recebe o erro de rede/servidor, não um 401.
+      if (!refreshFalhouDeVez(erroDoRefresh)) return throwError(() => erroDoRefresh);
+      auth.logout(router.url.startsWith('/login') ? undefined : router.url);
       return throwError(() => erroOriginal);
     }),
     // A repetição usa `next` direto: se der 401 de novo, não entra em outro ciclo de refresh.

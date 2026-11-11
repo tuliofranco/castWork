@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import type { PostLoginDto } from '@data/auth/login/dto/post-login.dto';
@@ -14,6 +15,14 @@ export const CHAVE_REFRESH_TOKEN = 'castwork.refreshToken';
 
 /** Margem para considerar o token vencido antes da hora (relógios desencontrados, latência). */
 const MARGEM_EXPIRACAO_SEGUNDOS = 10;
+
+/**
+ * O refresh falhou de vez (o refresh token não vale mais) ou só agora (rede, 429, 5xx)? Só a falha definitiva encerra a
+ * sessão: deslogar numa queda de rede jogaria fora um refresh token válido e a tela em que a pessoa estava.
+ */
+export function refreshFalhouDeVez(erro: unknown): boolean {
+  return !(erro instanceof HttpErrorResponse) || [400, 401, 403].includes(erro.status);
+}
 
 /**
  * Dono do token. Guarda em signal (para a UI reagir) e no localStorage (para sobreviver ao F5).
@@ -33,6 +42,8 @@ export class AuthService {
 
   /** Refresh em andamento, compartilhado por todas as requisições que receberem 401 ao mesmo tempo. */
   private refreshEmAndamento$: Observable<string> | null = null;
+  /** Muda a cada sessão encerrada: um refresh que termina depois do "Sair" não regrava os tokens. */
+  private epoca = 0;
 
   login(dto: PostLoginDto): Observable<void> {
     return this.loginService.postLogin(dto).pipe(
@@ -56,8 +67,12 @@ export class AuthService {
     const refreshToken = this.storage.obter(CHAVE_REFRESH_TOKEN);
     if (!refreshToken) return throwError(() => new Error('Sem refresh token'));
 
+    const epoca = this.epoca;
     this.refreshEmAndamento$ ??= this.refreshTokenService.postRefreshToken({ refreshToken }).pipe(
-      tap((resposta) => this.gravarTokens(resposta.accessToken, resposta.refreshToken)),
+      tap((resposta) => {
+        if (epoca !== this.epoca) throw new Error('Sessão encerrada');
+        this.gravarTokens(resposta.accessToken, resposta.refreshToken);
+      }),
       map((resposta) => resposta.accessToken),
       finalize(() => (this.refreshEmAndamento$ = null)),
       shareReplay({ bufferSize: 1, refCount: false }),
@@ -70,12 +85,19 @@ export class AuthService {
     return !this.jwt.expirado(this._token(), MARGEM_EXPIRACAO_SEGUNDOS);
   }
 
+  /** O access token pode ter vencido, mas ainda dá para renovar a sessão. */
+  temRefreshToken(): boolean {
+    return !!this.storage.obter(CHAVE_REFRESH_TOKEN);
+  }
+
   /**
    * Encerra a sessão no servidor (revoga o refresh token) e localmente. Não espera a resposta:
    * mesmo offline o usuário sai, e o refresh token ainda expira sozinho no servidor.
    */
   logout(returnTo?: string): void {
     const refreshToken = this.storage.obter(CHAVE_REFRESH_TOKEN);
+    // Já encerrada (várias requisições falharam juntas): não navega de novo, para não trocar o returnTo do primeiro.
+    if (!refreshToken && !this._token()) return;
     if (refreshToken) this.logoutService.postLogout({ refreshToken }).subscribe({ error: () => undefined });
     this.limparSessao();
     void this.router.navigate(['/login'], { queryParams: returnTo ? { returnTo } : {} });
@@ -88,6 +110,8 @@ export class AuthService {
   }
 
   limparSessao(): void {
+    this.epoca++;
+    this.refreshEmAndamento$ = null;
     this.storage.remover(CHAVE_ACCESS_TOKEN);
     this.storage.remover(CHAVE_REFRESH_TOKEN);
     this._token.set(null);

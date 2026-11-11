@@ -1071,9 +1071,19 @@ Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.s
 - [ ] **M2** Instrumentar o sintoma "Abrindo o modelo da versão…" para confirmar a causa.
 - [ ] Conferir no navegador com o CADCraft e o SolidCraft reais (inclusive o Voltar depois de uma troca).
 
-### Lotes 5 a 21
+### Lote 5: sessão que renova em vez de deslogar (feito)
 
-- [ ] Lote 5: A6, M4, B28, B29, M45
+- [x] **A6** O interceptor só desloga quando o refresh é recusado (400, 401, 403 ou sem refresh token); em rede, 429 ou 5xx mantém a sessão e propaga o erro do refresh.
+- [x] **M4** O `authGuard` renova a sessão quando o access token venceu e há refresh token; só a recusa apaga a sessão.
+- [x] **B28** `logout()` idempotente, e o interceptor não passa `returnTo` quando já está em `/login`.
+- [x] **B29** Um refresh que termina depois do "Sair" não regrava os tokens.
+- [x] **M45** Specs dos casos acima em `jwt.interceptor.spec.ts` e `guards.spec.ts`.
+- [ ] **A6** Respeitar o `Retry-After` no 429 e conferir `UseForwardedHeaders` no deploy.
+- [ ] **B29/B28** Specs próprios do `AuthService` (logout repetido e refresh em andamento no "Sair").
+- [ ] Conferir no navegador: derrubar a rede com o access token vencido dentro de uma ferramenta.
+
+### Lotes 6 a 21
+
 - [ ] Lote 6: M5, B30, B22, B10
 - [ ] Lote 7: M3, M19, M16, M21, B11
 - [ ] Lote 8: M6, M33, M35, M38, B26
