@@ -10,6 +10,8 @@ import { type Subscription, firstValueFrom } from 'rxjs';
 
 /** Intervalo para consultar a conversa enquanto a IA trabalha num turno que esta tela não enviou. */
 const INTERVALO_DE_CONSULTA_MS = 4000;
+/** Sem resposta do servidor (rede caiu, proxy desistiu do pedido longo): o turno pode estar correndo lá. */
+const STATUS_DE_CONEXAO: readonly number[] = [0, 502, 503, 504];
 
 /**
  * Tela padrão de toda ferramenta com IA (da versão, como o desenho 2D, ou do projeto, como o briefing): a moldura (`cw-ferramenta-ia`) com a conversa já ligada à API.
@@ -125,10 +127,14 @@ export class ConversaIaComponent {
         ? { id: -1, papel: 'joalheiro', texto, imagens: imagens.map((i) => i.url), anexos: arquivos.map((a) => a.nome) }
         : null,
     );
+    let anterior = this.conversa().arquivoId;
+    let enviada = false;
+    let retomar = false;
     try {
       await this.antesDeEnviar()?.();
-      const anterior = this.conversa().arquivoId;
+      anterior = this.conversa().arquivoId;
       aoVivo = this.acompanhar(true);
+      enviada = true;
       const conversa = await firstValueFrom(
         this.ferramentas.postConversa(
           this.projetoId(),
@@ -145,56 +151,86 @@ export class ConversaIaComponent {
       this.respondeu.emit();
       if (conversa.arquivoId !== anterior) this.arquivoMudou.emit();
     } catch (erro) {
+      // A conexão caiu no meio do pedido longo: a fala pode ter chegado e a IA seguir trabalhando no servidor.
+      // Em vez de dar o turno por perdido, a tela passa a consultar até saber o que aconteceu.
+      retomar = enviada && erro instanceof HttpErrorResponse && STATUS_DE_CONEXAO.includes(erro.status);
       // Erros da API já viram toast no interceptor; os da ferramenta (guardar o arquivo) aparecem aqui.
       if (!(erro instanceof HttpErrorResponse)) {
         this.toast.erro(erro instanceof Error ? erro.message : 'Não foi possível enviar a mensagem.');
       }
     } finally {
       aoVivo?.unsubscribe();
-      this.pendente.set(null);
-      this.andamento.set(null);
-      this.pensando.set(false);
+      if (!retomar) {
+        this.pendente.set(null);
+        this.andamento.set(null);
+        this.pensando.set(false);
+      }
+    }
+    if (retomar && !this.destruido) await this.aguardarIa(anterior);
+  }
+
+  /** Uma ação do chat por vez, e nenhuma com a IA trabalhando (apagar ou trocar de chat no meio do turno o perderia). */
+  private agindo = false;
+
+  private async acao(executar: () => Promise<void>): Promise<void> {
+    if (this.agindo || this.pensando()) return;
+    this.agindo = true;
+    try {
+      await executar();
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível concluir a ação.');
+    } finally {
+      this.agindo = false;
     }
   }
 
-  protected async novoChat(): Promise<void> {
-    this.conversa.set(await firstValueFrom(this.ferramentas.postNovoChat(this.projetoId(), this.escopo(), this.ferramenta())));
+  protected novoChat(): Promise<void> {
+    return this.acao(async () => this.conversa.set(await firstValueFrom(this.ferramentas.postNovoChat(this.projetoId(), this.escopo(), this.ferramenta()))));
   }
 
   protected async verChats(): Promise<void> {
-    this.chats.set(await firstValueFrom(this.ferramentas.getChats(this.projetoId(), this.escopo(), this.ferramenta())));
+    try {
+      this.chats.set(await firstValueFrom(this.ferramentas.getChats(this.projetoId(), this.escopo(), this.ferramenta())));
+    } catch {
+      // O interceptor já avisou.
+    }
   }
 
   /** O chat escolhido no histórico vira o em andamento e aparece na conversa. */
-  protected async abrirChat(numero: number): Promise<void> {
-    if (numero !== this.conversa().chat) {
-      this.conversa.set(await firstValueFrom(this.ferramentas.postContinuarChat(this.projetoId(), this.escopo(), this.ferramenta(), numero)));
-    }
-
-    this.chats.set(null);
+  protected abrirChat(numero: number): Promise<void> {
+    return this.acao(async () => {
+      if (numero !== this.conversa().chat) {
+        this.conversa.set(await firstValueFrom(this.ferramentas.postContinuarChat(this.projetoId(), this.escopo(), this.ferramenta(), numero)));
+      }
+      this.chats.set(null);
+    });
   }
 
   /** Um Desfazer por vez: o segundo clique esperaria um arquivo que o primeiro já trocou. */
-  private desfazendo = false;
-
-  protected async desfazer(ordem: number): Promise<void> {
-    if (this.desfazendo) return;
-    this.desfazendo = true;
-    try {
+  protected desfazer(ordem: number): Promise<void> {
+    return this.acao(async () => {
       this.conversa.set(await firstValueFrom(this.ferramentas.postDesfazer(this.projetoId(), this.escopo(), this.ferramenta(), ordem)));
       this.arquivoMudou.emit();
-    } finally {
-      this.desfazendo = false;
-    }
+    });
   }
 
-  protected async apagar(): Promise<void> {
-    await firstValueFrom(this.ferramentas.deleteConversa(this.projetoId(), this.escopo(), this.ferramenta()));
-    this.conversa.update((c) => ({ ...c, mensagens: [] }));
+  protected apagar(): Promise<void> {
+    return this.acao(async () => {
+      await firstValueFrom(this.ferramentas.deleteConversa(this.projetoId(), this.escopo(), this.ferramenta()));
+      this.conversa.update((c) => ({ ...c, mensagens: [] }));
+    });
   }
 
   private async carregar(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string): Promise<void> {
-    const conversa = await firstValueFrom(this.ferramentas.getConversa(projetoId, escopo, ferramenta));
+    let conversa: ConversaFerramentaDto;
+    try {
+      conversa = await firstValueFrom(this.ferramentas.getConversa(projetoId, escopo, ferramenta));
+    } catch {
+      // O interceptor já avisou; o chat fica vazio e a próxima mensagem funciona normalmente.
+      return;
+    }
+    // A rota trocou de versão ou peça enquanto esta resposta vinha: ela não é mais a conversa à vista.
+    if (projetoId !== this.projetoId() || escopo !== this.escopo() || ferramenta !== this.ferramenta()) return;
     this.conversa.set(conversa);
     if (conversa.processando) await this.aguardarIa();
 
@@ -204,15 +240,20 @@ export class ConversaIaComponent {
    * A fala já está no servidor e a IA trabalha nela (enviada antes de sair da tela): acompanha ao vivo e
    * consulta até a resposta chegar.
    */
-  private async aguardarIa(): Promise<void> {
+  private async aguardarIa(anterior = this.conversa().arquivoId): Promise<void> {
     this.pensando.set(true);
-    const anterior = this.conversa().arquivoId;
     const aoVivo = this.acompanhar(false);
     try {
       while (!this.destruido) {
         await new Promise((ok) => setTimeout(ok, INTERVALO_DE_CONSULTA_MS));
         if (this.destruido) return;
-        const conversa = await firstValueFrom(this.ferramentas.getConversa(this.projetoId(), this.escopo(), this.ferramenta()));
+        let conversa: ConversaFerramentaDto;
+        try {
+          conversa = await firstValueFrom(this.ferramentas.getConversa(this.projetoId(), this.escopo(), this.ferramenta(), true));
+        } catch {
+          // Uma consulta que falha (rede instável) não encerra o acompanhamento: tenta de novo no próximo intervalo.
+          continue;
+        }
         this.conversa.set(conversa);
         if (!conversa.processando) {
           this.respondeu.emit();
@@ -222,6 +263,7 @@ export class ConversaIaComponent {
       }
     } finally {
       aoVivo.unsubscribe();
+      this.pendente.set(null);
       this.andamento.set(null);
       this.pensando.set(false);
     }

@@ -1,7 +1,7 @@
 import { HttpClient, type HttpEvent, HttpEventType } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { IdCriadoDto } from '@data/common/http/id-criado.dto';
-import { semLoading } from '@shared/injection-tokens/http-context.tokens';
+import { semErro, semLoading } from '@shared/injection-tokens/http-context.tokens';
 import { Observable, map } from 'rxjs';
 
 import type {
@@ -38,8 +38,10 @@ export class FerramentasService {
   private readonly http = inject(HttpClient);
 
   /** Sem a barra de carregamento global: enquanto a IA trabalha, quem mostra o andamento é o chat. */
-  getConversa(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string): Observable<ConversaFerramentaDto> {
-    return this.http.get<ConversaFerramentaDto>(`${this.base(projetoId, escopo, ferramenta)}/conversa`, { context: semLoading() });
+  /** `silencioso`: sem o toast de erro global (a consulta repetida enquanto a IA trabalha trata a falha por conta própria). */
+  getConversa(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string, silencioso = false): Observable<ConversaFerramentaDto> {
+    const context = silencioso ? semErro(semLoading()) : semLoading();
+    return this.http.get<ConversaFerramentaDto>(`${this.base(projetoId, escopo, ferramenta)}/conversa`, { context });
   }
 
   /**

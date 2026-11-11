@@ -1094,9 +1094,21 @@ Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.s
 - [x] **B10** Desenho 2D e Modelo 3D trazem o arquivo do novo endereço quando a rota troca só a versão ou a peça (pela fila de trocas do lote 3). Spec nos dois componentes.
 - [ ] **B10** Agrupar as quatro rotas de ferramenta sob um pai com os guards (organização, sem efeito para o usuário).
 
-### Lotes 7 a 21
+### Lote 7: conversa com IA resiliente (parcial)
 
-- [ ] Lote 7: M3, M19, M16, M21, B11
+Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
+
+- [x] **M3** Conexão que cai no POST longo (status 0, 502, 503, 504) não encerra o turno: a tela passa a consultar a conversa até a IA terminar, mantém a fala à vista e avisa a ferramenta se o arquivo mudou.
+- [x] **M19** A consulta repetida tolera falha (tenta de novo no próximo intervalo, sem toast a cada tentativa); a carga inicial com erro não deixa promessa solta e ignora a resposta de um endereço antigo.
+- [x] **M21** "Apagar este chat" do menu fica desabilitado com a IA trabalhando; apagar, novo chat, abrir chat e desfazer saem cedo nesse caso.
+- [x] **B11** Uma ação do chat por vez, com tratamento de erro.
+- [x] **M16** `maxlength="4000"` no campo da mensagem.
+- [ ] **M16** O texto e os anexos só serem limpos depois de o envio dar certo.
+- [ ] **M19** Estado de erro com "Tentar de novo" na carga inicial da conversa.
+- [ ] **B11** "Desfazer" só no último cartão; estado de ocupado visível nos botões do chat.
+
+### Lotes 8 a 21
+
 - [ ] Lote 8: M6, M33, M35, M38, B26
 - [ ] Lote 9: M12, M25, B19, M11
 - [ ] Lote 10: M23, M26, M27, M28, B17, B18, B20, B31

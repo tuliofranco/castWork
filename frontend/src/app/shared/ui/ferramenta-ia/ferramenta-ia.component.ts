@@ -84,7 +84,7 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
                 <button type="button" role="menuitem" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo chat</button>
                 <button type="button" role="menuitem" (click)="pedirChats()"><i class="bi bi-clock-history" aria-hidden="true"></i> Conversas anteriores</button>
               }
-              <button type="button" role="menuitem" class="perigo" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar este chat</button>
+              <button type="button" role="menuitem" class="perigo" [disabled]="pensando() || mensagens().length === 0" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar este chat</button>
               <ng-content select="[menu]" />
             </div>
           }
@@ -248,6 +248,7 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
           <textarea
             id="fala-ferramenta"
             name="fala"
+            maxlength="4000"
             class="form-control"
             rows="1"
             placeholder="Peça uma mudança no desenho..."
