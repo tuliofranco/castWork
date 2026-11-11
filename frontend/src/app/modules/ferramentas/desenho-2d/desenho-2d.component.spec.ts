@@ -181,4 +181,17 @@ describe('Desenho2dComponent', () => {
     expect(el.querySelector('[role=alert]')).toBeNull();
     expect(botao(el, 'Salvar')!.disabled).toBe(false);
   });
+
+  it('deve confirmar antes de sair com trabalho não salvo e sair direto sem ele', async () => {
+    const sujo = await abrir(true);
+    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    expect(await sujo.fixture.componentInstance.podeSair()).toBe(false);
+    expect(confirmar).toHaveBeenCalledTimes(1);
+
+    TestBed.resetTestingModule();
+    const limpo = await abrir(false);
+    const semPergunta = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    expect(await limpo.fixture.componentInstance.podeSair()).toBe(true);
+    expect(semPergunta).not.toHaveBeenCalled();
+  });
 });

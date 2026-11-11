@@ -1061,9 +1061,18 @@ Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.s
 - [ ] **B9** Helper único de operação compartilhado entre 2D e 3D (fica com a extração da base comum, lote 17).
 - [ ] Conferir as corridas no navegador com o CADCraft e o SolidCraft reais.
 
-### Lotes 4 a 21
+### Lote 4: não perder trabalho ao sair (parcial)
 
-- [ ] Lote 4: A3, M2, M13
+- [x] **A3** `sairDaFerramentaGuard` (`canDeactivate`) nas quatro rotas das ferramentas: com trabalho não salvo, confirma antes de sair; para `/login` sai direto.
+- [x] **A3** Desenho 2D: fechar ou recarregar a aba com desenho não salvo dispara o aviso do navegador (`beforeunload`).
+- [x] **M13** Os iframes navegam com `location.replace`: a troca de arquivo não cria entradas no histórico do navegador.
+- [ ] **A3** Modelo 3D: `beforeunload` (o SolidCraft só responde de forma assíncrona; falta um sinal `sujo` mantido por evento ou sondagem).
+- [ ] **A3** Diálogo próprio com Salvar e sair / Descartar / Continuar (hoje é o `confirm` do navegador, só com sair ou ficar).
+- [ ] **M2** Instrumentar o sintoma "Abrindo o modelo da versão…" para confirmar a causa.
+- [ ] Conferir no navegador com o CADCraft e o SolidCraft reais (inclusive o Voltar depois de uma troca).
+
+### Lotes 5 a 21
+
 - [ ] Lote 5: A6, M4, B28, B29, M45
 - [ ] Lote 6: M5, B30, B22, B10
 - [ ] Lote 7: M3, M19, M16, M21, B11

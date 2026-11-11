@@ -69,7 +69,14 @@ export class PonteSolidCraft {
 
   /** Libera o SolidCraft deste iframe (memória do WebAssembly) quando ele sai de cena. */
   descarregar(): void {
-    this.iframe.src = 'about:blank';
+    this.navegar('about:blank');
+  }
+
+  /** Troca a página do iframe sem criar entrada no histórico: o Voltar do navegador não pode apagar o modelo à vista. */
+  private navegar(url: string): void {
+    const janela = this.iframe.contentWindow;
+    if (janela) janela.location.replace(url);
+    else this.iframe.src = url;
   }
 
   /** Recarrega o SolidCraft, ou o carrega pela primeira vez num iframe ainda vazio, e espera a API. */
@@ -77,7 +84,7 @@ export class PonteSolidCraft {
     await new Promise<void>((resolve) => {
       this.iframe.addEventListener('load', () => resolve(), { once: true });
       if (this.iframe.contentWindow?.location.pathname.startsWith('/solidcraft')) this.iframe.contentWindow.location.reload();
-      else this.iframe.src = '/solidcraft/?embed=editor';
+      else this.navegar('/solidcraft/?embed=editor');
     });
     const janela = this.janela();
     this.capturarAtalhoDeSalvar(janela);

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
+import type { TelaComTrabalhoNaoSalvo } from '@core/guards/sair-da-ferramenta.guard';
 import { PermissaoService } from '@core/services/permissao.service';
 import { type EscopoDaFerramenta, FerramentasService } from '@data/assistente/ferramentas.service';
 import { Modelo3dService } from '@data/ferramentas/modelo-3d/modelo-3d.service';
@@ -42,7 +43,7 @@ const FERRAMENTA = 'modelo-3d';
   styleUrl: './modelo-3d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Modelo3dComponent {
+export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
   private readonly ferramentas = inject(FerramentasService);
   private readonly toast = inject(ToastService);
   private readonly download = inject(DownloadService);
@@ -307,6 +308,17 @@ export class Modelo3dComponent {
       // O arquivo vem como Blob: o interceptor não avisa.
       this.toast.erro('Não foi possível baixar o modelo.');
     }
+  }
+
+  /**
+   * Sair da ferramenta (rota): com modelagem feita à mão e não salva, confirma antes. Se o SolidCraft não responder em
+   * 2 s, deixa sair.
+   */
+  async podeSair(): Promise<boolean> {
+    if (this.falha() || !this.ponte) return true;
+    const semResposta = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2000));
+    const sujo = await Promise.race([this.ponte.temAlteracoes().catch(() => false), semResposta]);
+    return !sujo || window.confirm('Há alterações que ainda não foram salvas no Castwork. Sair sem salvar?');
   }
 
   /** Depois de uma falha ao abrir ou trocar: abre de novo o arquivo atual. */

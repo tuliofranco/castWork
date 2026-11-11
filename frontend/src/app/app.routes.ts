@@ -1,3 +1,4 @@
+import { sairDaFerramentaGuard } from '@core/guards/sair-da-ferramenta.guard';
 import { authGuard } from '@core/guards/auth.guard';
 import { convidadoGuard } from '@core/guards/convidado.guard';
 import { permissionGuard } from '@core/guards/permission.guard';
@@ -22,12 +23,14 @@ export const routes: CastworkRoute[] = [
     path: 'projetos/:id/versoes/:versaoId/desenho-2d',
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
   },
   {
     path: 'projetos/:id/versoes/:versaoId/modelo-3d',
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Modelo 3D', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/modelo-3d/modelo-3d.component').then((m) => m.Modelo3dComponent),
   },
   {
@@ -35,12 +38,14 @@ export const routes: CastworkRoute[] = [
     path: 'projetos/:id/pecas/:pecaId/desenho-2d',
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D da peça', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
   },
   {
     path: 'projetos/:id/pecas/:pecaId/modelo-3d',
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Modelo 3D da peça', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/modelo-3d/modelo-3d.component').then((m) => m.Modelo3dComponent),
   },
   {

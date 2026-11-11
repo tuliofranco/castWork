@@ -2,6 +2,7 @@ import { valorDe } from '@shared/recursos/valor-de';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import type { TelaComTrabalhoNaoSalvo } from '@core/guards/sair-da-ferramenta.guard';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 import { type ArquivoFerramenta, type EscopoDaFerramenta, FerramentasService } from '@data/assistente/ferramentas.service';
@@ -37,8 +38,9 @@ const FERRAMENTA = 'desenho-2d';
   templateUrl: './desenho-2d.component.html',
   styleUrl: './desenho-2d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:beforeunload)': 'aoFecharAPagina($event)' },
 })
-export class Desenho2dComponent {
+export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   private readonly ferramentas = inject(FerramentasService);
   private readonly toast = inject(ToastService);
   private readonly download = inject(DownloadService);
@@ -233,6 +235,24 @@ export class Desenho2dComponent {
     } catch {
       // O arquivo vem como Blob: o interceptor não avisa.
       this.toast.erro('Não foi possível baixar o desenho.');
+    }
+  }
+
+  /** Sair da ferramenta (rota): com desenho feito à mão e não salvo, confirma antes. */
+  podeSair(): Promise<boolean> {
+    return Promise.resolve(!this.temTrabalhoNaoSalvo() || window.confirm('Há alterações que ainda não foram salvas no Castwork. Sair sem salvar?'));
+  }
+
+  /** Fechar ou recarregar a aba: o navegador mostra o aviso dele quando há desenho não salvo. */
+  protected aoFecharAPagina(evento: BeforeUnloadEvent): void {
+    if (this.temTrabalhoNaoSalvo()) evento.preventDefault();
+  }
+
+  private temTrabalhoNaoSalvo(): boolean {
+    try {
+      return !this.falha() && !!this.ponte?.temAlteracoes();
+    } catch {
+      return false;
     }
   }
 
