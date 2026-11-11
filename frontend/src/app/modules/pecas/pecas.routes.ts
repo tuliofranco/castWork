@@ -1,3 +1,4 @@
+import { idsNumericos } from '@core/guards/ids-numericos.guard';
 import type { CastworkRoute } from '@core/models/rota-data.model';
 
 /** A biblioteca é só de consulta: não se cria nem se edita peça aqui (ela chega pela publicação no projeto). */
@@ -8,6 +9,7 @@ export const PECAS_ROUTES: CastworkRoute[] = [
   },
   {
     path: ':id',
+    canMatch: [idsNumericos],
     loadComponent: () => import('./peca-detalhe/peca-detalhe.component').then((m) => m.PecaDetalheComponent),
     data: { title: 'Peça' },
   },

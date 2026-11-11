@@ -49,6 +49,7 @@ describe('Rotas da aplicação', () => {
     localStorage.setItem(CHAVE_ACCESS_TOKEN, criarTokenMock({ permissoes: [] }));
     const harness = await RouterTestingHarness.create('/');
     expect(TestBed.inject(Router).url).toBe('/403');
+    expect(harness.fixture.nativeElement.textContent).toContain('Seu acesso ainda não inclui nenhuma página.');
     expect([...harness.fixture.nativeElement.querySelectorAll('button')].map((b: HTMLButtonElement) => b.textContent?.trim())).toContain('Sair');
   });
 

@@ -1,3 +1,4 @@
+import { idsNumericos } from '@core/guards/ids-numericos.guard';
 import { sairDaFerramentaGuard } from '@core/guards/sair-da-ferramenta.guard';
 import { inject } from '@angular/core';
 import { PermissaoService } from '@core/services/permissao.service';
@@ -30,6 +31,7 @@ export const routes: CastworkRoute[] = [
   {
     // Ferramentas com IA abrem em tela cheia, fora do layout com menu (modo de foco).
     path: 'projetos/:id/versoes/:versaoId/desenho-2d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D', permissoes: ['projetos.ler'] },
     canDeactivate: [sairDaFerramentaGuard],
@@ -37,6 +39,7 @@ export const routes: CastworkRoute[] = [
   },
   {
     path: 'projetos/:id/versoes/:versaoId/modelo-3d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Modelo 3D', permissoes: ['projetos.ler'] },
     canDeactivate: [sairDaFerramentaGuard],
@@ -45,6 +48,7 @@ export const routes: CastworkRoute[] = [
   {
     // O desenho 2D e o modelo 3D de cada peça do projeto: as mesmas ferramentas, com conversa e arquivo só da peça.
     path: 'projetos/:id/pecas/:pecaId/desenho-2d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D da peça', permissoes: ['projetos.ler'] },
     canDeactivate: [sairDaFerramentaGuard],
@@ -52,6 +56,7 @@ export const routes: CastworkRoute[] = [
   },
   {
     path: 'projetos/:id/pecas/:pecaId/modelo-3d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Modelo 3D da peça', permissoes: ['projetos.ler'] },
     canDeactivate: [sairDaFerramentaGuard],
@@ -60,6 +65,7 @@ export const routes: CastworkRoute[] = [
   {
     // O desenho atual de uma peça do projeto, só para ver (aberto pela composição da versão); editar é na página da peça.
     path: 'projetos/:id/pecas/:pecaId/desenhos/:ferramenta',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho da peça', permissoes: ['projetos.ler'] },
     loadComponent: () => import('@modules/pecas/desenho-da-peca/desenho-da-peca.component').then((m) => m.DesenhoDaPecaComponent),
@@ -67,6 +73,7 @@ export const routes: CastworkRoute[] = [
   {
     // O desenho da peça da biblioteca, só para ver, também em tela cheia.
     path: 'pecas/:id/desenhos/:ferramenta',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho da peça', permissoes: ['pecas.ler'] },
     loadComponent: () => import('@modules/pecas/desenho-da-peca/desenho-da-peca.component').then((m) => m.DesenhoDaPecaComponent),
@@ -74,6 +81,7 @@ export const routes: CastworkRoute[] = [
   {
     // O briefing é a ferramenta do projeto que escreve o documento: tela de foco, como o desenho 2D.
     path: 'projetos/:id/briefing',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Briefing', permissoes: ['projetos.ler'] },
     loadComponent: () => import('@modules/ferramentas/briefing/briefing.component').then((m) => m.BriefingComponent),

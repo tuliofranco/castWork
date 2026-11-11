@@ -1084,16 +1084,15 @@ Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.s
 - [ ] **B29/B28** Specs próprios do `AuthService` (logout repetido e refresh em andamento no "Sair").
 - [ ] Conferir no navegador: derrubar a rede com o access token vencido dentro de uma ferramenta.
 
-### Lote 6: saída do 403 e rotas (parcial)
+### Lote 6: saída do 403 e rotas (feito)
 
 - [x] **M5** A raiz abre na primeira aba do menu que a pessoa pode ver (mesma conta do menu); sem nenhuma, vai ao 403.
-- [x] **M5** A página de erro mostra "Sair" a quem está logado.
-- [x] **M5** Specs em `app.routes.spec.ts` (só `pecas.ler` termina em `/pecas`; sem permissões vê o 403 com "Sair") e em `pagina-erro.component.spec.ts`.
-- [x] **B30** `UsuarioComponent`: a permissão de "Ateliê e marca" é recalculada quando a sessão muda (`computed`).
-- [ ] **M5** Mensagem própria no 403 para quem não tem nenhuma permissão.
-- [ ] **B30** Id duplicado e `role="dialog"` sem gestão de foco no painel do usuário.
-- [ ] **B22** Helper `idDaRota` para ids de rota não numéricos ("não encontrado" em vez de erro de carga).
-- [ ] **B10** Ferramentas reagirem à troca de `id`/`versaoId`/`pecaId` com a instância reaproveitada.
+- [x] **M5** A página de erro mostra "Sair" a quem está logado, e uma mensagem própria no 403 de quem não tem nenhuma permissão.
+- [x] **M5** Specs em `app.routes.spec.ts` e `pagina-erro.component.spec.ts`.
+- [x] **B30** `UsuarioComponent`: permissão recalculada quando a sessão muda, id do painel por instância e `role="group"` no lugar de `role="dialog"`.
+- [x] **B22** `idsNumericos` (`canMatch`) nas 13 rotas com `:id`, `:versaoId` ou `:pecaId`: endereço com id não numérico cai na página "não encontrada". Spec em `ids-numericos.guard.spec.ts`.
+- [x] **B10** Desenho 2D e Modelo 3D trazem o arquivo do novo endereço quando a rota troca só a versão ou a peça (pela fila de trocas do lote 3). Spec nos dois componentes.
+- [ ] **B10** Agrupar as quatro rotas de ferramenta sob um pai com os guards (organização, sem efeito para o usuário).
 
 ### Lotes 7 a 21
 

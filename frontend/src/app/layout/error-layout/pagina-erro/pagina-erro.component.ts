@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { SessaoService } from '@core/services/sessao.service';
 import { AuthService } from '@core/services/auth.service';
 import { RouterLink } from '@angular/router';
 
@@ -9,7 +10,7 @@ import { RouterLink } from '@angular/router';
   template: `
     <div class="pagina">
       <p class="codigo">{{ codigo() }}</p>
-      <h1>{{ mensagem() }}</h1>
+      <h1>{{ texto() }}</h1>
       <div class="acoes">
         <a routerLink="/" class="btn btn-primary btn-lg">Voltar ao início</a>
         @if (auth.isLoggedIn()) {
@@ -29,7 +30,15 @@ import { RouterLink } from '@angular/router';
 })
 export class PaginaErroComponent {
   protected readonly auth = inject(AuthService);
+  private readonly sessao = inject(SessaoService);
 
   readonly codigo = input.required<string>();
   readonly mensagem = input.required<string>();
+
+  /** No 403 de quem está logado sem nenhuma permissão, "Voltar ao início" não leva a lugar nenhum: diz o que fazer. */
+  protected readonly texto = computed(() =>
+    this.codigo() === '403' && this.auth.isLoggedIn() && this.sessao.permissoes().size === 0
+      ? 'Seu acesso ainda não inclui nenhuma página. Peça a liberação a quem administra o ateliê.'
+      : this.mensagem(),
+  );
 }

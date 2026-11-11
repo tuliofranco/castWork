@@ -3,7 +3,7 @@
     type="button"
     class="gatilho"
     [attr.aria-expanded]="aberto()"
-    aria-controls="painel-usuario"
+    [attr.aria-controls]="idPainel"
     [attr.aria-label]="'Conta de ' + usuario.nome"
     (click)="alternar()"
   >
@@ -12,7 +12,7 @@
   </button>
 
   @if (aberto()) {
-    <div class="painel" id="painel-usuario" role="dialog" aria-label="Conta">
+    <div class="painel" [id]="idPainel" role="group" aria-label="Conta">
       <div class="identidade">
         <cw-iniciais [nome]="usuario.nome" />
         <div>

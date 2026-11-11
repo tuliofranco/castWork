@@ -1,6 +1,6 @@
 import { valorDe } from '@shared/recursos/valor-de';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { TelaComTrabalhoNaoSalvo } from '@core/guards/sair-da-ferramenta.guard';
 import { PermissaoService } from '@core/services/permissao.service';
@@ -125,6 +125,22 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
       this.sincronizando.set(null);
     }
   };
+
+  constructor() {
+    // A rota reaproveita esta tela quando só muda a versão ou a peça (Voltar/Avançar, endereço editado): o arquivo
+    // do novo endereço é trazido pela mesma fila das trocas. A conversa se recarrega sozinha.
+    let aberto: string | undefined;
+    effect(() => {
+      const endereco = `${this.id()}|${this.versaoId()}|${this.pecaId()}`;
+      untracked(() => {
+        if (aberto !== undefined && endereco !== aberto) {
+          this.historico.set(null);
+          void this.trazerArquivo();
+        }
+        aberto = endereco;
+      });
+    });
+  }
 
   protected async iniciar(): Promise<void> {
     if (this.ponte) return;

@@ -171,4 +171,14 @@ describe('Modelo3dComponent', () => {
     expect(await limpo.fixture.componentInstance.podeSair()).toBe(true);
     expect(semPergunta).not.toHaveBeenCalled();
   });
+
+  it('deve trazer o arquivo da outra versão quando a rota troca só o parâmetro', async () => {
+    const { fixture, carregar } = await abrir();
+
+    fixture.componentRef.setInput('versaoId', '21');
+    await fixture.whenStable();
+    await vi.waitFor(() => expect(carregar).toHaveBeenCalledTimes(2));
+
+    expect(ferramentas.getArquivo).toHaveBeenLastCalledWith(1, 21, 'modelo-3d');
+  });
 });

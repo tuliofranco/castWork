@@ -1,3 +1,4 @@
+import { idsNumericos } from '@core/guards/ids-numericos.guard';
 import type { CastworkRoute } from '@core/models/rota-data.model';
 
 export const PROJETOS_ROUTES: CastworkRoute[] = [
@@ -12,26 +13,31 @@ export const PROJETOS_ROUTES: CastworkRoute[] = [
   },
   {
     path: ':id',
+    canMatch: [idsNumericos],
     loadComponent: () => import('./projeto-detalhe/projeto-detalhe.component').then((m) => m.ProjetoDetalheComponent),
     data: { title: 'Projeto' },
   },
   {
     path: ':id/configuracoes',
+    canMatch: [idsNumericos],
     loadComponent: () => import('./projeto-configuracoes/projeto-configuracoes.component').then((m) => m.ProjetoConfiguracoesComponent),
     data: { title: 'Configurações do projeto' },
   },
   {
     path: ':id/pecas/nova',
+    canMatch: [idsNumericos],
     loadComponent: () => import('./peca-do-projeto/peca-do-projeto.component').then((m) => m.PecaDoProjetoComponent),
     data: { title: 'Nova peça', permissoes: ['projetos.editar'] },
   },
   {
     path: ':id/pecas/:pecaId',
+    canMatch: [idsNumericos],
     loadComponent: () => import('./peca-do-projeto/peca-do-projeto.component').then((m) => m.PecaDoProjetoComponent),
     data: { title: 'Peça do projeto' },
   },
   {
     path: ':id/versoes/:versaoId',
+    canMatch: [idsNumericos],
     loadComponent: () => import('./versao-detalhe/versao-detalhe.component').then((m) => m.VersaoDetalheComponent),
     data: { title: 'Versão' },
   },

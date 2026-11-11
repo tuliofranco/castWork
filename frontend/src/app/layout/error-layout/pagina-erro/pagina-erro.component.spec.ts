@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 
+import { SessaoService } from '@core/services/sessao.service';
 import { AuthService } from '@core/services/auth.service';
 
 import { PaginaErroComponent } from './pagina-erro.component';
@@ -14,6 +15,7 @@ describe('PaginaErroComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: auth },
+        { provide: SessaoService, useValue: { permissoes: () => new Set(['pecas.ler']) } },
         provideRouter([{ path: '403', component: PaginaErroComponent, data: { codigo: '403', mensagem: 'Sem permissão' } }], withComponentInputBinding()),
       ],
     });
@@ -29,6 +31,7 @@ describe('PaginaErroComponent', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: auth },
+        { provide: SessaoService, useValue: { permissoes: () => new Set(['pecas.ler']) } },
         provideRouter(
           [{ path: '403', component: PaginaErroComponent, data: { codigo: '403', mensagem: 'Sem permissão' } }],
           withComponentInputBinding(),

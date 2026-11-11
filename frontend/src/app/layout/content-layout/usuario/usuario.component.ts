@@ -9,6 +9,8 @@ import { IniciaisComponent } from '@shared/ui/iniciais.component';
  * Usuário logado: iniciais no rail e, ao tocar, um painel com nome, ateliê, configurações da marca e "Sair".
  * Fecha ao tocar fora ou com Esc. `posicao` define para onde o painel abre (lado do rail ou abaixo, no celular).
  */
+let paineis = 0;
+
 @Component({
   selector: 'cw-usuario',
   imports: [IniciaisComponent, RouterLink],
@@ -30,6 +32,9 @@ export class UsuarioComponent {
   protected readonly podeConfigurar = computed(() => this.permissao.temAlguma(['atelie.configurar']));
 
   readonly posicao = input<'lateral' | 'abaixo'>('lateral');
+
+  /** O componente aparece duas vezes no layout (lateral e topo): cada painel tem o próprio id. */
+  protected readonly idPainel = `painel-usuario-${++paineis}`;
 
   protected readonly aberto = signal(false);
 

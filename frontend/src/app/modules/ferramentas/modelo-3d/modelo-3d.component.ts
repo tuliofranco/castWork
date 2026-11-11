@@ -1,6 +1,6 @@
 import { valorDe } from '@shared/recursos/valor-de';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, signal, viewChild, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 import type { TelaComTrabalhoNaoSalvo } from '@core/guards/sair-da-ferramenta.guard';
@@ -139,6 +139,19 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
   };
 
   constructor() {
+    // A rota reaproveita esta tela quando só muda a versão ou a peça (Voltar/Avançar, endereço editado): o arquivo
+    // do novo endereço é trazido pela mesma fila das trocas. A conversa se recarrega sozinha.
+    let aberto: string | undefined;
+    effect(() => {
+      const endereco = `${this.id()}|${this.versaoId()}|${this.pecaId()}`;
+      untracked(() => {
+        if (aberto !== undefined && endereco !== aberto) {
+          this.historico.set(null);
+          void this.trazerArquivo();
+        }
+        aberto = endereco;
+      });
+    });
     afterNextRender(() => void this.iniciar());
   }
 
