@@ -6,7 +6,7 @@ import { LoginService } from '@data/auth/login/login.service';
 import { LogoutService } from '@data/auth/logout/logout.service';
 import { RefreshTokenService } from '@data/auth/refresh-token/refresh-token.service';
 import { LocalStorageService } from '@shared/services/local-storage.service';
-import { type Observable, finalize, map, shareReplay, tap, throwError } from 'rxjs';
+import { type Observable, finalize, map, retry, shareReplay, tap, throwError, timer } from 'rxjs';
 
 import { JwtService } from './jwt.service';
 
@@ -22,6 +22,21 @@ const MARGEM_EXPIRACAO_SEGUNDOS = 10;
  */
 export function refreshFalhouDeVez(erro: unknown): boolean {
   return !(erro instanceof HttpErrorResponse) || [400, 401, 403].includes(erro.status);
+}
+
+/** Espera máxima por um refresh recusado pelo limite de requisições; acima disso, quem chamou recebe o 429. */
+const ESPERA_MAXIMA_DO_REFRESH_SEGUNDOS = 5;
+
+/**
+ * Um refresh barrado pelo limite de requisições (429) não chegou a ser processado: o refresh token continua valendo e
+ * dá para tentar de novo depois do `Retry-After`. Só quando a espera é curta; qualquer outro erro não é repetido (o
+ * refresh token é rotativo: repetir depois de uma resposta perdida derrubaria a sessão).
+ */
+function esperarLimiteDoRefresh(erro: unknown): Observable<unknown> {
+  // Sem o cabeçalho (ou sem acesso a ele por CORS) não há como saber quanto esperar: não repete.
+  const cabecalho = erro instanceof HttpErrorResponse && erro.status === 429 ? erro.headers.get('Retry-After') : null;
+  const espera = cabecalho === null || cabecalho.trim() === '' ? NaN : Number(cabecalho);
+  return Number.isFinite(espera) && espera >= 0 && espera <= ESPERA_MAXIMA_DO_REFRESH_SEGUNDOS ? timer(espera * 1000) : throwError(() => erro);
 }
 
 /**
@@ -69,6 +84,7 @@ export class AuthService {
 
     const epoca = this.epoca;
     this.refreshEmAndamento$ ??= this.refreshTokenService.postRefreshToken({ refreshToken }).pipe(
+      retry({ count: 1, delay: esperarLimiteDoRefresh }),
       tap((resposta) => {
         if (epoca !== this.epoca) throw new Error('Sessão encerrada');
         this.gravarTokens(resposta.accessToken, resposta.refreshToken);

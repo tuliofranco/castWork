@@ -1078,7 +1078,9 @@ Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.s
 - [x] **B28** `logout()` idempotente, e o interceptor não passa `returnTo` quando já está em `/login`.
 - [x] **B29** Um refresh que termina depois do "Sair" não regrava os tokens.
 - [x] **M45** Specs dos casos acima em `jwt.interceptor.spec.ts` e `guards.spec.ts`.
-- [ ] **A6** Respeitar o `Retry-After` no 429 e conferir `UseForwardedHeaders` no deploy.
+- [x] **A6** Refresh barrado pelo limite de requisições (429) é repetido uma vez depois do `Retry-After`, quando a espera é de até 5 s; rede, 5xx, espera longa ou cabeçalho ausente não repetem. Specs em `auth.refresh.spec.ts`.
+- [ ] **A6** (backend) `UseForwardedHeaders` não está configurado: `LimitesDeRequisicao.cs` particiona o limite por `RemoteIpAddress`, então atrás de proxy todos os usuários dividem o mesmo limite. O próprio arquivo aponta isso como pendência da Etapa 12.
+- [ ] **A6** (backend) Conferir se o CORS expõe o cabeçalho `Retry-After`: sem `WithExposedHeaders`, o navegador não o entrega ao front em origem diferente e o retry não acontece.
 - [ ] **B29/B28** Specs próprios do `AuthService` (logout repetido e refresh em andamento no "Sair").
 - [ ] Conferir no navegador: derrubar a rede com o access token vencido dentro de uma ferramenta.
 
