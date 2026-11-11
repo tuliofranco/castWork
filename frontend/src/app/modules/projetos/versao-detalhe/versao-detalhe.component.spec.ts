@@ -2,7 +2,8 @@ import { registerLocaleData } from '@angular/common';
 import localePt from '@angular/common/locales/pt';
 import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { PermissaoService } from '@core/services/permissao.service';
 import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
 import { PrecosService } from '@data/precificacao/precos/precos.service';
@@ -63,19 +64,20 @@ describe('VersaoDetalheComponent', () => {
     getPesosDaVersao: vi.fn(() => of(new Map([[10, 0.6]]))),
   };
 
+  const provedores = (podeEditar: boolean) => [
+    { provide: LOCALE_ID, useValue: 'pt-BR' },
+    { provide: ProjetosService, useValue: servico },
+    { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
+    { provide: ToastService, useValue: { sucesso: vi.fn() } },
+    { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
+    { provide: PrecosService, useValue: { getPrecos: () => of(null) } },
+  ];
+
   async function abrir(versaoId: string, podeEditar = true) {
     Object.values(servico).forEach((f) => f.mockClear());
     TestBed.configureTestingModule({
       imports: [VersaoDetalheComponent],
-      providers: [
-        provideRouter([{ path: '**', children: [] }]),
-        { provide: LOCALE_ID, useValue: 'pt-BR' },
-        { provide: ProjetosService, useValue: servico },
-        { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
-        { provide: ToastService, useValue: { sucesso: vi.fn() } },
-        { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
-        { provide: PrecosService, useValue: { getPrecos: () => of(null) } },
-      ],
+      providers: [provideRouter([{ path: '**', children: [] }]), ...provedores(podeEditar)],
     });
     const fixture = TestBed.createComponent(VersaoDetalheComponent);
     fixture.componentRef.setInput('id', '1');
@@ -172,14 +174,26 @@ describe('VersaoDetalheComponent', () => {
     expect(el.querySelector('.composicao .resumo')!.textContent?.replace(/\s+/g, ' ').trim()).toBe('1 peça · 12 un. · 7,200 g');
   });
 
+  // Com a rota real: o router reaproveita a página e só troca o `:versaoId`, então o projeto precisa ser relido.
   it('deve duplicar e abrir a cópia', async () => {
-    const { el, estabilizar } = await abrir('20');
+    Object.values(servico).forEach((f) => f.mockClear());
+    const copia = { id: 30, numero: 5, nome: 'Cópia da Versão 1', observacoes: null, status: 'EM_DESENVOLVIMENTO' as const, publicadaEm: null, itens: [] };
+    servico.getProjeto.mockReturnValueOnce(of(projeto)).mockReturnValueOnce(of({ ...projeto, versoes: [copia, ...projeto.versoes] }));
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ path: 'projetos/:id/versoes/:versaoId', component: VersaoDetalheComponent }], withComponentInputBinding()), ...provedores(true)],
+    });
+    const pagina = await RouterTestingHarness.create('/projetos/1/versoes/20');
+    const el = pagina.routeNativeElement!;
+    await pagina.fixture.whenStable();
+    expect(el.querySelector('h1')!.textContent).toBe('1. Versão 1');
 
     botao(el, 'Duplicar')!.click();
-    await estabilizar();
+    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/projetos/1/versoes/30'));
+    await pagina.fixture.whenStable();
 
     expect(servico.postDuplicarVersao).toHaveBeenCalledWith(1, 20);
-    expect(TestBed.inject(Router).url).toBe('/projetos/1/versoes/30');
+    expect(servico.getProjeto).toHaveBeenCalledTimes(2);
+    expect(pagina.routeNativeElement!.querySelector('h1')!.textContent).toBe('5. Cópia da Versão 1');
   });
 
   it('deve mostrar a versão arquivada sem edição e com desarquivar', async () => {

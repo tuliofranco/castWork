@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -82,9 +82,13 @@ export class VersaoDetalheComponent {
 
   protected readonly pdfDoBriefing = signal<{ readonly arquivo: Blob; readonly titulo: string; readonly nome: string } | null>(null);
 
+  /**
+   * Relido também quando só o `:versaoId` muda: ao duplicar, o router reaproveita esta página e a cópia ainda não está
+   * no projeto que já foi lido.
+   */
   protected readonly projeto = rxResource({
-    params: () => Number(this.id()),
-    stream: ({ params }) => this.projetosService.getProjeto(params),
+    params: () => ({ id: Number(this.id()), versaoId: Number(this.versaoId()) }),
+    stream: ({ params }) => this.projetosService.getProjeto(params.id),
   });
 
   protected readonly versao = computed<VersaoProjetoDto | undefined>(() =>
@@ -124,11 +128,11 @@ export class VersaoDetalheComponent {
     const versao = this.versao();
     return versao ? pecasEmRascunho(versao) : [];
   });
-  /** Mostra o aviso das peças em rascunho depois de tocar em Publicar. */
-  protected readonly publicacaoBloqueada = signal(false);
+  /** Mostra o aviso das peças em rascunho depois de tocar em Publicar (some ao trocar de versão). */
+  protected readonly publicacaoBloqueada = linkedSignal({ source: this.versaoId, computation: () => false });
 
-  /** Quantidade escolhida para cada peça do projeto antes de tocar em Adicionar. */
-  private readonly quantidadesNovas = signal<Readonly<Record<number, number>>>({});
+  /** Quantidade escolhida para cada peça do projeto antes de tocar em Adicionar (volta a 1 ao trocar de versão). */
+  private readonly quantidadesNovas = linkedSignal<string, Readonly<Record<number, number>>>({ source: this.versaoId, computation: () => ({}) });
 
   protected quantidadeNova(peca: PecaDoProjetoResumoDto): number {
     return this.quantidadesNovas()[peca.id] ?? 1;

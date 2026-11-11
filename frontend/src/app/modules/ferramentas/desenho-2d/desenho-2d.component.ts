@@ -148,6 +148,8 @@ export class Desenho2dComponent {
       const arquivoId = await firstValueFrom(this.ferramentas.postRestaurar(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
       this.conversa().registrarArquivo(arquivoId);
       this.historico.set(null);
+      // Solta a prancheta antes da troca: o desenho novo abre por trás, só com o aviso discreto.
+      this.sincronizando.set(null);
       await this.trazerArquivo();
       this.toast.sucesso('Desenho restaurado.');
     } catch (erro) {
