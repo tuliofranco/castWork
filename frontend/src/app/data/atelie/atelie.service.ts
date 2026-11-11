@@ -6,7 +6,7 @@ import { type Observable, map } from 'rxjs';
 
 import type { ConfiguracaoAtelieDto, PutAtelieDto } from './dto/atelie.dto';
 
-export const GET_CONFIGURACAO_ATELIE = gql`
+const GET_CONFIGURACAO_ATELIE = gql`
   query GetConfiguracaoAtelie {
     configuracaoAtelie {
       nome

@@ -25,7 +25,7 @@ registerLocaleData(localePt, 'pt-BR');
 class PainelPdfDeTeste {
   readonly arquivo = input<Blob | null>(null);
   readonly titulo = input('');
-  readonly fechado = output<void>();
+  readonly fechado = output();
 }
 
 describe('PecaDoProjetoComponent', () => {

@@ -17,7 +17,7 @@ import type {
   PutParametrosDePrecoDto,
 } from './dto/precos.dto';
 
-export const GET_PRECOS_DO_ATELIE = gql`
+const GET_PRECOS_DO_ATELIE = gql`
   query GetPrecosDoAtelie {
     precosDoAtelie {
       cotacoes {

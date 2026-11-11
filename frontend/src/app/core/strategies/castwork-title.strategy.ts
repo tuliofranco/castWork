@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { type ActivatedRouteSnapshot, type RouterStateSnapshot, TitleStrategy } from '@angular/router';
 
-export const NOME_APLICACAO = 'Castwork';
+const NOME_APLICACAO = 'Castwork';
 
 /**
  * Lê `data.title` da rota ativa mais profunda e define o título da aba como "<título> | Castwork".

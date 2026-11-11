@@ -27,7 +27,8 @@ export function nomeDeArquivoDaPeca(nome: string | null | undefined, extensao: s
       .trim();
   const base = aparar(limpar(nome ?? ''), ' .') || padrao;
   const extra = complemento ? aparar(limpar(complemento), ' .') : '';
-  return `${extra ? `${base} - ${extra}` : base}.${extensao.replace(/^\./, '')}`;
+  const nomeBase = extra ? `${base} - ${extra}` : base;
+  return `${nomeBase}.${extensao.replace(/^\./, '')}`;
 }
 
 /** Tira das pontas os caracteres de `pontas` (hífens e pontos; sem regex: a de pontas tem backtracking). */

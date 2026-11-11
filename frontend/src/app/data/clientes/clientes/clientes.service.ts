@@ -9,7 +9,7 @@ import { type Observable, map } from 'rxjs';
 import type { ClienteOpcaoDto, ClienteResumoDto } from './dto/cliente-resumo.dto';
 import type { PostClienteDto } from './dto/post-cliente.dto';
 
-export const GET_CLIENTES = gql`
+const GET_CLIENTES = gql`
   query GetClientes($termo: String, $primeiros: Int, $apos: String) {
     clientes(termo: $termo, first: $primeiros, after: $apos) {
       totalCount
