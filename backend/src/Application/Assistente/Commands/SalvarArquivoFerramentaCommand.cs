@@ -11,7 +11,8 @@ namespace Castwork.Application.Assistente.Commands;
 
 /// <summary>
 /// Grava o arquivo editado pelo joalheiro na tela (o DXF salvo no CADCraft). Vira a versão atual: a IA
-/// passa a trabalhar em cima dele. Retorna o Id da nova versão do arquivo.
+/// passa a trabalhar em cima dele. Numa peça do projeto publicada, o desenho novo faz dela outra peça (volta a rascunho).
+/// Retorna o Id da nova versão do arquivo.
 /// </summary>
 [Permissao(Regras.Projetos.Editar)]
 public sealed class SalvarArquivoFerramentaCommand : ComandoDeFerramenta, IRequest<long>
@@ -27,9 +28,9 @@ public sealed class SalvarArquivoFerramentaCommandHandler(IUnitOfWork unitOfWork
 {
     public async Task<long> Handle(SalvarArquivoFerramentaCommand request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
         var agora = relogio.GetUtcNow();
-        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, agora, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterOuCriarAsync(unitOfWork, request, request.Ferramenta, agora, cancellationToken);
 
         var arquivo = ArquivoFerramenta.Criar(conversa.Id, Convert.FromBase64String(request.Conteudo), OrigemArquivo.Joalheiro, agora);
         unitOfWork.GetRepository<ArquivoFerramenta>().Adicionar(arquivo);

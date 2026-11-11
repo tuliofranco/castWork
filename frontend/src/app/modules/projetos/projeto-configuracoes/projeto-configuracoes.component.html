@@ -3,6 +3,28 @@
 } @else if (projeto.value(); as p) {
   <cw-cabecalho-pagina titulo="Configurações" [voltarPara]="'/projetos/' + id()" [voltarRotulo]="p.nome" />
 
+  <section class="secao" aria-labelledby="titulo-nome">
+    <h2 id="titulo-nome">Nome</h2>
+    @if (podeEditar && editandoNome()) {
+      <form class="vinculo" (ngSubmit)="salvarNome()">
+        <label class="visually-hidden" for="nome">Nome do projeto</label>
+        <input id="nome" name="nome" class="form-control" [maxlength]="nomeMaximo" [ngModel]="nome()" (ngModelChange)="nome.set($event)" [disabled]="salvando()" />
+        <button type="submit" class="btn btn-primary" [disabled]="salvando() || !nomeValido()">Salvar</button>
+        <button type="button" class="btn btn-sutil" (click)="cancelarNome()">Cancelar</button>
+      </form>
+    } @else {
+      <div class="definido">
+        <i class="bi bi-gem" aria-hidden="true"></i>
+        <span class="texto">{{ p.nome }}</span>
+        @if (podeEditar) {
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Editar nome" title="Editar nome" (click)="editandoNome.set(true)">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+    }
+  </section>
+
   <section class="secao" aria-labelledby="titulo-cliente">
     <h2 id="titulo-cliente">Cliente</h2>
     @if (podeEditar && (trocandoCliente() || !p.cliente)) {

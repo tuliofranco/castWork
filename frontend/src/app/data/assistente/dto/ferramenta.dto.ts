@@ -79,7 +79,22 @@ export interface ChatDaConversaDto {
 }
 
 /** Quem gravou a versão do arquivo. */
-export type OrigemArquivo = 'Ia' | 'Joalheiro' | 'Desfazer' | 'Restauracao';
+export type OrigemArquivo = 'Ia' | 'Joalheiro' | 'Desfazer' | 'Restauracao' | 'Conferencia' | 'Biblioteca' | 'Montagem' | 'NomesDaPeca';
+
+/** Vista de uma imagem guardada: as quatro do modelo 3D e a do desenho 2D. */
+export type VistaDaImagem = 'iso' | 'frente' | 'topo' | 'lado' | '2d';
+
+/** Uma imagem guardada do arquivo (gerada em alta qualidade depois de salvar): vista e tipo (`image/png` ou `image/svg+xml`). */
+export interface ImagemGuardadaDto {
+  readonly vista: VistaDaImagem;
+  readonly tipo: string;
+}
+
+/** As imagens guardadas do arquivo atual, na ordem de mostrar; vazia enquanto não foram geradas. */
+export interface ImagensDoArquivoDto {
+  readonly arquivoId: number | null;
+  readonly imagens: readonly ImagemGuardadaDto[];
+}
 
 /** Uma versão do histórico do arquivo; `tamanho` 0 é o desenho em branco. */
 export interface VersaoDoArquivoDto {
@@ -109,4 +124,11 @@ export interface ListaDeArquivosDto {
   readonly tamanhoPagina: number;
   readonly totalRegistros: number;
   readonly totalPaginas: number;
+}
+
+/** O arquivo que ficou como final da peça (o ajustado, quando `ajustado`: a tela recarrega) e se a peça publicada virou outra. */
+export interface ArquivoFinalDto {
+  readonly arquivoId: number;
+  readonly ajustado: boolean;
+  readonly virouOutraPeca: boolean;
 }

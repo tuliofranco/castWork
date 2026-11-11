@@ -4,6 +4,7 @@ using Castwork.Domain.Entities.Atelie;
 using Castwork.Domain.Entities.Clientes;
 using Castwork.Domain.Entities.Ferramentas.Briefings;
 using Castwork.Domain.Entities.Pecas;
+using Castwork.Domain.Entities.Precificacao;
 using Castwork.Domain.Entities.Projetos;
 using Castwork.Domain.ValueObjects;
 using Castwork.Infra.Data.Converters;
@@ -34,6 +35,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<ImagemConversa> ImagensConversa => Set<ImagemConversa>();
 
+    public DbSet<ImagemDoArquivo> ImagensDoArquivo => Set<ImagemDoArquivo>();
+
     public DbSet<ConsumoDaIa> ConsumosDaIa => Set<ConsumoDaIa>();
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
@@ -45,6 +48,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     public DbSet<ConfiguracaoAtelie> ConfiguracaoAtelie => Set<ConfiguracaoAtelie>();
+
+    public DbSet<CotacaoMetal> CotacoesMetal => Set<CotacaoMetal>();
+
+    public DbSet<Liga> Ligas => Set<Liga>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,9 +73,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         // Enums como texto (nome do valor): legível no banco e estável a renumerações.
         configurationBuilder.Properties<TipoPeca>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<StatusVersao>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<StatusPecaDoProjeto>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<TipoJoia>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<PapelMensagem>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<OrigemArquivo>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<Metal>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<TipoMaoDeObra>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(18, 2);
     }
 }

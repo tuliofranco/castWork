@@ -13,7 +13,6 @@ export const GET_CONFIGURACAO_ATELIE = gql`
       documento
       email
       telefone
-      valorHoraPadrao
       endereco {
         cep
         logradouro

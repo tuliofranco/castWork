@@ -19,8 +19,8 @@ public sealed class ApagarConversaFerramentaCommandHandler(IUnitOfWork unitOfWor
 {
     public async Task Handle(ApagarConversaFerramentaCommand request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        if (await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken) is not { } conversa)
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        if (await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken) is not { } conversa)
         {
             return;
         }

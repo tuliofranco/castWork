@@ -24,6 +24,10 @@ const ORIGENS: Record<OrigemArquivo, string> = {
   Joalheiro: 'salvo por você',
   Desfazer: 'ação da IA desfeita',
   Restauracao: 'restaurado do histórico',
+  Conferencia: 'conferência de materiais',
+  Biblioteca: 'cópia da biblioteca',
+  Montagem: 'montado a partir das peças',
+  NomesDaPeca: 'marcado como final',
 };
 
 /**

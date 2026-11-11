@@ -1,5 +1,6 @@
 using System.Text.Json;
 
+using Castwork.Domain.Entities.Assistente;
 using Castwork.Infra.IA.Assistente;
 
 using Microsoft.Extensions.Options;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Castwork.Infra.IA.Ferramentas.Modelo3d;
 
 /// <summary>
-/// Modelo 3D: o SolidCraft (<c>solidcraft-cli mcp</c>, sem janela) trabalhando no projeto 3D da versão.
+/// Modelo 3D: o SolidCraft (<c>solidcraft-cli mcp</c>, sem janela) trabalhando no projeto 3D da versão ou da peça do projeto.
 /// </summary>
 internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerramentaNaIa
 {
@@ -22,7 +23,8 @@ internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerram
     public const string Instrucoes = """
         Você é a assistente de modelagem 3D do Castwork, um sistema para joalheiros artesanais. Você modela no
         SolidCraft (um CAD 3D paramétrico com linha do tempo de features) pelas ferramentas que recebe, no
-        projeto 3D desta versão da peça. O joalheiro vê o mesmo modelo ao lado do chat, no tablet.
+        projeto 3D desta versão da joia (ou de uma peça do projeto). O joalheiro vê o mesmo modelo ao lado do chat,
+        no tablet.
 
         Unidades: milímetros. Modele em escala 1:1 com as medidas reais da peça. Caminho mais rápido: `batch`
         com uma lista de comandos (ex.: `sketch.create`, `sketch.circle.center`, `sketch.finish`,
@@ -40,6 +42,14 @@ internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerram
         errado, corrija antes de responder. Agrupe o trabalho em poucos `batch` em vez de muitos `execute`.
         Informe o volume quando for útil para estimar o peso do metal.
 
+        Materiais: o arquivo já tem os materiais do ateliê, listados em "materiais" no contexto da versão (não crie,
+        não edite nem apague materiais: eles vêm do ateliê). Todo corpo de metal que você criar recebe o material da
+        liga com `material.assign` (`bodies` e `material`, com o nome exato da lista), no mesmo `batch` que cria o
+        corpo. A liga vem do briefing ou da composição; se não souber qual é, pergunte ao joalheiro (pode modelar
+        antes e atribuir depois). Use "Pedra" nos corpos que representam pedras (não entram no peso do metal) e
+        "Apoio (não conta)" em rascunhos, guias e corpos auxiliares. O material "Default" do SolidCraft conta como
+        sem material: o "Modelo agora" aponta esses corpos; atribua o material antes de terminar quando souber qual é.
+
         O joalheiro pode anexar arquivos do projeto. Um DXF do desenho 2D chega com o caminho na pasta do turno:
         importe com `sketch.insert_dxf` (`path`, e `plane` conforme a vista: XY para a superior, XZ para a
         frontal, YZ para a lateral), confira os perfis com `inspect_design` e só então extrude ou revolucione.
@@ -48,6 +58,21 @@ internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerram
         O joalheiro pode anexar fotos e croquis: use como referência de forma e proporção, e pergunte as
         medidas que a imagem não dá (não invente medidas). Use o contexto da versão (briefing e composição)
         para tirar medidas e materiais já definidos.
+
+        Quando o contexto traz "peca" (e não "versao"), o arquivo é o modelo de uma peça do projeto (um elo, um
+        fecho, um pingente...), que depois entra nas versões: modele só essa peça, em escala real, centrada na
+        origem. Todo corpo de metal dela recebe o material da liga da peça ("materialDaLiga" no contexto); o peso da
+        peça é medido no arquivo que o joalheiro marcar como final, na liga dela. Ao marcar, os corpos recebem o nome
+        da peça.
+
+        Na versão (o contexto traz "versao"), o modelo é só a montagem das peças: você não cria corpos nem modela
+        geometria nova (extrusões, revoluções, primitivas, superfícies). A composição diz quais peças têm modelo 3D
+        final ("temModelo3d"). O botão "Montar a partir das peças" (do joalheiro, não seu) traz uma cópia do modelo de
+        cada peça por unidade, num componente com o nome da peça e o número da unidade ("Elo oval (3)"), enfileiradas
+        ao longo do eixo X. Esses componentes são as peças prontas: só posicione e gire (mover, alinhar, juntas), e
+        não apague nem crie unidades sem o joalheiro pedir. Se ele pedir para montar e o modelo ainda não tiver as
+        peças, diga para usar o botão. Se faltar uma peça (ou ela não tiver modelo 3D final), oriente o joalheiro a
+        modelá-la no Modelo 3D da própria peça, na página dela, e marcar o arquivo final; depois, montar de novo.
 
         Responda em português do Brasil, curto e direto, em texto simples: sem markdown, sem negrito e sem
         títulos (o chat não formata). Comece dizendo em uma frase o que você fez no modelo.
@@ -87,12 +112,30 @@ internal sealed class Modelo3dNaIa(IOptions<SolidCraftOptions> opcoes) : IFerram
         DescreverPasso: PassosDoModelo.Descrever,
         AjustarEntrada: LimitarScreenshot,
 
+        // Na versão, o modelo é só a montagem das peças: os comandos que criam corpos são recusados (a instrução diz o mesmo).
+        RecusarNaVersao: CriacaoDeCorpos.Recusar,
+
         // Estado interno do kernel e do app, que não ajuda a IA a modelar.
         CamposInternos: new HashSet<string> { "kernel", "measured_by", "marker", "hidden_origin", "dirty", "revision", "redo", "selection", "path" },
         ResumoDoArquivo: (("measure", "{}"), ResumoDoModelo.Resumir),
 
         // A imagem da resposta, só para o joalheiro: maior que a da IA, porque não custa tokens.
-        VistaParaOJoalheiro: ("screenshot", JsonSerializer.Serialize(new { view = "iso", width = 960, height = 600, grid = false, axes = false })));
+        VistaParaOJoalheiro: ("screenshot", JsonSerializer.Serialize(new { view = "iso", width = 960, height = 600, grid = false, axes = false })),
+
+        // Os materiais das ligas ativas, a pedra e o apoio, garantidos a cada abertura (sem duplicar).
+        PrepararArquivo: (MateriaisNoArquivo.Leitura, MateriaisNoArquivo.Garantir),
+
+        // Guardadas a cada arquivo novo, nas vistas padrão do SolidCraft (iso, front, top, right), sem grade nem eixos.
+        VistasGuardadas:
+        [
+            Vista(VistaDaImagem.Iso, "iso"),
+            Vista(VistaDaImagem.Frente, "front"),
+            Vista(VistaDaImagem.Topo, "top"),
+            Vista(VistaDaImagem.Lado, "right"),
+        ]);
+
+    private static VistaGuardada Vista(string vista, string doSolidCraft)
+        => new(vista, ".png", _ => ("screenshot", JsonSerializer.Serialize(new { view = doSolidCraft, width = 1920, height = 1200, grid = false, axes = false })));
 
     /// <summary>
     /// A imagem custa tokens pela área: o screenshot sai no máximo em 768x480 (cerca de 490 tokens; o padrão do

@@ -30,9 +30,9 @@ public sealed class NovoChatFerramentaCommandHandler(IUnitOfWork unitOfWork, Tim
 {
     public async Task<ConversaFerramentaDto> Handle(NovoChatFerramentaCommand request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
         var agora = relogio.GetUtcNow();
-        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, agora, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterOuCriarAsync(unitOfWork, request, request.Ferramenta, agora, cancellationToken);
         conversa.NovoChat(agora);
         await unitOfWork.SalvarAsync(cancellationToken);
         return await ChatsDaConversa.ComArquivoAsync(unitOfWork, conversa, cancellationToken);
@@ -44,8 +44,8 @@ public sealed class ContinuarChatFerramentaCommandHandler(IUnitOfWork unitOfWork
 {
     public async Task<ConversaFerramentaDto> Handle(ContinuarChatFerramentaCommand request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken)
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken)
             ?? throw new Domain.Exceptions.EntidadeNaoEncontradaException("Chat", request.Numero);
         conversa.ContinuarChat(request.Numero, relogio.GetUtcNow());
         await unitOfWork.SalvarAsync(cancellationToken);
@@ -72,7 +72,7 @@ internal static class ChatsDaConversa
 {
     public static async Task<ConversaFerramentaDto> ComArquivoAsync(IUnitOfWork unitOfWork, ConversaFerramenta conversa, CancellationToken cancellationToken)
     {
-        var arquivo = await ConversaDaVersao.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
+        var arquivo = await ConversaDoEscopo.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
         return GetConversaFerramentaQueryHandler.Mapear(conversa, arquivo is { EmBranco: false } ? arquivo.Id : null, processando: false);
     }
 }

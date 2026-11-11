@@ -11,11 +11,13 @@ namespace Castwork.Application.Assistente.Queries;
 /// A primeira é a atual.
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
-public sealed class GetHistoricoArquivoFerramentaQuery : IRequest<IReadOnlyList<VersaoDoArquivoDto>>
+public sealed class GetHistoricoArquivoFerramentaQuery : IRequest<IReadOnlyList<VersaoDoArquivoDto>>, IEscopoDaFerramenta
 {
     public long ProjetoId { get; set; }
 
     public long VersaoId { get; set; }
+
+    public long PecaDoProjetoId { get; set; }
 
     public string Ferramenta { get; set; } = string.Empty;
 }
@@ -25,8 +27,8 @@ public sealed class GetHistoricoArquivoFerramentaQueryHandler(IUnitOfWork unitOf
 {
     public async Task<IReadOnlyList<VersaoDoArquivoDto>> Handle(GetHistoricoArquivoFerramentaQuery request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken);
         if (conversa is null)
         {
             return [];

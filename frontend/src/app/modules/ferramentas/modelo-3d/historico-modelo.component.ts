@@ -7,6 +7,10 @@ const ROTULOS: Record<OrigemArquivo, string> = {
   Joalheiro: 'Salvo por você',
   Desfazer: 'Ação da IA desfeita',
   Restauracao: 'Restaurado do histórico',
+  Conferencia: 'Conferência de peso e materiais',
+  Biblioteca: 'Cópia da peça da biblioteca',
+  Montagem: 'Montado a partir das peças',
+  NomesDaPeca: 'Marcado como final (corpos com o nome da peça)',
 };
 
 /**
@@ -19,7 +23,7 @@ const ROTULOS: Record<OrigemArquivo, string> = {
   template: `
     <dialog #dialogo class="historico" aria-labelledby="titulo-historico" (close)="fechado.emit()">
       <header>
-        <h2 id="titulo-historico">Histórico do modelo</h2>
+        <h2 id="titulo-historico">{{ titulo() }}</h2>
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="dialogo.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
       <ol>
@@ -27,7 +31,7 @@ const ROTULOS: Record<OrigemArquivo, string> = {
           <li>
             <div class="descricao">
               <strong>{{ rotulo(versao) }}</strong>
-              <small>{{ versao.criadoEm | date: 'dd/MM HH:mm' }}@if (atual) { · atual }</small>
+              <small>{{ versao.criadoEm | date: 'dd/MM HH:mm' }}@if (atual) { · atual }@if (versao.id === finalId()) { · <strong class="final">final</strong> }</small>
             </div>
             <div class="acoes">
               @if (versao.tamanho > 0) {
@@ -35,6 +39,9 @@ const ROTULOS: Record<OrigemArquivo, string> = {
               }
               @if (!atual) {
                 <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="restaurar.emit(versao)">Restaurar</button>
+              }
+              @if (podeMarcarFinal() && versao.tamanho > 0 && versao.id !== finalId()) {
+                <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="marcarFinal.emit(versao)">Marcar como final</button>
               }
             </div>
           </li>
@@ -111,6 +118,10 @@ const ROTULOS: Record<OrigemArquivo, string> = {
       }
     }
 
+    .final {
+      color: var(--cw-success-ink, inherit);
+    }
+
     .vazio {
       justify-content: center;
       opacity: 0.75;
@@ -121,6 +132,13 @@ const ROTULOS: Record<OrigemArquivo, string> = {
 export class HistoricoModeloComponent {
   readonly versoes = input<readonly VersaoDoArquivoDto[] | null>(null);
   readonly ocupado = input(false);
+  /** "Elo oval · Modelo 3D" na peça do projeto. */
+  readonly titulo = input('Histórico do modelo');
+  /** O arquivo final da peça (nulo fora da peça ou sem final). */
+  readonly finalId = input<number | null>(null);
+  /** Na peça do projeto, com permissão de editar: cada versão com desenho pode virar a final. */
+  readonly podeMarcarFinal = input(false);
+  readonly marcarFinal = output<VersaoDoArquivoDto>();
   readonly restaurar = output<VersaoDoArquivoDto>();
   readonly baixar = output<VersaoDoArquivoDto>();
   readonly fechado = output();

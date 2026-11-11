@@ -30,7 +30,7 @@ public class PersistenciaTests : TesteDeIntegracao
         var projetos = Usar(new ProjetoBuilder());
         var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
         await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = id, Nome = "Base" });
-        var peca = await Usar(new PecaBuilder()).BuildAsync();
+        var peca = await Usar(new PecaDoProjetoBuilder(id)).CriarAsync();
         AmbienteDeTeste.Relogio.Avancar(TimeSpan.FromHours(2));
         AmbienteDeTeste.Sessao.UsuarioId = 7;
 
@@ -81,7 +81,7 @@ public class PersistenciaTests : TesteDeIntegracao
         var projetos = Usar(new ProjetoBuilder());
         var id = await projetos.SendAsync(await projetos.BuildCommandAsync());
         await AmbienteDeTeste.SendAsync(new CriarVersaoCommand { ProjetoId = id, Nome = "Base" });
-        var peca = await Usar(new PecaBuilder()).CustomizeCommand(c => c.Tipo = Domain.Entities.Pecas.TipoPeca.Fecho).BuildAsync();
+        var peca = await Usar(new PecaBuilder()).CustomizeCommand(c => (c.Tipo, c.LigaId, c.Material) = (Domain.Entities.Pecas.TipoPeca.Fecho, 2, null)).BuildAsync();
 
         var valores = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Database
             .SqlQuery<string>($"SELECT status AS \"Value\" FROM projeto_versoes WHERE projeto_id = {id} UNION ALL SELECT tipo FROM pecas WHERE id = {peca} ORDER BY 1")

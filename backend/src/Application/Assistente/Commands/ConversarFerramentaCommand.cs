@@ -58,10 +58,10 @@ public sealed class ConversarFerramentaCommandHandler(
 {
     public async Task<ConversaFerramentaDto> Handle(ConversarFerramentaCommand request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
         var texto = string.IsNullOrWhiteSpace(request.Texto) ? null : request.Texto.Trim();
         var agora = relogio.GetUtcNow();
-        var conversa = await ConversaDaVersao.ObterOuCriarAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, agora, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterOuCriarAsync(unitOfWork, request, request.Ferramenta, agora, cancellationToken);
 
         // Sem fala nem imagem, só a abertura: a IA da ferramenta começa o chat novo, se a ferramenta abre sozinha
         // (o briefing resume o formulário e pergunta o que falta).
@@ -72,8 +72,8 @@ public sealed class ConversarFerramentaCommandHandler(
         }
 
         var anexos = await CarregarAnexosAsync(request, cancellationToken);
-        var arquivo = await ConversaDaVersao.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
-        var (contexto, locais) = await ferramenta.PrepararAsync(request.ProjetoId, request.VersaoId, cancellationToken);
+        var arquivo = await ConversaDoEscopo.ArquivoAtualAsync(unitOfWork, conversa.Id, cancellationToken);
+        var (contexto, locais, preparoDoArquivo) = await ferramenta.PrepararAsync(request, cancellationToken);
 
         var repositorioDeImagens = unitOfWork.GetRepository<ImagemConversa>();
         var novas = request.Imagens.Select(i => ImagemConversa.Criar(conversa.Id, Convert.FromBase64String(i), agora)).ToList();
@@ -113,7 +113,9 @@ public sealed class ConversarFerramentaCommandHandler(
                     locais,
                     [.. anexos.Select(a => a.Conteudo)],
                     request.Modelo,
-                    request.Esforco),
+                    request.Esforco,
+                    preparoDoArquivo,
+                    EscopoDaVersao: request.VersaoId != 0),
                 CancellationToken.None);
         }
         catch

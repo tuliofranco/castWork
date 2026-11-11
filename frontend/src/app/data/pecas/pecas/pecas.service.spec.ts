@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { ApolloTestingController, ApolloTestingModule } from 'apollo-angular/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { GET_PECAS, PecasService } from './pecas.service';
+import { GET_PECA, GET_PECAS, PecasService } from './pecas.service';
 
 describe('PecasService', () => {
   function configurar() {
@@ -30,14 +30,26 @@ describe('PecasService', () => {
     expect(ativasOp.operation.variables).toEqual({ termo: null, primeiros: 10, apos: null, filtro: { ativo: { eq: true } } });
   });
 
-  it('deve cadastrar a peça pelo REST', async () => {
+  it('deve pedir o histórico de uso e o valor só quando informado', async () => {
+    const { service, apollo } = configurar();
+
+    const peca = firstValueFrom(service.getPeca(7, { comHistorico: true, comValor: false }));
+    const op = apollo.expectOne(GET_PECA);
+    op.flush({ data: { peca: null } });
+
+    expect(await peca).toBeNull();
+    expect(op.operation.variables).toEqual({ id: 7, comHistorico: true, comValor: false });
+  });
+
+  it('deve buscar o desenho da peça pela rota da biblioteca e devolver nulo sem desenho', async () => {
     const { service, http } = configurar();
-    const promessa = firstValueFrom(service.postPeca({ nome: 'Elo', tipo: 'ELO', teor: '18k' }));
 
-    const req = http.expectOne('pecas');
-    expect(req.request.body).toEqual({ nome: 'Elo', tipo: 'ELO', teor: '18k' });
-    req.flush({ id: 5 }, { status: 201, statusText: 'Created' });
+    const comDesenho = firstValueFrom(service.getDesenho(7, 'modelo-3d'));
+    http.expectOne('pecas/7/desenhos/modelo-3d').flush(new Blob(['{}']));
+    const semDesenho = firstValueFrom(service.getDesenho(7, 'desenho-2d'));
+    http.expectOne('pecas/7/desenhos/desenho-2d').flush(null, { status: 204, statusText: 'No Content' });
 
-    expect(await promessa).toEqual({ id: 5 });
+    expect(await comDesenho).toBeInstanceOf(Blob);
+    expect(await semDesenho).toBeNull();
   });
 });

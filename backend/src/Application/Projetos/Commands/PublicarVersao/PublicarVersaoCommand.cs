@@ -7,7 +7,7 @@ using MediatR;
 namespace Castwork.Application.Projetos.Commands.PublicarVersao;
 
 /// <summary>
-/// Congela a composição da versão (mesmo vazia).
+/// Congela a composição da versão (mesmo vazia). Recusa (422) se alguma peça da composição está em rascunho, dizendo quais.
 /// </summary>
 [Permissao(Regras.Projetos.Editar)]
 public sealed class PublicarVersaoCommand : ComandoDeVersao, IRequest;

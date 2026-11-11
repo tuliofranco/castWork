@@ -1,14 +1,20 @@
 <cw-conversa-ia
   ferramenta="desenho-2d"
-  titulo="Desenho 2D"
+  [titulo]="titulo()"
   [projetoId]="projeto()"
-  [versaoId]="versao()"
+  [escopo]="escopo()"
   [voltarPara]="voltarPara()"
-  voltarRotulo="Versão"
+  [voltarRotulo]="daPeca() ? 'Peça' : 'Versão'"
   [antesDeEnviar]="antesDeEnviar"
   (arquivoMudou)="arquivoMudou()"
 >
   <ng-container acoes>
+    @if (daPeca() && podeEditar()) {
+      <!-- O arquivo à vista vira o final da peça: o que vale para a publicação e a ficha técnica. -->
+      <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando() || !atualNaoEFinal()" (click)="marcarComoFinal()">
+        <i class="bi bi-patch-check" aria-hidden="true"></i> Marcar como final
+      </button>
+    }
     <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
       <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
     </button>
@@ -18,6 +24,7 @@
   </ng-container>
 
   <div area class="prancheta">
+    <cw-aviso-peca-publicada [publicada]="publicada()" />
     @if (sincronizando(); as aviso) {
       <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
     }
@@ -25,6 +32,14 @@
       <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o desenho. O que você mudar agora será substituído.</p>
     } @else if (trocando()) {
       <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o desenho…</p>
+    } @else if (atualNaoEFinal()) {
+      <p class="aviso-ia" role="status">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+        {{ finalId() ? 'Este não é o arquivo final da peça: a publicação e a ficha técnica usam o final.' : 'A peça ainda não tem arquivo final: sem ele, fica sem desenho 2D.' }}
+        @if (podeEditar()) {
+          <button type="button" class="marcar" (click)="marcarComoFinal()">Marcar como final</button>
+        }
+      </p>
     }
     <!-- Dois CADCrafts (WebAssembly, servido pelo próprio front em /cadcraft): um à vista, o outro abre o próximo desenho por trás. -->
     <iframe
@@ -53,6 +68,10 @@
 
 <cw-historico-desenho
   [versoes]="historico()"
+  [titulo]="daPeca() ? titulo() : 'Histórico do desenho'"
+  [finalId]="finalId()"
+  [podeMarcarFinal]="daPeca() && podeEditar()"
+  (marcarFinal)="marcarComoFinal($event.id)"
   [ocupado]="!!sincronizando() || pensando()"
   (restaurar)="restaurar($event)"
   (baixar)="baixar($event)"

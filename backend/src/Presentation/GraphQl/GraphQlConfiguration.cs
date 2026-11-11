@@ -1,5 +1,12 @@
 using Castwork.Application.Atelie.Queries.GetConfiguracaoAtelie;
 using Castwork.Application.Common.Enderecos;
+using Castwork.Application.Ferramentas.Modelo3d.Queries.GetConferenciaDoModelo;
+using Castwork.Application.Pecas.Queries;
+using Castwork.Application.Precificacao.Queries;
+using Castwork.Application.Precificacao.Queries.GetPrecosDoAtelie;
+using Castwork.Application.Projetos.Queries;
+using Castwork.Application.Projetos.Queries.GetPesoDaPeca;
+using Castwork.Application.Projetos.Queries.GetPrecoDaVersao;
 using Castwork.GraphQl.DataLoaders;
 using Castwork.GraphQl.Erros;
 using Castwork.GraphQl.Queries;
@@ -33,12 +40,43 @@ public static class GraphQlConfiguration
             .AddTypeExtension<ClientesQueries>()
             .AddTypeExtension<ProjetosQueries>()
             .AddTypeExtension<AtelieQueries>()
+            .AddTypeExtension<PrecificacaoQueries>()
             .AddType<PecaType>()
             .AddType<ClienteType>()
             .AddType<ProjetoType>()
 
             // DTO da Application exposto com nome de domínio, sem o sufixo técnico.
             .AddType(new ObjectType<ConfiguracaoAtelieDto>(d => d.Name("ConfiguracaoAtelie")))
+            .AddType(new ObjectType<PrecosDoAtelieDto>(d => d.Name("PrecosDoAtelie")))
+            .AddType(new ObjectType<CotacaoVigenteDto>(d => d.Name("CotacaoVigente")))
+            .AddType(new ObjectType<CotacaoDto>(d => d.Name("Cotacao")))
+            .AddType(new ObjectType<LigaDto>(d => d.Name("Liga")))
+            .AddType(new ObjectType<ParametrosDePrecoDto>(d => d.Name("ParametrosDePreco")))
+            .AddType(new ObjectType<CotacaoDoProjetoDto>(d => d.Name("CotacaoDoProjeto")))
+            .AddType(new ObjectType<CalculoDoPrecoDto>(d => d.Name("CalculoDoPreco")))
+            .AddType(new ObjectType<CustoDoMetalDto>(d => d.Name("CustoDoMetal")))
+            .AddType(new ObjectType<CustoDaPecaDto>(d => d.Name("CustoDaPeca")))
+            .AddType(new ObjectType<CustoDaMaoDeObraDto>(d => d.Name("CustoDaMaoDeObra")))
+            .AddType(new ObjectType<ServicoExternoDto>(d => d.Name("ServicoExterno")))
+            .AddType(new ObjectType<PendenciaDoPrecoDto>(d => d.Name("PendenciaDoPreco")))
+            .AddType(new ObjectType<AvisoDoPrecoDto>(d => d.Name("AvisoDoPreco")))
+            .AddType(new ObjectType<PesoManualDto>(d => d.Name("PesoManual")))
+            .AddType(new ObjectType<ConferenciaDoModeloDto>(d => d.Name("ConferenciaDoModelo")))
+            .AddType(new ObjectType<PesoDaLigaDto>(d => d.Name("PesoDaLiga")))
+            .AddType(new ObjectType<CorpoConferidoDto>(d => d.Name("CorpoConferido")))
+            .AddType(new ObjectType<SobreposicaoConferidaDto>(d => d.Name("SobreposicaoConferida")))
+            .AddType(new ObjectType<MaterialDisponivelDto>(d => d.Name("MaterialDisponivel")))
+            .AddType(new ObjectType<VersaoQueUsaPecaDto>(d => d.Name("VersaoQueUsaPeca")))
+            .AddType(new ObjectType<DesenhoDaPecaDto>(d =>
+            {
+                d.Name("DesenhoDaPeca");
+                d.Ignore(x => x.PecaId);
+            }))
+            .AddType(new ObjectType<PesoDaPecaDto>(d =>
+            {
+                d.Name("PesoDaPeca");
+                d.Ignore(x => x.PecaDoProjetoId);
+            }))
             .AddType(new ObjectType<EnderecoDto>(d =>
             {
                 d.Name("Endereco");
@@ -50,9 +88,17 @@ public static class GraphQlConfiguration
             .AddFiltering()
             .AddSorting()
             .AddDataLoader<ClientePorIdDataLoader>()
-            .AddDataLoader<PecaPorIdDataLoader>()
+            .AddDataLoader<PecaDoProjetoPorIdDataLoader>()
+            .AddDataLoader<PecasPorProjetoDataLoader>()
+            .AddDataLoader<HistoricoDeUsoPorPecaDataLoader>()
+            .AddDataLoader<DesenhosPorPecaDataLoader>()
+            .AddDataLoader<PesoPorPecaDoProjetoDataLoader>()
+            .AddDataLoader<ArquivosFinaisPorPecaDoProjetoDataLoader>()
             .AddDataLoader<VersoesPorProjetoDataLoader>()
             .AddDataLoader<ItensPorVersaoDataLoader>()
+            .AddDataLoader<PrecosPorProjetoDataLoader>()
+            .AddDataLoader<PrecoPorVersaoDataLoader>()
+            .AddDataLoader<ConferenciaPorVersaoDataLoader>()
             .AddDataLoader<ProjetosPorClienteDataLoader>()
             .AddErrorFilter<ErrorFilter>()
             .ModifyPagingOptions(o =>

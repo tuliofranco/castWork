@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Castwork.IntegrationTests.Http;
 
 /// <summary>
-/// Fluxo das telas por HTTP: cliente → peça → projeto → composição → publicação.
+/// Fluxo das telas por HTTP: cliente → projeto → peça do projeto → composição → publicação (da peça e da versão).
 /// </summary>
 public class CadastroEndpointsTests : TesteDeIntegracao
 {
@@ -45,21 +45,24 @@ public class CadastroEndpointsTests : TesteDeIntegracao
     public async Task DeveMontarEPublicarUmProjetoPorHttpAsync()
     {
         var clienteId = await CriarAsync("/api/clientes", new { nome = "Maria Silva" });
-        var eloId = await CriarAsync("/api/pecas", new { nome = "Elo oval", tipo = "Elo", material = "Ouro amarelo", teor = "18k", pesoGramas = 0.35m });
         var projetoId = await CriarAsync("/api/projetos", new { nome = "Colar Raízes", clienteId });
+        var eloId = await CriarAsync($"/api/projetos/{projetoId}/pecas", new { nome = "Elo oval", tipo = "Elo", ligaId = 2, pesoGramas = 0.35m });
         var v1 = await CriarAsync($"/api/projetos/{projetoId}/versoes", new { nome = "Base" });
 
-        var item = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaId = eloId, quantidade = 12 });
+        var item = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaDoProjetoId = eloId, quantidade = 12 });
+        var comRascunho = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/versoes/{v1}/publicar", UriKind.Relative), null);
+        var publicarPeca = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/pecas/{eloId}/publicar", UriKind.Relative), null);
         var publicar = await _http.PostAsync(new Uri($"/api/projetos/{projetoId}/versoes/{v1}/publicar", UriKind.Relative), null);
-        var depoisDePublicada = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaId = eloId, quantidade = 1 });
+        var depoisDePublicada = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/{v1}/itens", new { pecaDoProjetoId = eloId, quantidade = 1 });
 
-        (item.StatusCode, publicar.StatusCode, depoisDePublicada.StatusCode)
-            .Should().Be((HttpStatusCode.Created, HttpStatusCode.NoContent, HttpStatusCode.UnprocessableEntity));
+        (item.StatusCode, comRascunho.StatusCode, publicarPeca.StatusCode, publicar.StatusCode, depoisDePublicada.StatusCode)
+            .Should().Be((HttpStatusCode.Created, HttpStatusCode.UnprocessableEntity, HttpStatusCode.Created, HttpStatusCode.NoContent, HttpStatusCode.UnprocessableEntity));
+        (await comRascunho.Content.ReadFromJsonAsync<ProblemDetails>())!.Detail.Should().Contain("rascunho: Elo oval");
         (await depoisDePublicada.Content.ReadFromJsonAsync<ProblemDetails>())!.Detail.Should().Contain("publicada");
         var versao = await AmbienteDeTeste.ExecutarNoBancoAsync(db => db.Projetos.Where(p => p.Id == projetoId)
             .SelectMany(p => p.Versoes).Include(v => v.Itens).AsNoTracking().SingleAsync());
         versao.Should().BeEquivalentTo(new { Status = StatusVersao.Publicada }, o => o.ExcludingMissingMembers());
-        versao.Itens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { PecaId = eloId, Quantidade = 12 });
+        versao.Itens.Should().ContainSingle().Which.Should().BeEquivalentTo(new { PecaDoProjetoId = eloId, Quantidade = 12 });
     }
 
     [Test]
@@ -84,9 +87,9 @@ public class CadastroEndpointsTests : TesteDeIntegracao
     public async Task DeveResponder404ParaVersaoInexistenteE400ParaProjetoInvalidoAsync()
     {
         var projetoId = await CriarAsync("/api/projetos", new { nome = "Pulseira" });
-        var eloId = await CriarAsync("/api/pecas", new { nome = "Elo", tipo = "Elo" });
+        var eloId = await CriarAsync($"/api/projetos/{projetoId}/pecas", new { nome = "Elo", tipo = "Elo" });
 
-        var versaoInexistente = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/999999/itens", new { pecaId = eloId, quantidade = 1 });
+        var versaoInexistente = await _http.PostAsJsonAsync($"/api/projetos/{projetoId}/versoes/999999/itens", new { pecaDoProjetoId = eloId, quantidade = 1 });
         var projetoInvalido = await _http.PostAsJsonAsync("/api/projetos", new { nome = string.Empty, clienteId = 999_999 });
 
         versaoInexistente.StatusCode.Should().Be(HttpStatusCode.NotFound);

@@ -31,6 +31,10 @@
     }
   </div>
 
+  @if (publicacaoBloqueada() && rascunhos().length > 0) {
+    <cw-pecas-em-rascunho [projetoId]="+id()" [numero]="v.numero" [pecas]="rascunhos()" />
+  }
+
   @switch (v.status) {
     @case ('PUBLICADA') {
       <p class="aviso"><i class="bi bi-lock" aria-hidden="true"></i><span>Composição congelada. Para mudar, duplique como uma nova versão.</span></p>
@@ -109,7 +113,7 @@
           <p>
             Nenhuma peça nesta versão.
             @if (editavel()) {
-              Busque na biblioteca e toque em <strong>Adicionar</strong>.
+              Escolha entre as peças do projeto e toque em <strong>Adicionar</strong>.
             }
           </p>
         </div>
@@ -119,7 +123,12 @@
             <li class="cw-linha item">
               <span class="cw-icone-linha"><i class="bi" [class]="'bi-' + iconeTipo(item.peca.tipo)" aria-hidden="true"></i></span>
               <span class="principal">
-                <span class="nome">{{ item.peca.nome }}</span>
+                <span class="nome">
+                  {{ item.peca.nome }}
+                  @if (item.peca.status === 'RASCUNHO') {
+                    <cw-selo [tom]="statusPeca.RASCUNHO.tom" [icone]="statusPeca.RASCUNHO.icone">Rascunho</cw-selo>
+                  }
+                </span>
                 <span class="meta">
                   {{ rotuloTipo(item.peca.tipo) }}
                   @if (item.peca.material) {
@@ -133,6 +142,12 @@
                   <span class="observacao">{{ item.observacao }}</span>
                 }
               </span>
+              <a class="btn btn-sutil btn-icone" [routerLink]="['/projetos', id(), 'pecas', item.peca.id, 'desenhos', 'desenho-2d']" [queryParams]="{ versao: versaoId() }" [attr.aria-label]="'Ver o 2D de ' + item.peca.nome" title="Ver 2D">
+                <i class="bi bi-vector-pen" aria-hidden="true"></i>
+              </a>
+              <a class="btn btn-sutil btn-icone" [routerLink]="['/projetos', id(), 'pecas', item.peca.id, 'desenhos', 'modelo-3d']" [queryParams]="{ versao: versaoId() }" [attr.aria-label]="'Ver o 3D de ' + item.peca.nome" title="Ver 3D">
+                <i class="bi bi-box" aria-hidden="true"></i>
+              </a>
               @if (editavel()) {
                 <cw-quantidade [valor]="item.quantidade" [rotulo]="item.peca.nome" [desabilitado]="salvando()" (alterado)="alterarQuantidade(item, $event)" />
                 <button type="button" class="btn btn-perigo-sutil btn-icone" [attr.aria-label]="'Remover ' + item.peca.nome" [disabled]="salvando()" (click)="remover(item)">
@@ -150,47 +165,47 @@
     @if (editavel()) {
       <section class="biblioteca" aria-labelledby="titulo-biblioteca">
         <header class="cabecalho-secao">
-          <h2 id="titulo-biblioteca">Adicionar da biblioteca</h2>
+          <h2 id="titulo-biblioteca">Adicionar do projeto</h2>
+          <a class="btn btn-sutil" [routerLink]="['/projetos', id(), 'pecas', 'nova']"><i class="bi bi-plus-lg" aria-hidden="true"></i> Nova peça</a>
         </header>
-        <cw-campo-busca [controle]="buscaPeca" placeholder="Nome ou material" rotulo="Buscar peças para adicionar" />
+        <cw-campo-busca [controle]="buscaPeca" placeholder="Nome ou material" rotulo="Buscar peças do projeto para adicionar" />
 
-        @let resultados = biblioteca.value();
-        <cw-estado-lista
-          [carregando]="!biblioteca.hasValue() && biblioteca.isLoading()"
-          [erro]="!!biblioteca.error()"
-          mensagemErro="Não foi possível buscar as peças."
-          [vazio]="resultados?.nodes?.length === 0"
-          iconeVazio="gem"
-          [tituloVazio]="buscaPeca.value ? 'Nenhuma peça encontrada.' : 'A biblioteca está vazia.'"
-          descricaoVazio="Cadastre a peça na aba Peças e volte aqui."
-          [quantidadeEsqueleto]="3"
-          (tentarDeNovo)="biblioteca.reload()"
-        >
-          @if (resultados) {
-            <ul class="cw-lista">
-              @for (peca of resultados.nodes; track peca.id) {
-                <li class="cw-linha resultado">
-                  <span class="principal">
-                    <span class="nome">{{ peca.nome }}</span>
-                    <span class="meta">
-                      {{ rotuloTipo(peca.tipo) }}
-                      @if (peca.teor) {
-                        · {{ formatarTeor(peca.teor) }}
-                      }
-                    </span>
+        @if (pecasDoProjeto().length === 0) {
+          <cw-estado-lista
+            [vazio]="true"
+            iconeVazio="gem"
+            [tituloVazio]="buscaPeca.value ? 'Nenhuma peça encontrada.' : 'O projeto ainda não tem peças.'"
+            descricaoVazio="Crie uma peça ou importe da biblioteca na página do projeto."
+          >
+            <a acaoVazio class="btn btn-secundario" [routerLink]="voltarPara()">Ir para o projeto</a>
+          </cw-estado-lista>
+        } @else {
+          <ul class="cw-lista">
+            @for (peca of pecasDoProjeto(); track peca.id) {
+              <li class="cw-linha resultado">
+                <span class="principal">
+                  <span class="nome">{{ peca.nome }}</span>
+                  <span class="meta">
+                    {{ rotuloTipo(peca.tipo) }}
+                    @if (peca.teor) {
+                      · {{ formatarTeor(peca.teor) }}
+                    }
+                    · {{ statusPeca[peca.status].rotulo }}
                   </span>
-                  <span class="adicionar">
-                    <cw-quantidade [valor]="quantidadeNova(peca)" [rotulo]="peca.nome" [espera]="0" (alterado)="definirQuantidadeNova(peca, $event)" />
-                    <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="adicionar(peca)">Adicionar</button>
-                  </span>
-                </li>
-              }
-            </ul>
-          }
-        </cw-estado-lista>
+                </span>
+                <span class="adicionar">
+                  <cw-quantidade [valor]="quantidadeNova(peca)" [rotulo]="peca.nome" [espera]="0" (alterado)="definirQuantidadeNova(peca, $event)" />
+                  <button type="button" class="btn btn-primary" [disabled]="salvando()" (click)="adicionar(peca)">Adicionar</button>
+                </span>
+              </li>
+            }
+          </ul>
+        }
       </section>
     }
   </div>
+
+  <cw-preco-versao [projetoId]="+id()" [versao]="v" [podeVerCalculo]="podeVerCalculo" [podeEditar]="podeEditarOrcamento" />
 } @else {
   <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="5" />
 }

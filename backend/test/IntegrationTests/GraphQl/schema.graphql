@@ -85,8 +85,71 @@ type Query {
   projeto(id: Long!): Projeto
     @authorize(policy: "projetos.ler")
     @cost(weight: "10")
-  "Dados do ateliê da instalação (cabeçalho, documentos, valor/hora sugerido)."
+  "Dados do ateliê da instalação (cabeçalho e documentos)."
   configuracaoAtelie: ConfiguracaoAtelie! @authorize @cost(weight: "10")
+  "Padrões de preço do ateliê: cotação vigente de cada metal (puro), ligas ativas e parâmetros."
+  precosDoAtelie: PrecosDoAtelie!
+    @authorize(policy: "precificacao.ler")
+    @cost(weight: "10")
+  "Ligas ativas do ateliê (para o material das peças)."
+  ligas: [Liga!]! @authorize(policy: "projetos.ler") @cost(weight: "10")
+  "Histórico de cotações de um metal, da mais recente para a mais antiga, paginado."
+  historicoDeCotacoes(
+    metal: Metal!
+    "Returns the first _n_ elements from the list."
+    first: Int
+    "Returns the elements in the list that come after the specified cursor."
+    after: String
+    "Returns the last _n_ elements from the list."
+    last: Int
+    "Returns the elements in the list that come before the specified cursor."
+    before: String
+  ): HistoricoDeCotacoesConnection
+    @authorize(policy: "precificacao.ler")
+    @listSize(
+      assumedSize: 50
+      slicingArguments: ["first", "last"]
+      slicingArgumentDefaultValue: 20
+      sizedFields: ["edges", "nodes"]
+      requireOneSlicingArgument: false
+    )
+    @cost(weight: "10")
+}
+
+type ArquivoFinalDaPecaDto {
+  pecaDoProjetoId: Long!
+  ferramenta: String!
+  arquivoId: Long!
+  nome: String
+  criadoEm: DateTime!
+}
+
+type AvisoDoPreco {
+  tipo: TipoDeAviso!
+  descricao: String!
+  metal: Metal
+  corpos: [String!]!
+}
+
+type CalculoDoPreco {
+  origemDoPeso: OrigemDoPeso!
+  pesosManuaisGuardados: [PesoManual!]!
+  metais: [CustoDoMetal!]!
+  custoDosMetais: Decimal!
+  composicao: [CustoDaPeca!]!
+  custoDaComposicao: Decimal!
+  maoDeObra: CustoDaMaoDeObra!
+  servicos: [ServicoExterno!]!
+  custoDosServicos: Decimal!
+  custoTotal: Decimal!
+  perdaPercentual: Decimal!
+  markup: Decimal!
+  markupDaVersao: Decimal
+  taxasPercentual: Decimal!
+  arredondarPara: Decimal!
+  precoSemArredondar: Decimal!
+  pendencias: [PendenciaDoPreco!]!
+  avisos: [AvisoDoPreco!]!
 }
 
 type Cliente {
@@ -121,19 +184,97 @@ type ClientesEdge {
   node: Cliente!
 }
 
+type ConferenciaDoModelo {
+  versaoId: Long!
+  arquivoId: Long
+  medido: Boolean!
+  alteravel: Boolean!
+  pesoDoMetal: Decimal!
+  pesosPorLiga: [PesoDaLiga!]!
+  corpos: [CorpoConferido!]!
+  sobreposicoes: [SobreposicaoConferida!]!
+  materiais: [MaterialDisponivel!]!
+}
+
 type ConfiguracaoAtelie {
   nome: String!
   documento: String
   email: String
   telefone: String
   endereco: Endereco
-  valorHoraPadrao: Decimal!
   assinatura: String
   corMarca: String!
   instagram: String
   site: String
   avisoBriefing: String
   possuiLogo: Boolean!
+}
+
+type CorpoConferido {
+  nome: String!
+  material: String
+  uso: UsoDoCorpo!
+  ligaId: Long
+  liga: String
+  volumeMm3: Decimal
+  massaGramas: Decimal
+  fechado: Boolean!
+  contaNoPeso: Boolean!
+}
+
+type Cotacao {
+  id: Long!
+  metal: Metal!
+  valor: Decimal!
+  registradaEm: DateTime!
+  registradaPor: String
+}
+
+type CotacaoDoProjeto {
+  metal: Metal!
+  valor: Decimal!
+  cotadaEm: DateTime!
+}
+
+type CotacaoVigente {
+  metal: Metal!
+  atual: Cotacao
+}
+
+type CustoDaMaoDeObra {
+  tipo: TipoMaoDeObra
+  horas: Decimal
+  valorHora: Decimal
+  custo: Decimal!
+}
+
+type CustoDaPeca {
+  pecaDoProjetoId: Long!
+  nome: String!
+  quantidade: Int!
+  custoUnitario: Decimal
+  custo: Decimal!
+}
+
+type CustoDoMetal {
+  ligaId: Long!
+  liga: String!
+  metal: Metal!
+  teor: Int!
+  ligaAtiva: Boolean!
+  pesoEstimado: Decimal!
+  pesoAFundir: Decimal!
+  cotacaoDoPuro: Decimal
+  valorPorGrama: Decimal
+  custo: Decimal!
+  pesoReal: Decimal
+  diferencaDoPesoReal: Decimal
+}
+
+type DesenhoDaPeca {
+  ferramenta: String!
+  copiadoEm: DateTime!
+  tamanho: Int!
 }
 
 type Endereco {
@@ -146,12 +287,48 @@ type Endereco {
   uf: String!
 }
 
+"A connection to a list of items."
+type HistoricoDeCotacoesConnection {
+  "Information to aid in pagination."
+  pageInfo: PageInfo!
+  "A list of edges."
+  edges: [HistoricoDeCotacoesEdge!]
+  "A flattened list of the nodes."
+  nodes: [Cotacao!]
+  "Identifies the total count of items in the connection."
+  totalCount: Int! @cost(weight: "10")
+}
+
+"An edge in a connection."
+type HistoricoDeCotacoesEdge {
+  "A cursor for use in pagination."
+  cursor: String!
+  "The item at the end of the edge."
+  node: Cotacao!
+}
+
 type ItemComposicao {
   id: Long!
   quantidade: Int!
   observacao: String
-  pecaId: Long!
-  peca: Peca! @cost(weight: "10")
+  pecaDoProjetoId: Long!
+  "A peça do projeto usada nesta linha."
+  peca: PecaDoProjeto! @cost(weight: "10")
+}
+
+type Liga {
+  id: Long!
+  nome: String!
+  metal: Metal!
+  teor: Int!
+  densidade: Decimal!
+}
+
+type MaterialDisponivel {
+  nome: String!
+  rotulo: String!
+  uso: UsoDoCorpo!
+  ligaId: Long
 }
 
 "Information about pagination in a connection."
@@ -166,17 +343,59 @@ type PageInfo {
   endCursor: String
 }
 
+type ParametrosDePreco {
+  perdaPercentual: Decimal!
+  valorHora: Decimal!
+  markup: Decimal!
+  taxasPercentual: Decimal!
+  arredondarPara: Decimal!
+}
+
 type Peca {
   id: Long!
   nome: String!
   tipo: TipoPeca!
+  "A liga do ateliê escolhida (peças de metal); null na pedra, sem liga ou nas peças anteriores à liga."
+  ligaId: Long
+  "Nome da liga copiado quando ela foi escolhida, ou o material livre da pedra."
   material: String
   descricao: String
   ativo: Boolean!
   criadoEm: DateTime!
-  "Teor em milésimos (750 = 18k), quando a peça é de metal."
+  "Teor em milésimos (750 = 18k), copiado da liga; null na pedra."
   teor: Int @cost(weight: "10")
   pesoGramas: Decimal @cost(weight: "10")
+  "O desenho 2D e o modelo 3D da peça, copiados do projeto ao publicar (só para ver). O conteúdo vem por REST."
+  desenhos: [DesenhoDaPeca!]! @cost(weight: "10")
+  "Projetos que usam a peça (pelas cópias vinculadas a ela), com as versões e o valor em cada projeto."
+  historicoDeUso: [UsoDaPeca!]
+    @authorize(policy: "projetos.ler")
+    @cost(weight: "10")
+}
+
+type PecaDoProjeto {
+  id: Long!
+  nome: String!
+  tipo: TipoPeca!
+  "A liga do ateliê escolhida (peças de metal); null na pedra, sem liga ou nas peças anteriores à liga."
+  ligaId: Long
+  "Nome da liga copiado quando ela foi escolhida, ou o material livre da pedra."
+  material: String
+  descricao: String
+  ativo: Boolean!
+  "RASCUNHO: só neste projeto; PUBLICADA: está na biblioteca."
+  status: StatusPecaDoProjeto!
+  "A peça da biblioteca de que esta é cópia; null em rascunho."
+  pecaId: Long
+  "Teor em milésimos (750 = 18k), copiado da liga; null na pedra."
+  teor: Int @cost(weight: "10")
+  pesoGramas: Decimal @cost(weight: "10")
+  "O peso que vale para a peça e de onde vem: medido no modelo 3D (na liga da peça) ou, sem 3D, o digitado."
+  peso: PesoDaPeca! @cost(weight: "10")
+  "O arquivo final de cada ferramenta da peça (desenho 2D e modelo 3D), o que vale para o peso, a montagem e a publicação; a ferramenta sem final não aparece."
+  arquivosFinais: [ArquivoFinalDaPecaDto!]! @cost(weight: "10")
+  "Custo de uma unidade neste projeto (R$), não o preço de venda. Null quando ainda não tem valor."
+  valor: Decimal @authorize(policy: "precificacao.ler") @cost(weight: "10")
 }
 
 "A connection to a list of items."
@@ -199,6 +418,59 @@ type PecasEdge {
   node: Peca!
 }
 
+type PendenciaDoPreco {
+  tipo: TipoDePendencia!
+  descricao: String!
+  pecaDoProjetoId: Long
+  ligaId: Long
+  metal: Metal
+  corpos: [String!]!
+}
+
+type PesoDaLiga {
+  ligaId: Long!
+  liga: String!
+  peso: Decimal!
+}
+
+type PesoDaPeca {
+  gramas: Decimal
+  origem: OrigemDoPesoDaPeca!
+  pesoDigitado: Decimal
+}
+
+type PesoManual {
+  ligaId: Long!
+  liga: String!
+  peso: Decimal!
+}
+
+type PrecoDaVersao {
+  "Preço final (R$), arredondado para cima. Parcial quando o status é INCOMPLETO."
+  preco: Decimal!
+  "COMPLETO, ou INCOMPLETO enquanto houver pendência."
+  status: StatusDoPreco!
+  "O cálculo linha a linha e os dados do orçamento da versão."
+  calculo: CalculoDoPreco @authorize(policy: "precificacao.ler")
+}
+
+type PrecosDoAtelie {
+  cotacoes: [CotacaoVigente!]!
+  ligas: [Liga!]!
+  parametros: ParametrosDePreco!
+}
+
+type PrecosDoProjeto {
+  "Quando os preços foram copiados do ateliê."
+  herdadosEm: DateTime!
+  "Quando foram editados no projeto; null enquanto estão como herdados."
+  alteradosEm: DateTime
+  "R$/g do metal puro no projeto, só os metais com cotação."
+  cotacoes: [CotacaoDoProjeto!] @authorize(policy: "precificacao.ler")
+  "Perda, valor da hora, markup, taxas e arredondamento do projeto."
+  parametros: ParametrosDePreco @authorize(policy: "precificacao.ler")
+}
+
 type Projeto {
   id: Long!
   nome: String!
@@ -207,8 +479,14 @@ type Projeto {
   criadoEm: DateTime!
   alteradoEm: DateTime
   cliente: Cliente @cost(weight: "10")
+  "Preços deste projeto: cópia dos do ateliê, editável só aqui."
+  precos: PrecosDoProjeto! @cost(weight: "10")
+  "Peças do projeto (criadas aqui ou importadas da biblioteca), por nome."
+  pecas("Só a peça com este Id." id: Long): [PecaDoProjeto!]!
+    @cost(weight: "10")
   "Versões da arte, da mais recente para a mais antiga."
-  versoes: [VersaoProjeto!]! @cost(weight: "10")
+  versoes("Só a versão com este Id." id: Long): [VersaoProjeto!]!
+    @cost(weight: "10")
 }
 
 "A connection to a list of items."
@@ -231,6 +509,29 @@ type ProjetosEdge {
   node: Projeto!
 }
 
+type ServicoExterno {
+  nome: String!
+  valor: Decimal!
+}
+
+type SobreposicaoConferida {
+  corpoA: String!
+  corpoB: String!
+  volumeMm3: Decimal!
+  deMetal: Boolean!
+  podeUnir: Boolean!
+}
+
+type UsoDaPeca {
+  projetoId: Long!
+  projeto: String!
+  pecaDoProjetoId: Long!
+  "Versões cuja composição usa a peça (vazia se o projeto ainda não a usou)."
+  versoes: [VersaoQueUsaPeca!]!
+  "Valor da peça neste projeto (custo de uma unidade, R$); null sem valor."
+  valor: Decimal @authorize(policy: "precificacao.ler")
+}
+
 type VersaoProjeto {
   id: Long!
   numero: Int!
@@ -240,6 +541,18 @@ type VersaoProjeto {
   publicadaEm: DateTime
   "Composição: as peças da versão e a quantidade de cada uma."
   itens: [ItemComposicao!]! @cost(weight: "10")
+  "Preço da versão calculado agora com os preços do projeto. O cálculo detalhado exige precificacao.ler."
+  preco: PrecoDaVersao! @cost(weight: "10")
+  "Conferência de peso e materiais do modelo 3D: corpos com material, volume e peso, sobreposições e os materiais do ateliê."
+  conferenciaDoModelo: ConferenciaDoModelo! @cost(weight: "10")
+}
+
+type VersaoQueUsaPeca {
+  versaoId: Long!
+  numero: Int!
+  nome: String!
+  status: StatusVersao!
+  quantidade: Int!
 }
 
 input BooleanOperationFilterInput {
@@ -351,15 +664,63 @@ enum ApplyPolicy {
   VALIDATION
 }
 
+enum Metal {
+  OURO
+  PRATA
+}
+
+enum OrigemDoPeso {
+  MANUAL
+  MODELO
+}
+
+enum OrigemDoPesoDaPeca {
+  DIGITADO
+  MODELO
+  MODELO_SEM_LIGA
+  MODELO_NAO_MEDIDO
+}
+
 enum SortEnumType {
   ASC
   DESC
+}
+
+enum StatusDoPreco {
+  COMPLETO
+  INCOMPLETO
+}
+
+enum StatusPecaDoProjeto {
+  RASCUNHO
+  PUBLICADA
 }
 
 enum StatusVersao {
   EM_DESENVOLVIMENTO
   PUBLICADA
   ARQUIVADA
+}
+
+enum TipoDeAviso {
+  COTACAO_ANTIGA
+  CORPOS_SOBREPOSTOS
+  CORPO_ABERTO
+}
+
+enum TipoDePendencia {
+  PECA_SEM_VALOR
+  METAL_SEM_COTACAO
+  SEM_METAL_COM_PESO
+  LIGA_DESATIVADA
+  VALOR_HORA_A_DEFINIR
+  CORPOS_SEM_MATERIAL
+  MODELO_NAO_MEDIDO
+}
+
+enum TipoMaoDeObra {
+  POR_HORAS
+  VALOR_FIXO
 }
 
 enum TipoPeca {
@@ -370,6 +731,13 @@ enum TipoPeca {
   CORRENTE
   ENGASTE
   OUTRO
+}
+
+enum UsoDoCorpo {
+  METAL
+  PEDRA
+  APOIO
+  SEM_MATERIAL
 }
 
 "The `DateTime` scalar type represents a date and time with time zone offset information."

@@ -38,12 +38,19 @@
 
 // A linha tem duas zonas de toque: abrir a versão (link) e as ações à direita (botões).
 .versao {
+  flex-wrap: wrap;
   padding: 0;
   gap: 0;
 
+  .bloqueio {
+    flex: 1 1 100%;
+    padding: 0 1.25rem 0.75rem;
+  }
+
   .abrir {
     display: flex;
-    flex: 1 1 auto;
+    // Base 0: com a linha quebrando (para o aviso de rascunho), as ações continuam ao lado.
+    flex: 1 1 0;
     align-items: center;
     gap: 1rem;
     min-width: 0;

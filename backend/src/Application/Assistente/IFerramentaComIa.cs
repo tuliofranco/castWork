@@ -20,14 +20,25 @@ public interface IFerramentaComIa
     bool DoProjeto { get; }
 
     /// <summary>
+    /// Ferramenta da versão que também abre em cada peça do projeto (o desenho 2D e o modelo 3D da peça), com conversa e
+    /// arquivo próprios da peça.
+    /// </summary>
+    bool DaPeca { get; }
+
+    /// <summary>
     /// Com o chat vazio, a IA pode abrir a conversa sozinha (sem fala do joalheiro).
     /// </summary>
     bool AbreSozinha { get; }
 
-    Task<PreparoDoTurno> PrepararAsync(long projetoId, long versaoId, CancellationToken cancellationToken);
+    /// <summary>
+    /// O contexto do turno no escopo da conversa: o projeto, a versão ou a peça do projeto.
+    /// </summary>
+    Task<PreparoDoTurno> PrepararAsync(IEscopoDaFerramenta escopo, CancellationToken cancellationToken);
 }
 
 /// <summary>
 /// O contexto (JSON) que a IA recebe no turno e as ferramentas locais dela (nulo quando só usa o MCP).
+/// <see cref="PreparoDoArquivo"/>: o que o arquivo de trabalho precisa ter ao ser aberto (JSON que só a ferramenta
+/// entende, ex.: os materiais do modelo 3D); nulo quando não há.
 /// </summary>
-public sealed record PreparoDoTurno(string Contexto, IFerramentasLocais? Locais = null);
+public sealed record PreparoDoTurno(string Contexto, IFerramentasLocais? Locais = null, string? PreparoDoArquivo = null);

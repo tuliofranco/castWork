@@ -15,7 +15,7 @@ import { SeloComponent } from '@shared/ui/selo.component';
 import { finalize, of } from 'rxjs';
 
 /**
- * Configurações do projeto: o que se define uma vez e raramente muda (cliente e briefing).
+ * Configurações do projeto: o que se define uma vez e raramente muda (nome, cliente e briefing).
  * Definidos, aparecem como uma linha discreta; o seletor e as ações só abrem quando pedidos.
  */
 @Component({
@@ -52,6 +52,16 @@ export class ProjetoConfiguracoesComponent {
     stream: ({ params }) => (params ? this.clientesService.getClientesOpcoes() : of([])),
   });
 
+  /** Mesmo limite do backend (`Projeto.NomeMaxLength`). */
+  protected readonly nomeMaximo = 150;
+  /** Nome digitado; volta ao do projeto sempre que o projeto é relido. */
+  protected readonly nome = linkedSignal(() => this.projeto.value()?.nome ?? '');
+  protected readonly editandoNome = signal(false);
+  protected readonly nomeValido = computed(() => {
+    const nome = this.nome().trim();
+    return nome.length > 0 && nome !== this.projeto.value()?.nome;
+  });
+
   /** Cliente escolhido no seletor; volta ao do projeto sempre que o projeto é relido. */
   protected readonly clienteEscolhido = linkedSignal<number | null>(() => this.projeto.value()?.cliente?.id ?? null);
   /** Com cliente vinculado, o seletor só aparece ao pedir para trocar. */
@@ -62,6 +72,26 @@ export class ProjetoConfiguracoesComponent {
   protected readonly documentoAberto = signal<{ readonly projetoId: number; readonly id: number; readonly nome: string; readonly titulo: string; readonly arquivo: Blob } | null>(
     null,
   );
+
+  protected cancelarNome(): void {
+    this.nome.set(this.projeto.value()?.nome ?? '');
+    this.editandoNome.set(false);
+  }
+
+  protected salvarNome(): void {
+    if (!this.nomeValido()) {
+      return;
+    }
+    this.salvando.set(true);
+    this.projetosService
+      .putNome(Number(this.id()), this.nome().trim())
+      .pipe(finalize(() => this.salvando.set(false)))
+      .subscribe(() => {
+        this.toast.sucesso('Nome do projeto alterado.');
+        this.editandoNome.set(false);
+        this.projeto.reload();
+      });
+  }
 
   protected cancelarCliente(): void {
     this.clienteEscolhido.set(this.projeto.value()?.cliente?.id ?? null);

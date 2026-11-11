@@ -4,16 +4,16 @@ using Castwork.Domain.Exceptions;
 namespace Castwork.Domain.Entities.Projetos;
 
 /// <summary>
-/// Uma linha da composição: quantas unidades de qual peça (ex.: 12× elo oval, banho de ródio).
+/// Uma linha da composição: quantas unidades de qual peça do projeto (ex.: 12× elo oval, banho de ródio).
 /// </summary>
 public sealed class ItemComposicao : BaseEntity<long>
 {
     public const int QuantidadeMaxima = 10_000;
     public const int ObservacaoMaxLength = 300;
 
-    internal ItemComposicao(long pecaId, int quantidade, string? observacao)
+    internal ItemComposicao(long pecaDoProjetoId, int quantidade, string? observacao)
     {
-        PecaId = Guard.IdValido(pecaId, nameof(PecaId));
+        PecaDoProjetoId = Guard.IdValido(pecaDoProjetoId, nameof(PecaDoProjetoId));
         Alterar(quantidade, observacao);
     }
 
@@ -21,7 +21,10 @@ public sealed class ItemComposicao : BaseEntity<long>
     {
     }
 
-    public long PecaId { get; private set; }
+    /// <summary>
+    /// A peça do mesmo projeto (<see cref="PecaDoProjeto"/>), nunca a da biblioteca.
+    /// </summary>
+    public long PecaDoProjetoId { get; private set; }
 
     public int Quantidade { get; private set; }
 

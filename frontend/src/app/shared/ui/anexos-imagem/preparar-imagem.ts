@@ -11,12 +11,17 @@ export interface ImagemAnexada {
 const LADO_MAXIMO = 1568;
 const QUALIDADE_JPEG = 0.85;
 
+/** HEIC/HEIF, o formato das fotos do iPhone. Alguns navegadores entregam o arquivo sem `type`, por isso a extensão também conta. */
+export function ehHeic(arquivo: File): boolean {
+  return /^image\/hei[cf]/.test(arquivo.type) || /\.hei[cf]$/i.test(arquivo.name);
+}
+
 /**
  * Reduz a foto (câmera do tablet chega a 12 MP) e converte para JPEG. EXIF de rotação é aplicado pelo
  * `createImageBitmap`, então a foto não chega deitada.
  */
 export async function prepararImagem(arquivo: File): Promise<ImagemAnexada> {
-  const bitmap = await createImageBitmap(arquivo, { imageOrientation: 'from-image' });
+  const bitmap = await abrir(arquivo);
   const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height));
   const largura = Math.round(bitmap.width * escala);
   const altura = Math.round(bitmap.height * escala);
@@ -34,4 +39,18 @@ export async function prepararImagem(arquivo: File): Promise<ImagemAnexada> {
 
   const url = canvas.toDataURL('image/jpeg', QUALIDADE_JPEG);
   return { base64: url.slice(url.indexOf(',') + 1), url };
+}
+
+/**
+ * O Safari abre HEIC sozinho; Chrome, Brave e Firefox não. Nesses, a foto é decodificada pelo `heic-to` (libheif em
+ * WebAssembly, ~3 MB), carregado só quando chega um HEIC, para não pesar no bundle.
+ */
+async function abrir(arquivo: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(arquivo, { imageOrientation: 'from-image' });
+  } catch (erro) {
+    if (!ehHeic(arquivo)) throw erro;
+    const { heicTo } = await import('heic-to');
+    return heicTo({ blob: arquivo, type: 'bitmap' });
+  }
 }

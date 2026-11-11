@@ -1,3 +1,5 @@
+using Castwork.Application.Precificacao.Queries.GetPrecosDoAtelie;
+using Castwork.Application.Projetos.Queries;
 using Castwork.Domain.Entities.Clientes;
 using Castwork.Domain.Entities.Projetos;
 
@@ -22,4 +24,27 @@ public static class ProjetosQueryExtensions
             || clientes.Any(c => c.Id == p.ClienteId && c.Nome.ToLower().Contains(termoMinusculo)));
 #pragma warning restore CA1304, CA1311, CA1862
     }
+
+    /// <summary>
+    /// Preços de cada projeto (cotações e parâmetros) numa consulta só. Os valores saem dos value objects na projeção.
+    /// </summary>
+    public static IQueryable<PrecosDoProjetoDto> ParaPrecosDto(this IQueryable<Projeto> query)
+        => query.Select(p => new PrecosDoProjetoDto
+        {
+            ProjetoId = p.Id,
+            Cotacoes = p.Cotacoes
+                .OrderBy(c => c.Metal)
+                .Select(c => new CotacaoDoProjetoDto { Metal = c.Metal, Valor = c.Valor.Valor, CotadaEm = c.CotadaEm })
+                .ToList(),
+            Parametros = new ParametrosDePrecoDto
+            {
+                PerdaPercentual = p.ParametrosDePreco.PerdaPercentual,
+                ValorHora = p.ParametrosDePreco.ValorHora.Valor,
+                Markup = p.ParametrosDePreco.Markup,
+                TaxasPercentual = p.ParametrosDePreco.TaxasPercentual,
+                ArredondarPara = p.ParametrosDePreco.ArredondarPara.Valor,
+            },
+            HerdadosEm = p.PrecosHerdadosEm,
+            AlteradosEm = p.PrecosAlteradosEm,
+        });
 }

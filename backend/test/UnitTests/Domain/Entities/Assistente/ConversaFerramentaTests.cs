@@ -1,3 +1,6 @@
+using System.Reflection;
+
+using Castwork.Domain.Common;
 using Castwork.Domain.Entities.Assistente;
 using Castwork.Domain.Entities.Ferramentas.Briefings;
 using Castwork.Domain.Exceptions;
@@ -7,6 +10,22 @@ namespace Castwork.UnitTests.Domain.Entities.Assistente;
 public class ConversaFerramentaTests
 {
     private static readonly DateTimeOffset Agora = new(2026, 11, 6, 13, 0, 0, TimeSpan.Zero);
+
+    [Test]
+    public void DeveCriarAConversaDaPecaDoProjetoSemVersao()
+    {
+        var conversa = ConversaFerramenta.Criar(1, versaoId: null, "modelo-3d", Agora, pecaDoProjetoId: 9);
+
+        conversa.Should().BeEquivalentTo(new { ProjetoId = 1L, VersaoId = (long?)null, PecaDoProjetoId = (long?)9, Ferramenta = "modelo-3d" });
+    }
+
+    [Test]
+    public void DeveRecusarConversaDaVersaoEDaPecaAoMesmoTempo()
+    {
+        var criar = () => ConversaFerramenta.Criar(1, 5, "modelo-3d", Agora, pecaDoProjetoId: 9);
+
+        criar.Should().Throw<ValorInvalidoException>();
+    }
 
     [Test]
     public void DeveDesfazerSoAUltimaAcaoAindaValendo()
@@ -161,5 +180,66 @@ public class ConversaFerramentaTests
         var desfazer = () => conversa.DesfazerAcao(acao.Ordem);
 
         desfazer.Should().Throw<RegraDeNegocioException>().WithMessage("*chat em andamento*");
+    }
+
+    [Test]
+    public void DeveMarcarOArquivoFinalSoNaPecaESoUmaVez()
+    {
+        var conversa = ComId(ConversaFerramenta.Criar(1, versaoId: null, "modelo-3d", Agora, pecaDoProjetoId: 9), 3);
+        var arquivo = ComId(ArquivoFerramenta.Criar(3, [1], OrigemArquivo.Joalheiro, Agora), 20);
+
+        conversa.MarcarArquivoFinal(arquivo).Should().BeTrue();
+        conversa.MarcarArquivoFinal(arquivo).Should().BeFalse("o final já é este");
+        conversa.ArquivoFinalId.Should().Be(20);
+
+        var daVersao = ComId(ConversaFerramenta.Criar(1, 5, "modelo-3d", Agora), 3);
+        var naVersao = () => daVersao.MarcarArquivoFinal(arquivo);
+        naVersao.Should().Throw<RegraDeNegocioException>().WithMessage("*peça do projeto*");
+    }
+
+    [Test]
+    public void DeveRecusarComoFinalOArquivoDeOutraConversaArquivadoOuEmBranco()
+    {
+        var conversa = ComId(ConversaFerramenta.Criar(1, versaoId: null, "desenho-2d", Agora, pecaDoProjetoId: 9), 3);
+        var deOutra = ComId(ArquivoFerramenta.Criar(4, [1], OrigemArquivo.Joalheiro, Agora), 20);
+        var arquivado = ComId(ArquivoFerramenta.Criar(3, [1], OrigemArquivo.Joalheiro, Agora), 21);
+        arquivado.Arquivar(Agora);
+        var emBranco = ComId(ArquivoFerramenta.EmBrancoPara(3, Agora), 22);
+
+        ((Action)(() => conversa.MarcarArquivoFinal(deOutra))).Should().Throw<RegraDeNegocioException>().WithMessage("*não é desta conversa*");
+        ((Action)(() => conversa.MarcarArquivoFinal(arquivado))).Should().Throw<RegraDeNegocioException>().WithMessage("*Desarquive*");
+        ((Action)(() => conversa.MarcarArquivoFinal(emBranco))).Should().Throw<RegraDeNegocioException>().WithMessage("*em branco*");
+        conversa.ArquivoFinalId.Should().BeNull();
+    }
+
+    [Test]
+    public void DeveRecusarArquivarOArquivoFinal()
+    {
+        var conversa = ComId(ConversaFerramenta.Criar(1, versaoId: null, "desenho-2d", Agora, pecaDoProjetoId: 9), 3);
+        var final = ComId(ArquivoFerramenta.Criar(3, [1], OrigemArquivo.Joalheiro, Agora), 20);
+        var outro = ComId(ArquivoFerramenta.Criar(3, [2], OrigemArquivo.Joalheiro, Agora), 21);
+        conversa.MarcarArquivoFinal(final);
+
+        ((Action)(() => conversa.GarantirQuePodeArquivar(final))).Should().Throw<RegraDeNegocioException>().WithMessage("*arquivo final*");
+        ((Action)(() => conversa.GarantirQuePodeArquivar(outro))).Should().NotThrow();
+    }
+
+    [Test]
+    public void DeveRecusarNovoChatNaPeca()
+    {
+        var conversa = ConversaFerramenta.Criar(1, versaoId: null, "modelo-3d", Agora, pecaDoProjetoId: 9);
+        conversa.RegistrarMensagem(PapelMensagem.Joalheiro, "Oi", "{}", Agora.AddHours(-1));
+
+        var novoChat = () => conversa.NovoChat(Agora);
+
+        novoChat.Should().Throw<RegraDeNegocioException>().WithMessage("*uma conversa só*");
+        conversa.ChatAtual.Should().Be(1);
+    }
+
+    private static T ComId<T>(T entidade, long id)
+        where T : BaseEntity<long>
+    {
+        typeof(BaseEntity<long>).GetProperty(nameof(BaseEntity<long>.Id))!.SetValue(entidade, id, BindingFlags.NonPublic | BindingFlags.Instance, null, null, null);
+        return entidade;
     }
 }

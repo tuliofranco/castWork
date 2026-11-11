@@ -405,6 +405,10 @@ namespace Castwork.Infra.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long?>("ArquivoFinalId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("arquivo_final_id");
+
                     b.Property<int>("ChatAtual")
                         .HasColumnType("integer")
                         .HasColumnName("chat_atual");
@@ -418,6 +422,10 @@ namespace Castwork.Infra.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("ferramenta");
+
+                    b.Property<long?>("PecaDoProjetoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("peca_do_projeto_id");
 
                     b.Property<long>("ProjetoId")
                         .HasColumnType("bigint")
@@ -436,14 +444,20 @@ namespace Castwork.Infra.Migrations
                     b.HasKey("Id")
                         .HasName("pk_ferramenta_conversas");
 
+                    b.HasIndex("ArquivoFinalId")
+                        .HasDatabaseName("ix_ferramenta_conversas_arquivo_final_id");
+
+                    b.HasIndex("PecaDoProjetoId")
+                        .HasDatabaseName("ix_ferramenta_conversas_peca_do_projeto_id");
+
                     b.HasIndex("VersaoId")
                         .HasDatabaseName("ix_ferramenta_conversas_versao_id");
 
-                    b.HasIndex("ProjetoId", "VersaoId", "Ferramenta")
+                    b.HasIndex("ProjetoId", "VersaoId", "PecaDoProjetoId", "Ferramenta")
                         .IsUnique()
-                        .HasDatabaseName("ix_ferramenta_conversas_projeto_id_versao_id_ferramenta");
+                        .HasDatabaseName("ix_ferramenta_conversas_projeto_id_versao_id_peca_do_projeto_i");
 
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("ProjetoId", "VersaoId", "Ferramenta"), false);
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("ProjetoId", "VersaoId", "PecaDoProjetoId", "Ferramenta"), false);
 
                     b.ToTable("ferramenta_conversas", (string)null);
                 });
@@ -491,6 +505,50 @@ namespace Castwork.Infra.Migrations
                         .HasDatabaseName("ix_ferramenta_imagens_conversa_id");
 
                     b.ToTable("ferramenta_imagens", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Assistente.ImagemDoArquivo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("ArquivoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("arquivo_id");
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTimeOffset>("CriadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criada_em");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo");
+
+                    b.Property<string>("Vista")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("vista");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ferramenta_arquivo_imagens");
+
+                    b.HasIndex("ArquivoId", "Vista", "Tipo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ferramenta_arquivo_imagens_arquivo_id_vista_tipo");
+
+                    b.ToTable("ferramenta_arquivo_imagens", (string)null);
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Assistente.MensagemFerramenta", b =>
@@ -653,11 +711,6 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("telefone");
 
-                    b.Property<decimal>("ValorHoraPadrao")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)")
-                        .HasColumnName("valor_hora_padrao");
-
                     b.Property<uint>("Versao")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -710,6 +763,46 @@ namespace Castwork.Infra.Migrations
                                 .IsFixedLength();
                         });
 
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "ParametrosDePreco", "Castwork.Domain.Entities.Atelie.ConfiguracaoAtelie.ParametrosDePreco#ParametrosDePreco", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("ArredondarPara")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasDefaultValue(10m)
+                                .HasColumnName("arredondar_para");
+
+                            b1.Property<decimal>("Markup")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasDefaultValue(1.8m)
+                                .HasColumnName("markup");
+
+                            b1.Property<decimal>("PerdaPercentual")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasDefaultValue(8m)
+                                .HasColumnName("perda_percentual");
+
+                            b1.Property<decimal>("TaxasPercentual")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasDefaultValue(0m)
+                                .HasColumnName("taxas_percentual");
+
+                            b1.Property<decimal>("ValorHora")
+                                .ValueGeneratedOnAdd()
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasDefaultValue(0m)
+                                .HasColumnName("valor_hora_padrao");
+                        });
+
                     b.HasKey("Id")
                         .HasName("pk_configuracao_atelie");
 
@@ -722,8 +815,7 @@ namespace Castwork.Infra.Migrations
                             AvisoBriefing = "Peça feita à mão: textura, tonalidade e proporções podem variar levemente em relação às referências.",
                             CorMarca = "#2E6E68",
                             CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Nome = "Meu ateliê",
-                            ValorHoraPadrao = 0m
+                            Nome = "Meu ateliê"
                         });
                 });
 
@@ -991,6 +1083,84 @@ namespace Castwork.Infra.Migrations
                     b.ToTable("briefing_documentos", (string)null);
                 });
 
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.DesenhoDaPeca", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<DateTimeOffset>("CopiadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("copiado_em");
+
+                    b.Property<string>("Ferramenta")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ferramenta");
+
+                    b.Property<long>("PecaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("peca_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_peca_desenhos");
+
+                    b.HasIndex("PecaId", "Ferramenta")
+                        .IsUnique()
+                        .HasDatabaseName("ix_peca_desenhos_peca_id_ferramenta");
+
+                    b.ToTable("peca_desenhos", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.ImagemDoDesenhoDaPeca", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<byte[]>("Conteudo")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("conteudo");
+
+                    b.Property<long>("DesenhoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("desenho_id");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo");
+
+                    b.Property<string>("Vista")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("vista");
+
+                    b.HasKey("Id")
+                        .HasName("pk_peca_desenho_imagens");
+
+                    b.HasIndex("DesenhoId", "Vista", "Tipo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_peca_desenho_imagens_desenho_id_vista_tipo");
+
+                    b.ToTable("peca_desenho_imagens", (string)null);
+                });
+
             modelBuilder.Entity("Castwork.Domain.Entities.Pecas.Peca", b =>
                 {
                     b.Property<long>("Id")
@@ -1024,6 +1194,10 @@ namespace Castwork.Infra.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("descricao");
+
+                    b.Property<long?>("LigaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("liga_id");
 
                     b.Property<string>("Material")
                         .HasMaxLength(60)
@@ -1060,6 +1234,9 @@ namespace Castwork.Infra.Migrations
                     b.HasKey("Id")
                         .HasName("pk_pecas");
 
+                    b.HasIndex("LigaId")
+                        .HasDatabaseName("ix_pecas_liga_id");
+
                     b.HasIndex("Nome")
                         .HasDatabaseName("ix_pecas_nome");
 
@@ -1067,6 +1244,220 @@ namespace Castwork.Infra.Migrations
                         .HasDatabaseName("ix_pecas_tipo");
 
                     b.ToTable("pecas", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Precificacao.CotacaoMetal", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Metal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metal");
+
+                    b.Property<DateTimeOffset>("RegistradaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("registrada_em");
+
+                    b.Property<long?>("RegistradaPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("registrada_por");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cotacoes_metal");
+
+                    b.HasIndex("Metal", "RegistradaEm")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_cotacoes_metal_metal_registrada_em");
+
+                    b.ToTable("cotacoes_metal", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Precificacao.Liga", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+                    NpgsqlPropertyBuilderExtensions.HasIdentityOptions(b.Property<long>("Id"), 1000L, null, null, null, null, null);
+
+                    b.Property<DateTimeOffset?>("AlteradoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("alterado_em");
+
+                    b.Property<long?>("AlteradoPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("alterado_por");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("criado_em");
+
+                    b.Property<long?>("CriadoPor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("criado_por");
+
+                    b.Property<decimal>("Densidade")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)")
+                        .HasColumnName("densidade");
+
+                    b.Property<string>("Metal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metal");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("nome");
+
+                    b.Property<int>("Teor")
+                        .HasColumnType("integer")
+                        .HasColumnName("teor");
+
+                    b.Property<uint>("Versao")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ligas");
+
+                    b.HasIndex("Nome")
+                        .HasDatabaseName("ix_ligas_nome");
+
+                    b.ToTable("ligas", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 19.3m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 24k",
+                            Teor = 999
+                        },
+                        new
+                        {
+                            Id = 2L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 15.5m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 18k amarelo",
+                            Teor = 750
+                        },
+                        new
+                        {
+                            Id = 3L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 15.0m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 18k branco",
+                            Teor = 750
+                        },
+                        new
+                        {
+                            Id = 4L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 15.1m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 18k rosé",
+                            Teor = 750
+                        },
+                        new
+                        {
+                            Id = 5L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 13.4m,
+                            Metal = "Ouro",
+                            Nome = "Ouro 14k amarelo",
+                            Teor = 585
+                        },
+                        new
+                        {
+                            Id = 6L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 10.4m,
+                            Metal = "Prata",
+                            Nome = "Prata 950",
+                            Teor = 950
+                        },
+                        new
+                        {
+                            Id = 7L,
+                            Ativo = true,
+                            CriadoEm = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Densidade = 10.36m,
+                            Metal = "Prata",
+                            Nome = "Prata 925",
+                            Teor = 925
+                        });
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.CotacaoDoProjeto", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("CotadaEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cotada_em");
+
+                    b.Property<string>("Metal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("metal");
+
+                    b.Property<long>("ProjetoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("projeto_id");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_projeto_cotacoes");
+
+                    b.HasIndex("ProjetoId", "Metal")
+                        .IsUnique()
+                        .HasDatabaseName("ix_projeto_cotacoes_projeto_id_metal");
+
+                    b.ToTable("projeto_cotacoes", (string)null);
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>
@@ -1083,9 +1474,9 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("observacao");
 
-                    b.Property<long>("PecaId")
+                    b.Property<long>("PecaDoProjetoId")
                         .HasColumnType("bigint")
-                        .HasColumnName("peca_id");
+                        .HasColumnName("peca_do_projeto_id");
 
                     b.Property<int>("Quantidade")
                         .HasColumnType("integer")
@@ -1098,14 +1489,96 @@ namespace Castwork.Infra.Migrations
                     b.HasKey("Id")
                         .HasName("pk_projeto_versao_itens");
 
-                    b.HasIndex("PecaId")
-                        .HasDatabaseName("ix_projeto_versao_itens_peca_id");
+                    b.HasIndex("PecaDoProjetoId")
+                        .HasDatabaseName("ix_projeto_versao_itens_peca_do_projeto_id");
 
-                    b.HasIndex("VersaoId", "PecaId")
+                    b.HasIndex("VersaoId", "PecaDoProjetoId")
                         .IsUnique()
-                        .HasDatabaseName("ix_projeto_versao_itens_versao_id_peca_id");
+                        .HasDatabaseName("ix_projeto_versao_itens_versao_id_peca_do_projeto_id");
 
                     b.ToTable("projeto_versao_itens", (string)null);
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.PecaDoProjeto", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("ativo");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("descricao");
+
+                    b.Property<long?>("LigaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("liga_id");
+
+                    b.Property<string>("Material")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("material");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nome");
+
+                    b.Property<long?>("PecaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("peca_id");
+
+                    b.Property<decimal?>("Peso")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)")
+                        .HasColumnName("peso");
+
+                    b.Property<long>("ProjetoId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("projeto_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int?>("Teor")
+                        .HasColumnType("integer")
+                        .HasColumnName("teor");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo");
+
+                    b.Property<decimal?>("Valor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("valor");
+
+                    b.HasKey("Id")
+                        .HasName("pk_projeto_pecas");
+
+                    b.HasIndex("LigaId")
+                        .HasDatabaseName("ix_projeto_pecas_liga_id");
+
+                    b.HasIndex("PecaId")
+                        .HasDatabaseName("ix_projeto_pecas_peca_id");
+
+                    b.HasIndex("ProjetoId")
+                        .HasDatabaseName("ix_projeto_pecas_projeto_id");
+
+                    b.ToTable("projeto_pecas", (string)null);
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.Projeto", b =>
@@ -1148,11 +1621,49 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("nome");
 
+                    b.Property<DateTimeOffset?>("PrecosAlteradosEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("precos_alterados_em");
+
+                    b.Property<DateTimeOffset>("PrecosHerdadosEm")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("precos_herdados_em");
+
                     b.Property<uint>("Versao")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "ParametrosDePreco", "Castwork.Domain.Entities.Projetos.Projeto.ParametrosDePreco#ParametrosDePreco", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<decimal>("ArredondarPara")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("arredondar_para");
+
+                            b1.Property<decimal>("Markup")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("markup");
+
+                            b1.Property<decimal>("PerdaPercentual")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("perda_percentual");
+
+                            b1.Property<decimal>("TaxasPercentual")
+                                .HasPrecision(5, 2)
+                                .HasColumnType("numeric(5,2)")
+                                .HasColumnName("taxas_percentual");
+
+                            b1.Property<decimal>("ValorHora")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("valor_hora");
+                        });
 
                     b.HasKey("Id")
                         .HasName("pk_projetos");
@@ -1174,6 +1685,18 @@ namespace Castwork.Infra.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal?>("Markup")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("markup");
+
+                    b.Property<string>("Metais")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metais")
+                        .HasDefaultValueSql("'[]'::jsonb");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -1198,11 +1721,37 @@ namespace Castwork.Infra.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("publicada_em");
 
+                    b.Property<string>("Servicos")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("servicos")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "MaoDeObra", "Castwork.Domain.Entities.Projetos.VersaoProjeto.MaoDeObra#MaoDeObra", b1 =>
+                        {
+                            b1.Property<decimal?>("Horas")
+                                .HasPrecision(6, 2)
+                                .HasColumnType("numeric(6,2)")
+                                .HasColumnName("mao_de_obra_horas");
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("mao_de_obra_tipo");
+
+                            b1.Property<decimal?>("ValorFixo")
+                                .HasPrecision(18, 2)
+                                .HasColumnType("numeric(18,2)")
+                                .HasColumnName("mao_de_obra_valor_fixo");
+                        });
 
                     b.HasKey("Id")
                         .HasName("pk_projeto_versoes");
@@ -1262,6 +1811,18 @@ namespace Castwork.Infra.Migrations
 
             modelBuilder.Entity("Castwork.Domain.Entities.Assistente.ConversaFerramenta", b =>
                 {
+                    b.HasOne("Castwork.Domain.Entities.Assistente.ArquivoFerramenta", null)
+                        .WithMany()
+                        .HasForeignKey("ArquivoFinalId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_ferramenta_conversas_ferramenta_arquivos_arquivo_final_id");
+
+                    b.HasOne("Castwork.Domain.Entities.Projetos.PecaDoProjeto", null)
+                        .WithMany()
+                        .HasForeignKey("PecaDoProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_ferramenta_conversas_peca_do_projeto_peca_do_projeto_id");
+
                     b.HasOne("Castwork.Domain.Entities.Projetos.Projeto", null)
                         .WithMany()
                         .HasForeignKey("ProjetoId")
@@ -1284,6 +1845,16 @@ namespace Castwork.Infra.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_ferramenta_imagens_ferramenta_conversas_conversa_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Assistente.ImagemDoArquivo", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Assistente.ArquivoFerramenta", null)
+                        .WithMany()
+                        .HasForeignKey("ArquivoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ferramenta_arquivo_imagens_ferramenta_arquivos_arquivo_id");
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Assistente.MensagemFerramenta", b =>
@@ -1343,14 +1914,53 @@ namespace Castwork.Infra.Migrations
                         .HasConstraintName("fk_briefing_documentos_briefings_briefing_id");
                 });
 
-            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.DesenhoDaPeca", b =>
                 {
                     b.HasOne("Castwork.Domain.Entities.Pecas.Peca", null)
-                        .WithMany()
+                        .WithMany("Desenhos")
                         .HasForeignKey("PecaId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_projeto_versao_itens_pecas_peca_id");
+                        .HasConstraintName("fk_peca_desenhos_pecas_peca_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.ImagemDoDesenhoDaPeca", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Pecas.DesenhoDaPeca", null)
+                        .WithMany("Imagens")
+                        .HasForeignKey("DesenhoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_peca_desenho_imagens_peca_desenhos_desenho_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.Peca", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Precificacao.Liga", null)
+                        .WithMany()
+                        .HasForeignKey("LigaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_pecas_ligas_liga_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.CotacaoDoProjeto", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Projetos.Projeto", null)
+                        .WithMany("Cotacoes")
+                        .HasForeignKey("ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_projeto_cotacoes_projetos_projeto_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.ItemComposicao", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Projetos.PecaDoProjeto", null)
+                        .WithMany()
+                        .HasForeignKey("PecaDoProjetoId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("fk_projeto_versao_itens_peca_do_projeto_peca_do_projeto_id");
 
                     b.HasOne("Castwork.Domain.Entities.Projetos.VersaoProjeto", null)
                         .WithMany("Itens")
@@ -1358,6 +1968,30 @@ namespace Castwork.Infra.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_projeto_versao_itens_projeto_versoes_versao_id");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Projetos.PecaDoProjeto", b =>
+                {
+                    b.HasOne("Castwork.Domain.Entities.Precificacao.Liga", null)
+                        .WithMany()
+                        .HasForeignKey("LigaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_projeto_pecas_ligas_liga_id");
+
+                    b.HasOne("Castwork.Domain.Entities.Pecas.Peca", "PecaPublicada")
+                        .WithMany()
+                        .HasForeignKey("PecaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_projeto_pecas_pecas_peca_id");
+
+                    b.HasOne("Castwork.Domain.Entities.Projetos.Projeto", null)
+                        .WithMany("Pecas")
+                        .HasForeignKey("ProjetoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_projeto_pecas_projetos_projeto_id");
+
+                    b.Navigation("PecaPublicada");
                 });
 
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.Projeto", b =>
@@ -1389,8 +2023,22 @@ namespace Castwork.Infra.Migrations
                     b.Navigation("Mensagens");
                 });
 
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.DesenhoDaPeca", b =>
+                {
+                    b.Navigation("Imagens");
+                });
+
+            modelBuilder.Entity("Castwork.Domain.Entities.Pecas.Peca", b =>
+                {
+                    b.Navigation("Desenhos");
+                });
+
             modelBuilder.Entity("Castwork.Domain.Entities.Projetos.Projeto", b =>
                 {
+                    b.Navigation("Cotacoes");
+
+                    b.Navigation("Pecas");
+
                     b.Navigation("Versoes");
                 });
 

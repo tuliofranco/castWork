@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { PermissaoService } from '@core/services/permissao.service';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
 import { PaginacaoCursor } from '@shared/components/paginacao/paginacao-cursor';
 import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
@@ -16,17 +15,21 @@ import { debounceTime, distinctUntilChanged, tap } from 'rxjs';
 
 const POR_PAGINA = 20;
 
-/** Biblioteca de peças: componentes reutilizáveis nas versões de qualquer projeto. */
+/**
+ * Biblioteca de peças: só busca. Sem "Nova peça" nem edição (a peça chega aqui ao ser publicada num projeto) e sem
+ * valor (o valor é de cada projeto). Cada peça abre o detalhe de consulta, com o histórico de uso.
+ */
 @Component({
   selector: 'cw-pecas',
-  imports: [RouterLink, DecimalPipe, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PaginacaoComponent, SeloComponent],
+  imports: [DecimalPipe, RouterLink, CabecalhoPaginaComponent, CampoBuscaComponent, EstadoListaComponent, PaginacaoComponent, SeloComponent],
   templateUrl: './pecas.component.html',
-  styles: '.peso { color: var(--cw-ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }',
+  styles: `
+    .peso { color: var(--cw-ink-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PecasComponent {
   private readonly pecasService = inject(PecasService);
-  protected readonly podeCriar = inject(PermissaoService).temAlguma(['pecas.criar']);
   protected readonly paginacao = new PaginacaoCursor();
   protected readonly rotuloTipo = rotuloTipoPeca;
   protected readonly iconeTipo = iconeTipoPeca;

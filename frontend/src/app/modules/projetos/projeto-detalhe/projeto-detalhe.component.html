@@ -40,6 +40,19 @@
     </div>
   </section>
 
+  @if (podeVerPrecos) {
+    <cw-precos-projeto [projetoId]="p.id" [podeEditar]="podeEditarPrecos" />
+  }
+
+  <cw-pecas-projeto
+    [projetoId]="p.id"
+    [podeEditar]="podeEditar"
+    [podeImportar]="podeImportarPecas"
+    [podeVerValor]="podeVerPrecos"
+    [podeEditarValor]="podeEditarPrecos"
+    (alterado)="projeto.reload()"
+  />
+
   <section class="secao" aria-labelledby="titulo-versoes">
     <div class="cabecalho-secao">
       <h2 id="titulo-versoes">Versões</h2>
@@ -137,6 +150,9 @@
                   }
                 }
               </span>
+            }
+            @if (bloqueada() === v.id && rascunhos(v).length > 0) {
+              <cw-pecas-em-rascunho class="bloqueio" [projetoId]="p.id" [numero]="v.numero" [pecas]="rascunhos(v)" />
             }
           </li>
         }

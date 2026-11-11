@@ -91,7 +91,7 @@
     ferramenta="briefing"
     titulo="Briefing"
     [projetoId]="projetoNumero()"
-    [versaoId]="null"
+    [escopo]="null"
     [voltarPara]="voltarPara()"
     [voltarRotulo]="p?.nome ?? 'Projeto'"
     boasVindas="Oi! Me conte sobre a peça: o que o cliente quer, materiais, medidas e prazo. Eu preencho o briefing com você e aviso o que ainda falta."
@@ -106,18 +106,18 @@
       </button>
       @if (podeEditar) {
         <button type="button" class="btn btn-secundario" [disabled]="gerandoPdf()" (click)="salvarPdf()">
-          <i class="bi bi-download" aria-hidden="true"></i> {{ gerandoPdf() ? 'Salvando...' : 'Salvar PDF' }}
+          <i class="bi bi-check2-circle" aria-hidden="true"></i> {{ gerandoPdf() ? 'Salvando...' : 'Definir como padrão' }}
         </button>
       }
     </ng-container>
 
     <div area class="folha">
-      @if (atualizandoPrevia()) {
+      @if (pdfAtual.isLoading()) {
         <p class="aviso-folha" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o PDF…</p>
       }
-      @if (previa(); as pdf) {
-        <cw-visualizador-pdf [arquivo]="pdf" rotulo="Pré-visualização do briefing" />
-      } @else if (!atualizandoPrevia()) {
+      @if (pdfAtual.hasValue()) {
+        <cw-visualizador-pdf [arquivo]="pdfAtual.value()" rotulo="PDF do briefing" />
+      } @else if (!pdfAtual.isLoading()) {
         <p class="sem-previa">Não foi possível montar o PDF agora. A conversa continua funcionando.</p>
       }
 
@@ -133,14 +133,13 @@
                 <span class="nome">
                   Briefing de {{ d.geradoEm | date: 'dd/MM HH:mm' }}
                   @if (primeiro) {
-                    <span class="recente">mais recente</span>
+                    <span class="recente">padrão</span>
                   }
                 </span>
-                <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Ver ' + d.nomeArquivo" (click)="ver(d.id, d.nomeArquivo, d.geradoEm)"><i class="bi bi-eye" aria-hidden="true"></i></button>
-                <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Baixar ' + d.nomeArquivo" (click)="baixar(d.id, d.nomeArquivo)"><i class="bi bi-download" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Ver ' + d.nomeArquivo" (click)="ver(d.id, d.geradoEm)"><i class="bi bi-eye" aria-hidden="true"></i></button>
               </li>
             } @empty {
-              <li class="vazio">Nenhum PDF guardado ainda. Toque em Salvar PDF ou peça na conversa.</li>
+              <li class="vazio">Nenhum PDF guardado ainda. Toque em Definir como padrão ou peça na conversa.</li>
             }
           </ul>
         </aside>
@@ -149,8 +148,4 @@
   </cw-conversa-ia>
 }
 
-<cw-painel-pdf [arquivo]="visualizando()?.arquivo ?? null" [titulo]="visualizando()?.titulo ?? ''" (fechado)="visualizando.set(null)">
-  @if (visualizando(); as v) {
-    <button type="button" class="btn btn-primary" (click)="baixar(v.id, v.nome)"><i class="bi bi-download" aria-hidden="true"></i> Baixar</button>
-  }
-</cw-painel-pdf>
+<cw-painel-pdf [arquivo]="visualizando()?.arquivo ?? null" [titulo]="visualizando()?.titulo ?? ''" (fechado)="visualizando.set(null)" />

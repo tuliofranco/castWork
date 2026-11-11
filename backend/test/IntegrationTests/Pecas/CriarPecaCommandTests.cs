@@ -12,12 +12,12 @@ namespace Castwork.IntegrationTests.Pecas;
 public class CriarPecaCommandTests : TesteDeIntegracao
 {
     [Test]
-    public async Task DeveCadastrarPecaComTeorEPesoNaBibliotecaAsync()
+    public async Task DeveCadastrarPecaComLigaEPesoNaBibliotecaAsync()
     {
         var pecas = Usar(new PecaBuilder());
         var command = await pecas.CustomizeCommand(c =>
         {
-            (c.Nome, c.Tipo, c.Material, c.Teor, c.PesoGramas) = ("Elo oval", TipoPeca.Elo, "Ouro amarelo", "18k", 0.35m);
+            (c.Nome, c.Tipo, c.LigaId, c.Material, c.PesoGramas) = ("Elo oval", TipoPeca.Elo, 2, null, 0.35m);
         }).BuildCommandAsync();
 
         var id = await pecas.SendAsync(command);
@@ -27,7 +27,8 @@ public class CriarPecaCommandTests : TesteDeIntegracao
         {
             Nome = "Elo oval",
             Tipo = TipoPeca.Elo,
-            Material = "Ouro amarelo",
+            LigaId = (long?)2,
+            Material = "Ouro 18k amarelo",
             Teor = TeorMetal.Ouro18k,
             Peso = Peso.EmGramas(0.35m),
             Ativo = true,
@@ -36,14 +37,14 @@ public class CriarPecaCommandTests : TesteDeIntegracao
     }
 
     [Test]
-    public async Task DeveRejeitarTeorPesoETipoInvalidosAsync()
+    public async Task DeveRejeitarLigaInexistentePesoETipoInvalidosAsync()
     {
         var pecas = Usar(new PecaBuilder());
-        var command = await pecas.CustomizeCommand(c => (c.Tipo, c.Teor, c.PesoGramas) = ((TipoPeca)42, "33k", -1m)).BuildCommandAsync();
+        var command = await pecas.CustomizeCommand(c => (c.Tipo, c.LigaId, c.Material, c.PesoGramas) = ((TipoPeca)42, 999_999, null, -1m)).BuildCommandAsync();
 
         var enviar = () => pecas.SendAsync(command);
 
         (await enviar.Should().ThrowAsync<ValidationException>()).Which.Errors.Select(e => e.PropertyName)
-            .Should().BeEquivalentTo("tipo", "teor", "pesoGramas");
+            .Should().BeEquivalentTo("tipo", "ligaId", "pesoGramas");
     }
 }

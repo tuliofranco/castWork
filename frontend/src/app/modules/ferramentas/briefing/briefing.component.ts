@@ -7,7 +7,6 @@ import { BriefingService } from '@data/ferramentas/briefing/briefing.service';
 import type { BriefingDto, TipoJoia } from '@data/ferramentas/briefing/dto/briefing.dto';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { aplicarErrosDoServidor } from '@shared/forms/aplicar-erros-do-servidor';
-import { DownloadService } from '@shared/services/download.service';
 import { ToastService } from '@shared/services/toast.service';
 import { BarraAcoesComponent } from '@shared/ui/barra-acoes.component';
 import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component';
@@ -46,7 +45,6 @@ export class BriefingComponent {
   private readonly briefingService = inject(BriefingService);
   private readonly projetosService = inject(ProjetosService);
   private readonly toast = inject(ToastService);
-  private readonly download = inject(DownloadService);
 
   /** \`:id\` da rota (withComponentInputBinding). */
   readonly id = input.required<string>();
@@ -73,11 +71,22 @@ export class BriefingComponent {
   protected readonly salvandoFormulario = signal(false);
   protected readonly errosGerais = signal<readonly string[]>([]);
   protected readonly gerandoPdf = signal(false);
-  /** O PDF como está agora (prévia, sem guardar), na área de trabalho. */
-  protected readonly previa = signal<Blob | null>(null);
-  protected readonly atualizandoPrevia = signal(false);
+  /**
+   * O PDF da área de trabalho: o último guardado (o padrão). Sem nenhum guardado, a prévia de como está agora.
+   * Depende do briefing carregado, então volta a aparecer ao reabrir a conversa.
+   */
+  protected readonly pdfAtual = rxResource({
+    params: () => {
+      const b = this.briefing.value();
+      return b ? { projetoId: b.projetoId, documentoId: b.documentos[0]?.id ?? null } : undefined;
+    },
+    stream: ({ params }) =>
+      params.documentoId !== null
+        ? this.briefingService.getDocumento(params.projetoId, params.documentoId)
+        : this.briefingService.getPrevia(params.projetoId),
+  });
   /** Um PDF guardado aberto em tela cheia. */
-  protected readonly visualizando = signal<{ readonly arquivo: Blob; readonly titulo: string; readonly id: number; readonly nome: string } | null>(null);
+  protected readonly visualizando = signal<{ readonly arquivo: Blob; readonly titulo: string } | null>(null);
   protected readonly mostrandoDocumentos = signal(false);
 
   protected readonly mostrarFormulario = computed(() => this.briefing.value() === null || this.editandoFormulario());
@@ -91,10 +100,6 @@ export class BriefingComponent {
     prazo: [''],
     orcamento: ['', Validators.maxLength(300)],
   });
-
-  constructor() {
-    void this.atualizarPrevia();
-  }
 
   protected materialMarcado(material: string): boolean {
     return this.listaDeMateriais().includes(material);
@@ -150,7 +155,6 @@ export class BriefingComponent {
           this.editandoFormulario.set(false);
           // Na primeira vez, a conversa abre sozinha: a IA resume o formulário e pergunta o que falta.
           if (!primeiraVez) this.toast.sucesso('Formulário atualizado. A IA vai considerar a correção.');
-          void this.atualizarPrevia();
         },
         error: (erro: unknown) => this.errosGerais.set(aplicarErrosDoServidor(this.form, erro)),
       });
@@ -159,10 +163,10 @@ export class BriefingComponent {
   /** A IA respondeu: os campos e os documentos podem ter mudado, e o PDF da área de trabalho também. */
   protected aposResposta(): void {
     this.briefing.reload();
-    void this.atualizarPrevia();
+    this.pdfAtual.reload();
   }
 
-  /** Guarda o PDF como está e já baixa. */
+  /** Guarda o PDF como está e o define como padrão da área de trabalho. */
   protected salvarPdf(): void {
     this.gerandoPdf.set(true);
     this.briefingService
@@ -173,32 +177,14 @@ export class BriefingComponent {
       )
       .subscribe((briefing) => {
         this.briefing.set(briefing);
-        const documento = briefing?.documentos[0];
-        if (documento) this.baixar(documento.id, documento.nomeArquivo);
-        this.toast.sucesso('PDF salvo no projeto.');
+        this.toast.sucesso('PDF definido como padrão.');
       });
   }
 
-  protected async ver(documentoId: number, nomeArquivo: string, geradoEm: string): Promise<void> {
+  protected async ver(documentoId: number, geradoEm: string): Promise<void> {
     const arquivo = await firstValueFrom(this.briefingService.getDocumento(this.projetoId(), documentoId));
     const titulo = `Briefing de ${new Date(geradoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`;
-    this.visualizando.set({ arquivo, titulo, id: documentoId, nome: nomeArquivo });
-  }
-
-  protected baixar(documentoId: number, nomeArquivo: string): void {
-    this.briefingService.getDocumento(this.projetoId(), documentoId).subscribe((blob) => this.download.salvar(blob, nomeArquivo));
-  }
-
-  private async atualizarPrevia(): Promise<void> {
-    this.atualizandoPrevia.set(true);
-    try {
-      this.previa.set(await firstValueFrom(this.briefingService.getPrevia(this.projetoId())));
-    } catch {
-      // Sem briefing ainda (404) ou gerador indisponível: a área mostra o aviso.
-      this.previa.set(null);
-    } finally {
-      this.atualizandoPrevia.set(false);
-    }
+    this.visualizando.set({ arquivo, titulo });
   }
 
   private listaDeMateriais(): string[] {

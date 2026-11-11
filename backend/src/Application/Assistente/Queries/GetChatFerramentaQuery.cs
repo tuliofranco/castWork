@@ -10,11 +10,13 @@ namespace Castwork.Application.Assistente.Queries;
 /// As mensagens de um chat anterior, para leitura (sem o arquivo: o desenho é o mesmo para todos os chats).
 /// </summary>
 [Permissao(Regras.Projetos.Consultar)]
-public sealed class GetChatFerramentaQuery : IRequest<ConversaFerramentaDto>
+public sealed class GetChatFerramentaQuery : IRequest<ConversaFerramentaDto>, IEscopoDaFerramenta
 {
     public long ProjetoId { get; set; }
 
     public long VersaoId { get; set; }
+
+    public long PecaDoProjetoId { get; set; }
 
     public string Ferramenta { get; set; } = string.Empty;
 
@@ -25,8 +27,8 @@ public sealed class GetChatFerramentaQueryHandler(IUnitOfWork unitOfWork) : IReq
 {
     public async Task<ConversaFerramentaDto> Handle(GetChatFerramentaQuery request, CancellationToken cancellationToken)
     {
-        await ConversaDaVersao.GarantirVersaoAsync(unitOfWork, request.ProjetoId, request.VersaoId, cancellationToken);
-        var conversa = await ConversaDaVersao.ObterAsync(unitOfWork, request.ProjetoId, request.VersaoId, request.Ferramenta, cancellationToken);
+        await ConversaDoEscopo.GarantirEscopoAsync(unitOfWork, request, cancellationToken);
+        var conversa = await ConversaDoEscopo.ObterAsync(unitOfWork, request, request.Ferramenta, cancellationToken);
         if (conversa is null || !conversa.Mensagens.Any(m => m.Chat == request.Numero))
         {
             throw new EntidadeNaoEncontradaException("Chat", request.Numero);

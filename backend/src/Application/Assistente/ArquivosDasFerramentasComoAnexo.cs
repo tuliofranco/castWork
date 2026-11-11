@@ -5,8 +5,8 @@ using Castwork.Domain.Entities.Projetos;
 namespace Castwork.Application.Assistente;
 
 /// <summary>
-/// Os arquivos das ferramentas como anexo: de cada conversa do projeto (uma por ferramenta e versão), só o
-/// arquivo atual, sem os arquivados e sem o desenho em branco.
+/// Os arquivos das ferramentas como anexo: de cada conversa do projeto (uma por ferramenta e versão, ou por ferramenta e
+/// peça do projeto), só o arquivo atual, sem os arquivados e sem o desenho em branco.
 /// </summary>
 public sealed class ArquivosDasFerramentasComoAnexo(IUnitOfWork unitOfWork) : IFonteDeAnexos
 {
@@ -47,7 +47,7 @@ public sealed class ArquivosDasFerramentasComoAnexo(IUnitOfWork unitOfWork) : IF
         var conversas = unitOfWork.GetRepository<ConversaFerramenta>().FindBy(c => c.ProjetoId == projetoId);
         var arquivo = await unitOfWork.GetRepository<ArquivoFerramenta>()
             .FindBy(a => a.Id == id && a.ArquivadoEm == null && a.Conteudo.Length > 0 && conversas.Any(c => c.Id == a.ConversaId))
-            .Select(a => new { a.Id, a.Nome, a.Conteudo, Conversa = conversas.Where(c => c.Id == a.ConversaId).Select(c => new { c.Ferramenta, c.VersaoId }).First() })
+            .Select(a => new { a.Id, a.Nome, a.Conteudo, Conversa = conversas.Where(c => c.Id == a.ConversaId).Select(c => new { c.Ferramenta, c.VersaoId, c.PecaDoProjetoId }).First() })
             .AsNoTracking()
             .SingleOrDefaultAsync(cancellationToken);
         if (arquivo is null)
@@ -56,9 +56,21 @@ public sealed class ArquivosDasFerramentasComoAnexo(IUnitOfWork unitOfWork) : IF
         }
 
         var numeros = await NumerosDasVersoesAsync(projetoId, cancellationToken);
+        var pecaId = arquivo.Conversa.PecaDoProjetoId;
+        var peca = pecaId is null
+            ? null
+            : await unitOfWork.GetRepository<Projeto>()
+                .FindBy(p => p.Id == projetoId)
+                .SelectMany(p => p.Pecas)
+                .Where(p => p.Id == pecaId)
+                .Select(p => p.Nome)
+                .FirstOrDefaultAsync(cancellationToken);
+        var descricao = arquivo.Conversa.VersaoId is { } v && numeros.TryGetValue(v, out var numero) ? $"{arquivo.Conversa.Ferramenta} · versão {numero}"
+            : peca is not null ? $"{arquivo.Conversa.Ferramenta} · peça {peca}"
+            : arquivo.Conversa.Ferramenta;
         return new AnexoCarregado(
             arquivo.Nome ?? $"{arquivo.Conversa.Ferramenta}-{arquivo.Id}",
-            arquivo.Conversa.VersaoId is { } v && numeros.TryGetValue(v, out var numero) ? $"{arquivo.Conversa.Ferramenta} · versão {numero}" : arquivo.Conversa.Ferramenta,
+            descricao,
             arquivo.Conversa.Ferramenta,
             null,
             arquivo.Conteudo);

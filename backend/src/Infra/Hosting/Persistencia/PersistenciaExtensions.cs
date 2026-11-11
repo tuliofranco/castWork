@@ -23,11 +23,12 @@ public static class PersistenciaExtensions
             .ValidateOnStart();
 
         services.AddScoped<AuditoriaInterceptor>();
+        services.AddScoped<ImagensDoArquivoInterceptor>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             var connectionString = sp.GetRequiredService<IOptions<PersistenciaOptions>>().Value.Castwork;
-            Configurar(options, connectionString).AddInterceptors(sp.GetRequiredService<AuditoriaInterceptor>());
+            Configurar(options, connectionString).AddInterceptors(sp.GetRequiredService<AuditoriaInterceptor>(), sp.GetRequiredService<ImagensDoArquivoInterceptor>());
         });
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -1,7 +1,11 @@
+using Castwork.Domain.Entities.Precificacao;
 using Castwork.Infra.Data;
 
 using MediatR;
 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
 using Npgsql;
@@ -30,6 +34,26 @@ public static class AmbienteDeTeste
 
     public static SessaoDeTeste Sessao { get; } = new();
 
+    /// <summary>
+    /// O medidor do modelo 3D (sem SolidCraft): o teste define a medição que ele devolve.
+    /// </summary>
+    public static MedidorDoModeloDeTeste Medidor { get; } = new();
+
+    /// <summary>
+    /// O editor do modelo 3D da conferência de materiais (sem SolidCraft): devolve o arquivo com a alteração anotada.
+    /// </summary>
+    public static EditorDoModeloDeTeste Editor { get; } = new();
+
+    /// <summary>
+    /// O montador do modelo 3D da versão a partir das peças (sem SolidCraft): anota as peças no arquivo.
+    /// </summary>
+    public static MontadorDoModeloDeTeste Montador { get; } = new();
+
+    /// <summary>
+    /// O gerador das imagens guardadas (sem CADCraft nem SolidCraft), chamado em segundo plano a cada arquivo novo.
+    /// </summary>
+    public static GeradorDeImagensDeTeste GeradorDeImagens { get; } = new();
+
     private static string ConnectionString => _container?.GetConnectionString()
         ?? throw new InvalidOperationException("Ambiente de teste não iniciado.");
 
@@ -41,7 +65,7 @@ public static class AmbienteDeTeste
         _container = new PostgreSqlBuilder(ImagemPostgres).Build();
         await _container.StartAsync();
 
-        _factory = new CastworkWebApplicationFactory(ConnectionString, Relogio, Sessao);
+        _factory = new CastworkWebApplicationFactory(ConnectionString, Relogio, Sessao, Medidor, Editor, Montador, GeradorDeImagens);
 
         // Acessar Services executa o Program.cs inteiro, inclusive as migrations.
         _ = _factory.Services;
@@ -53,7 +77,7 @@ public static class AmbienteDeTeste
             DbAdapter = DbAdapter.Postgres,
             SchemasToInclude = ["public"],
 
-            // regras: catálogo sincronizado na inicialização; configuracao_atelie: linha única recriada no reset.
+            // regras: catálogo sincronizado na inicialização. configuracao_atelie e ligas: seeds recriados no reset.
             TablesToIgnore = [new Table("__EFMigrationsHistory"), new Table("regras")],
         });
     }
@@ -80,9 +104,14 @@ public static class AmbienteDeTeste
         await conexao.OpenAsync();
         await _respawner!.ResetAsync(conexao);
         await RecriarConfiguracaoAtelieAsync(conexao);
+        await RecriarSeedAsync<Liga>();
 
         Relogio.Reiniciar();
         Sessao.Reiniciar();
+        Medidor.Reiniciar();
+        Editor.Reiniciar();
+        Montador.Reiniciar();
+        GeradorDeImagens.Reiniciar();
     }
 
     /// <summary>
@@ -96,7 +125,7 @@ public static class AmbienteDeTeste
     /// Quem chama descarta a factory.
     /// </summary>
     public static CastworkWebApplicationFactory CriarFactory(IReadOnlyDictionary<string, string> configuracao)
-        => new(ConnectionString, Relogio, Sessao, configuracao);
+        => new(ConnectionString, Relogio, Sessao, Medidor, Editor, Montador, GeradorDeImagens, configuracao);
 
     public static T Obter<T>()
         where T : notnull
@@ -137,6 +166,28 @@ public static class AmbienteDeTeste
         {
             await acao(context);
             return true;
+        });
+
+    /// <summary>
+    /// Devolve as linhas do <c>HasData</c> da entidade, lidas do modelo do EF: o seed tem uma fonte só (a configuration).
+    /// </summary>
+    private static Task RecriarSeedAsync<TEntidade>()
+        => ExecutarNoBancoAsync(async context =>
+        {
+            var tipo = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(TEntidade))
+                ?? throw new InvalidOperationException($"{typeof(TEntidade).Name} não está no modelo.");
+
+            foreach (var linha in tipo.GetSeedData())
+            {
+                var campos = linha.Where(c => c.Value is not null).Select(c => (Propriedade: tipo.FindProperty(c.Key)!, Valor: c.Value!)).ToList();
+                var colunas = string.Join(", ", campos.Select(c => c.Propriedade.GetColumnName()));
+                var parametros = string.Join(", ", campos.Select((_, i) => $"{{{i}}}"));
+                var valores = campos.Select(c => (c.Propriedade.GetValueConverter() ?? c.Propriedade.FindTypeMapping()?.Converter)?.ConvertToProvider(c.Valor) ?? c.Valor);
+
+#pragma warning disable EF1002 // Tabela e colunas vêm do modelo do EF; os valores vão como parâmetros.
+                await context.Database.ExecuteSqlRawAsync($"INSERT INTO {tipo.GetTableName()} ({colunas}) VALUES ({parametros})", valores);
+#pragma warning restore EF1002
+            }
         });
 
     private static async Task RecriarConfiguracaoAtelieAsync(NpgsqlConnection conexao)

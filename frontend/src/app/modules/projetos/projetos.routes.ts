@@ -21,6 +21,16 @@ export const PROJETOS_ROUTES: CastworkRoute[] = [
     data: { title: 'Configurações do projeto' },
   },
   {
+    path: ':id/pecas/nova',
+    loadComponent: () => import('./peca-do-projeto/peca-do-projeto.component').then((m) => m.PecaDoProjetoComponent),
+    data: { title: 'Nova peça', permissoes: ['projetos.editar'] },
+  },
+  {
+    path: ':id/pecas/:pecaId',
+    loadComponent: () => import('./peca-do-projeto/peca-do-projeto.component').then((m) => m.PecaDoProjetoComponent),
+    data: { title: 'Peça do projeto' },
+  },
+  {
     path: ':id/versoes/:versaoId',
     loadComponent: () => import('./versao-detalhe/versao-detalhe.component').then((m) => m.VersaoDetalheComponent),
     data: { title: 'Versão' },
