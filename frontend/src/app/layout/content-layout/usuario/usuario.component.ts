@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { PermissaoService } from '@core/services/permissao.service';
@@ -25,7 +25,9 @@ export class UsuarioComponent {
   private readonly auth = inject(AuthService);
   private readonly elemento = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly sessao = inject(SessaoService);
-  protected readonly podeConfigurar = inject(PermissaoService).temAlguma(['atelie.configurar']);
+  private readonly permissao = inject(PermissaoService);
+  /** Recalculada quando as permissões da sessão mudam (refresh do token). */
+  protected readonly podeConfigurar = computed(() => this.permissao.temAlguma(['atelie.configurar']));
 
   readonly posicao = input<'lateral' | 'abaixo'>('lateral');
 

@@ -22,7 +22,7 @@
           }
         </div>
       </div>
-      @if (podeConfigurar) {
+      @if (podeConfigurar()) {
         <a class="btn btn-sutil w-100 configurar" routerLink="/atelie" (click)="aberto.set(false)">
           <i class="bi bi-brush" aria-hidden="true"></i> Ateliê e marca
         </a>

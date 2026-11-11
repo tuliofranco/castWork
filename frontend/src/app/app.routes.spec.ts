@@ -39,6 +39,19 @@ describe('Rotas da aplicação', () => {
     expect(TestBed.inject(Title).getTitle()).toBe(`${titulo} | Castwork`);
   });
 
+  it('deve abrir na primeira aba permitida quem não pode ver projetos', async () => {
+    localStorage.setItem(CHAVE_ACCESS_TOKEN, criarTokenMock({ permissoes: ['pecas.ler', 'portfolio.ler'] }));
+    await RouterTestingHarness.create('/');
+    expect(TestBed.inject(Router).url).toBe('/pecas');
+  });
+
+  it('deve mostrar o 403 com Sair a quem não pode ver nenhuma página', async () => {
+    localStorage.setItem(CHAVE_ACCESS_TOKEN, criarTokenMock({ permissoes: [] }));
+    const harness = await RouterTestingHarness.create('/');
+    expect(TestBed.inject(Router).url).toBe('/403');
+    expect([...harness.fixture.nativeElement.querySelectorAll('button')].map((b: HTMLButtonElement) => b.textContent?.trim())).toContain('Sair');
+  });
+
   it('deve mandar para o login quem não está logado', async () => {
     localStorage.clear();
     await RouterTestingHarness.create('/clientes');

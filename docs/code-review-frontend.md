@@ -1084,9 +1084,19 @@ Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.s
 - [ ] **B29/B28** Specs próprios do `AuthService` (logout repetido e refresh em andamento no "Sair").
 - [ ] Conferir no navegador: derrubar a rede com o access token vencido dentro de uma ferramenta.
 
-### Lotes 6 a 21
+### Lote 6: saída do 403 e rotas (parcial)
 
-- [ ] Lote 6: M5, B30, B22, B10
+- [x] **M5** A raiz abre na primeira aba do menu que a pessoa pode ver (mesma conta do menu); sem nenhuma, vai ao 403.
+- [x] **M5** A página de erro mostra "Sair" a quem está logado.
+- [x] **M5** Specs em `app.routes.spec.ts` (só `pecas.ler` termina em `/pecas`; sem permissões vê o 403 com "Sair") e em `pagina-erro.component.spec.ts`.
+- [x] **B30** `UsuarioComponent`: a permissão de "Ateliê e marca" é recalculada quando a sessão muda (`computed`).
+- [ ] **M5** Mensagem própria no 403 para quem não tem nenhuma permissão.
+- [ ] **B30** Id duplicado e `role="dialog"` sem gestão de foco no painel do usuário.
+- [ ] **B22** Helper `idDaRota` para ids de rota não numéricos ("não encontrado" em vez de erro de carga).
+- [ ] **B10** Ferramentas reagirem à troca de `id`/`versaoId`/`pecaId` com a instância reaproveitada.
+
+### Lotes 7 a 21
+
 - [ ] Lote 7: M3, M19, M16, M21, B11
 - [ ] Lote 8: M6, M33, M35, M38, B26
 - [ ] Lote 9: M12, M25, B19, M11

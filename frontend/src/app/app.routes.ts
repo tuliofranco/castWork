@@ -1,4 +1,7 @@
 import { sairDaFerramentaGuard } from '@core/guards/sair-da-ferramenta.guard';
+import { inject } from '@angular/core';
+import { PermissaoService } from '@core/services/permissao.service';
+import { montarMenu } from '@layout/content-layout/menu/montar-menu';
 import { authGuard } from '@core/guards/auth.guard';
 import { convidadoGuard } from '@core/guards/convidado.guard';
 import { permissionGuard } from '@core/guards/permission.guard';
@@ -6,6 +9,12 @@ import type { CastworkRoute } from '@core/models/rota-data.model';
 import { ContentLayoutComponent } from '@layout/content-layout/content-layout.component';
 import { ErrorLayoutComponent } from '@layout/error-layout/error-layout.component';
 import { PaginaErroComponent } from '@layout/error-layout/pagina-erro/pagina-erro.component';
+
+function inicioPermitido(): string {
+  const permissao = inject(PermissaoService);
+  const abas = routes.find((rota) => rota.component === ContentLayoutComponent)?.children ?? [];
+  return montarMenu(abas, (permissoes) => permissao.temAlguma(permissoes))[0]?.caminho ?? '/403';
+}
 
 /**
  * O `data` (title, menu, order, icon, permissoes) fica AQUI, no nível do lazy load:
@@ -76,7 +85,8 @@ export const routes: CastworkRoute[] = [
     canActivate: [authGuard],
     canActivateChild: [permissionGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'projetos' },
+      // O início é a primeira aba do menu que a pessoa pode ver (a mesma conta do menu); sem nenhuma, 403.
+      { path: '', pathMatch: 'full', redirectTo: () => inicioPermitido() },
       {
         path: 'projetos',
         data: { title: 'Projetos', menu: true, order: 1, icon: 'collection', permissoes: ['projetos.ler'] },
