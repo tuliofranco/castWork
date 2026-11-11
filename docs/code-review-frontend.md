@@ -1107,9 +1107,21 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **M19** Estado de erro com "Tentar de novo" na carga inicial da conversa.
 - [ ] **B11** "Desfazer" só no último cartão; estado de ocupado visível nos botões do chat.
 
-### Lotes 8 a 21
+### Lote 8: erros de download e mensagens do servidor (parcial)
 
-- [ ] Lote 8: M6, M33, M35, M38, B26
+- [x] **M6** O `erroGlobalInterceptor` lê o ProblemDetails de dentro do Blob e avisa quando um download falha (arquivo da ferramenta, versão do histórico, desenho da peça, documento do briefing). Spec no interceptor.
+- [x] **M6** Prévias, miniaturas, logo e os dois PDFs que já tratam o próprio erro (documentos e ficha técnica) pedem com `semErro`, para não empilhar toasts.
+- [x] **M33** A explicação da API (`detail`) vale no 403, 404 e 409; mensagem própria no 429. No 500 continua o texto genérico.
+- [x] **M35** `cw-imagem-protegida`: imagem que não carrega vira "tentar de novo" em vez de ficar carregando para sempre.
+- [x] **M38** `DownloadService.salvar` revoga a URL com 60 s de folga e anexa o link ao documento em volta do clique.
+- [ ] **M6** Estado `baixando` nos botões de download e try/catch nos `firstValueFrom` dos chamadores listados no achado.
+- [ ] **M33** `traceId` na mensagem do 500.
+- [ ] **M35** Spec da imagem protegida.
+- [ ] **M38** Trocar as duas cópias manuais de download (configurações do projeto e peça do projeto) pelo `DownloadService`; spec do serviço.
+- [ ] **B26** Ateliê: estado de erro próprio para o logo e confirmação no "Remover" (por ora a falha só deixou de ser candidata a toast).
+
+### Lotes 9 a 21
+
 - [ ] Lote 9: M12, M25, B19, M11
 - [ ] Lote 10: M23, M26, M27, M28, B17, B18, B20, B31
 - [ ] Lote 11: M24

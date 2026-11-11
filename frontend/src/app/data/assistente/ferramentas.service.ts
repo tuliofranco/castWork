@@ -143,14 +143,14 @@ export class FerramentasService {
   /** Prévia (SVG) do arquivo atual da ferramenta (ou do final da peça, com `final`); nulo se não há arquivo ou prévia. */
   getPreviaAtual(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string, final = false): Observable<Blob | null> {
     return this.http
-      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/previa`, { params: paramsDoFinal(final), observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/previa`, { params: paramsDoFinal(final), observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 
   /** Prévia (SVG) de um arquivo do histórico; nula se não há prévia (204). */
   getPrevia(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string, arquivoId: number): Observable<Blob | null> {
     return this.http
-      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/historico/${arquivoId}/previa`, { observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/historico/${arquivoId}/previa`, { observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 
@@ -173,7 +173,7 @@ export class FerramentasService {
   ): Observable<Blob | null> {
     const params: Record<string, string> = { ...(formato ? { formato } : {}), ...paramsDoFinal(final) };
     return this.http
-      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/imagens/${vista}`, { params, observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/imagens/${vista}`, { params, observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 

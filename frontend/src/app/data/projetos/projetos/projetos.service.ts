@@ -1,3 +1,4 @@
+import { semErro } from '@shared/injection-tokens/http-context.tokens';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { ConsultaPaginadaDto, PaginaDto } from '@data/common/graphql/pagina.dto';
@@ -401,7 +402,7 @@ export class ProjetosService {
    * tem `precificacao.ler`. Em erro, o ProblemDetails chega como Blob; `lerErroBlob` converte.
    */
   getFichaTecnicaDaPeca(projetoId: number, pecaId: number): Observable<Blob> {
-    return this.http.get(`projetos/${projetoId}/pecas/${pecaId}/documentos/ficha-tecnica.pdf`, { responseType: 'blob' }).pipe(lerErroBlob());
+    return this.http.get(`projetos/${projetoId}/pecas/${pecaId}/documentos/ficha-tecnica.pdf`, { responseType: 'blob', context: semErro() }).pipe(lerErroBlob());
   }
 
   /** Coloca a peça em rascunho na biblioteca; devolve o Id da peça nova da biblioteca. */

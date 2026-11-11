@@ -164,9 +164,9 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
       await this.ponte.carregar(arquivo?.conteudo ?? null, nomeDeArquivo(arquivo?.nome, 'json', 'modelo').replace(/\.json$/, ''));
       this.atualId.set(arquivo?.id ?? null);
       void this.conferirMateriais();
-    } catch {
+    } catch (erro) {
       this.falha.set(true);
-      this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
     } finally {
       this.sincronizando.set(null);
       this.aberturaConcluida();
@@ -317,9 +317,8 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
       const nome = this.daPeca() ? nomeDeArquivoDaPeca(valorDe(this.peca)?.nome, 'json') : `modelo-${versao.id}.json`;
       if (arquivo) this.download.salvar(arquivo, nome);
       else this.toast.erro('Esta versão está em branco: não há arquivo para baixar.');
-    } catch {
-      // O arquivo vem como Blob: o interceptor não avisa.
-      this.toast.erro('Não foi possível baixar o modelo.');
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível baixar o modelo.');
     }
   }
 
@@ -393,10 +392,10 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
       this.atualId.set(arquivo?.id ?? null);
       this.falha.set(false);
       void this.conferirMateriais();
-    } catch {
+    } catch (erro) {
       nova.descarregar();
       this.falha.set(true);
-      this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
     }
   }
 

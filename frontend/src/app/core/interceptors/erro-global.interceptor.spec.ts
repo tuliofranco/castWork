@@ -35,9 +35,23 @@ describe('erroGlobalInterceptor', () => {
     expect(toast.erro).not.toHaveBeenCalled();
   });
 
-  it('não deve mostrar toast quando o erro vem como Blob (download)', () => {
-    falhar(new Blob(['{}']), 404, { responseType: 'blob' as 'json' });
-    expect(toast.erro).not.toHaveBeenCalled();
+  it('deve ler o ProblemDetails de dentro do Blob e avisar quando um download falha', async () => {
+    const http = configurarHttp([erroGlobalInterceptor], [{ provide: ToastService, useValue: toast }]);
+    let recebido: unknown;
+    TestBed.inject(HttpClient)
+      .get('x', { responseType: 'blob' })
+      .subscribe({ error: (e: unknown) => (recebido = e) });
+    http.expectOne('x').flush(new Blob([JSON.stringify({ title: 'Conflito', detail: 'A peça ainda não tem desenho.' })]), { status: 409, statusText: 'Erro' });
+
+    await vi.waitFor(() => expect(recebido).toBeInstanceOf(HttpErrorResponse));
+    expect(toast.erro).toHaveBeenCalledWith('A peça ainda não tem desenho.');
+    expect((recebido as HttpErrorResponse).error).toEqual({ title: 'Conflito', detail: 'A peça ainda não tem desenho.' });
+  });
+
+  it('deve preferir a explicação da API no 403, 404 e 409, e ter mensagem própria no 429', () => {
+    expect(mensagemDeErroHttp(new HttpErrorResponse({ status: 404, error: { detail: 'Versão arquivada.' } }))).toBe('Versão arquivada.');
+    expect(mensagemDeErroHttp(new HttpErrorResponse({ status: 429 }))).toBe('Muitas tentativas em pouco tempo. Aguarde um instante e tente de novo.');
+    expect(mensagemDeErroHttp(new HttpErrorResponse({ status: 500, error: { detail: 'NullReferenceException' } }))).toBe('Erro no servidor. Tente novamente em instantes.');
   });
 
   it.each([

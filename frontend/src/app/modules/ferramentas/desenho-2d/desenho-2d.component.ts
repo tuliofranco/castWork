@@ -152,9 +152,9 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
       // Salvar como, e o Castwork não receberia o arquivo. A aba do CADCraft leva o nome que o joalheiro deu ao arquivo.
       await this.ponte.carregar(await this.conteudoOuVazio(arquivo), nomeDeArquivo(arquivo?.nome, 'dxf', 'desenho'));
       this.atualId.set(arquivo?.id ?? null);
-    } catch {
+    } catch (erro) {
       this.falha.set(true);
-      this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
     } finally {
       this.sincronizando.set(null);
       this.aberturaConcluida();
@@ -248,9 +248,8 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
       const nome = this.daPeca() ? nomeDeArquivoDaPeca(valorDe(this.peca)?.nome, 'dxf') : `desenho-${versao.id}.dxf`;
       if (arquivo) this.download.salvar(arquivo, nome);
       else this.toast.erro('Esta versão está em branco: não há arquivo para baixar.');
-    } catch {
-      // O arquivo vem como Blob: o interceptor não avisa.
-      this.toast.erro('Não foi possível baixar o desenho.');
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível baixar o desenho.');
     }
   }
 
@@ -330,10 +329,10 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
       // Só agora o arquivo novo é o que está à vista.
       this.atualId.set(arquivo?.id ?? null);
       this.falha.set(false);
-    } catch {
+    } catch (erro) {
       nova.descarregar();
       this.falha.set(true);
-      this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
     }
   }
 

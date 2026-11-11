@@ -1,3 +1,4 @@
+import { semErro } from '@shared/injection-tokens/http-context.tokens';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { dadosGql } from '@shared/operators/dados-gql.operator';
@@ -59,7 +60,7 @@ export class AtelieService {
   }
 
   getLogo(): Observable<Blob> {
-    return this.http.get('atelie/logo', { responseType: 'blob' });
+    return this.http.get('atelie/logo', { responseType: 'blob', context: semErro() });
   }
 
   putLogo(arquivo: File): Observable<void> {

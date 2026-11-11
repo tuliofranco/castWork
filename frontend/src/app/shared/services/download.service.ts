@@ -11,9 +11,12 @@ export class DownloadService {
     const link = this.document.createElement('a');
     link.href = url;
     link.download = nome;
+    // Fora do documento, alguns navegadores ignoram o clique.
+    this.document.body.appendChild(link);
     link.click();
-    // Liberar no próximo ciclo: alguns navegadores ainda leem a URL logo após o click.
-    setTimeout(() => URL.revokeObjectURL(url));
+    link.remove();
+    // Com folga: o navegador pode ainda estar lendo a URL (arquivo grande, diálogo de "salvar como").
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   /** Abre o PDF numa nova aba (visualizador do navegador). */
