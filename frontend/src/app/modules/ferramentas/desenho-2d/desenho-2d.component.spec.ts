@@ -1,4 +1,3 @@
-import { ChangeDetectionStrategy, Component, forwardRef, input, output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { PermissaoService } from '@core/services/permissao.service';
@@ -7,33 +6,14 @@ import { FerramentasService } from '@data/assistente/ferramentas.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { DownloadService } from '@shared/services/download.service';
 import { ToastService } from '@shared/services/toast.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
+import { ConversaFalsaComponent } from '../../assistente/testing/conversa-falsa.component';
 
 import { Desenho2dComponent } from './desenho-2d.component';
 import { HistoricoDesenhoComponent } from './historico-desenho.component';
 import { PonteCadCraft } from './ponte-cadcraft';
-
-/** A conversa de verdade fala com a API; aqui basta o que o Desenho 2D usa dela. */
-@Component({
-  selector: 'cw-conversa-ia',
-  template: '<ng-content select="[acoes]" /><ng-content select="[area]" />',
-  providers: [{ provide: ConversaIaComponent, useExisting: forwardRef(() => ConversaFalsaComponent) }],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-class ConversaFalsaComponent {
-  readonly ferramenta = input<string>();
-  readonly titulo = input<string>();
-  readonly projetoId = input<number>();
-  readonly escopo = input<unknown>();
-  readonly voltarPara = input<string>();
-  readonly voltarRotulo = input<string>();
-  readonly antesDeEnviar = input<unknown>();
-  readonly arquivoMudou = output();
-  readonly pensando = signal(false);
-  readonly registrarArquivo = vi.fn();
-}
 
 describe('Desenho2dComponent', () => {
   const dxf = new Blob(['0\nEOF\n']);
@@ -45,11 +25,11 @@ describe('Desenho2dComponent', () => {
   const toast = { sucesso: vi.fn(), erro: vi.fn() };
 
   /** Abre o desenho da versão com o CADCraft simulado; `comAlteracoes` é o "•" no título dele. */
-  async function abrir(comAlteracoes: boolean) {
+  async function abrir(comAlteracoes = false) {
     vi.restoreAllMocks();
     [...Object.values(ferramentas), ...Object.values(toast)].forEach((f) => f.mockClear());
     const carregar = vi.spyOn(PonteCadCraft.prototype, 'carregar').mockResolvedValue();
-    vi.spyOn(PonteCadCraft.prototype, 'descarregar').mockImplementation(() => undefined);
+    const descarregar = vi.spyOn(PonteCadCraft.prototype, 'descarregar').mockImplementation(() => undefined);
     vi.spyOn(PonteCadCraft.prototype, 'temAlteracoes').mockReturnValue(comAlteracoes);
     vi.spyOn(PonteCadCraft.prototype, 'salvar').mockResolvedValue(dxf);
 
@@ -70,20 +50,32 @@ describe('Desenho2dComponent', () => {
     await fixture.whenStable();
 
     fixture.debugElement.query(By.css('iframe')).triggerEventHandler('load');
-    await vi.waitFor(() => expect(carregar).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(ferramentas.getArquivo).toHaveBeenCalledTimes(1));
+    await pausa();
     await fixture.whenStable();
-    return { fixture, el: fixture.nativeElement as HTMLElement, carregar };
+    const conversa = fixture.debugElement.query(By.directive(ConversaFalsaComponent)).componentInstance as ConversaFalsaComponent;
+    return { fixture, el: fixture.nativeElement as HTMLElement, carregar, descarregar, conversa };
   }
 
+  /** Deixa as promessas em andamento (a fila de trocas) avançarem. */
+  const pausa = () => new Promise((resolve) => setTimeout(resolve));
   const versao = { id: 7 } as VersaoDoArquivoDto;
+  const botao = (el: HTMLElement, texto: string) => [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === texto);
+  const pedirRestaurar = (fixture: Awaited<ReturnType<typeof abrir>>['fixture']) =>
+    fixture.debugElement.query(By.directive(HistoricoDesenhoComponent)).triggerEventHandler('restaurar', versao);
+
+  /** O CADCraft de trás demora a abrir: cada `carregar` fica esperando até o teste liberar. */
+  function segurarCarregar(carregar: Awaited<ReturnType<typeof abrir>>['carregar']) {
+    const liberar: (() => void)[] = [];
+    carregar.mockImplementation(() => new Promise<void>((pronto) => liberar.push(pronto)));
+    return liberar;
+  }
 
   async function restaurar(fixture: Awaited<ReturnType<typeof abrir>>['fixture']) {
-    fixture.debugElement.query(By.directive(HistoricoDesenhoComponent)).triggerEventHandler('restaurar', versao);
+    pedirRestaurar(fixture);
     await vi.waitFor(() => expect(toast.sucesso).toHaveBeenCalledWith('Desenho restaurado.'));
     await fixture.whenStable();
   }
-
-  const botao = (el: HTMLElement, texto: string) => [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === texto);
 
   it('deve liberar a prancheta depois de restaurar com alterações feitas à mão', async () => {
     const { fixture, el, carregar } = await abrir(true);
@@ -100,12 +92,93 @@ describe('Desenho2dComponent', () => {
   });
 
   it('deve restaurar sem guardar nada quando não há alterações feitas à mão', async () => {
-    const { fixture, el } = await abrir(false);
+    const { fixture, el } = await abrir();
 
     await restaurar(fixture);
 
     expect(ferramentas.putArquivo).not.toHaveBeenCalled();
     expect(el.querySelector('.sincronizando')).toBeNull();
+    expect(botao(el, 'Salvar')!.disabled).toBe(false);
+  });
+
+  it('deve restaurar uma vez só no duplo clique', async () => {
+    const { fixture, carregar } = await abrir();
+
+    pedirRestaurar(fixture);
+    pedirRestaurar(fixture);
+    await vi.waitFor(() => expect(toast.sucesso).toHaveBeenCalledWith('Desenho restaurado.'));
+
+    expect(ferramentas.postRestaurar).toHaveBeenCalledTimes(1);
+    expect(carregar).toHaveBeenCalledTimes(2);
+  });
+
+  it('deve fazer uma troca por vez quando a IA muda o desenho durante outra troca', async () => {
+    const { fixture, carregar, descarregar, conversa } = await abrir();
+    const liberar = segurarCarregar(carregar);
+
+    conversa.arquivoMudou.emit();
+    await vi.waitFor(() => expect(liberar.length).toBe(1));
+    conversa.arquivoMudou.emit();
+    conversa.arquivoMudou.emit();
+    await pausa();
+
+    // Só um CADCraft abre por trás; os outros pedidos esperam.
+    expect(liberar.length).toBe(1);
+
+    liberar[0]!();
+    await vi.waitFor(() => expect(liberar.length).toBe(2));
+    liberar[1]!();
+    await pausa();
+    await fixture.whenStable();
+
+    // Os pedidos que chegaram durante a troca viram uma troca a mais, com o arquivo mais novo, e cada troca libera só
+    // o CADCraft que saiu de cena.
+    expect(liberar.length).toBe(2);
+    expect(descarregar).toHaveBeenCalledTimes(2);
+    expect(fixture.nativeElement.querySelector('[role=alert]')).toBeNull();
+    expect(botao(fixture.nativeElement, 'Salvar')!.disabled).toBe(false);
+  });
+
+  it('não deve salvar o desenho antigo enquanto o novo abre por trás', async () => {
+    const { fixture, el, carregar, conversa } = await abrir(true);
+    const liberar = segurarCarregar(carregar);
+
+    conversa.arquivoMudou.emit();
+    await vi.waitFor(() => expect(liberar.length).toBe(1));
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Atualizando o desenho');
+    expect(botao(el, 'Salvar')!.disabled).toBe(true);
+    expect(botao(el, 'Histórico')!.disabled).toBe(true);
+
+    // A mensagem à IA espera a troca antes de guardar o que foi feito à mão.
+    let enviou = false;
+    void conversa.antesDeEnviar()!().then(() => (enviou = true));
+    await pausa();
+    expect(enviou).toBe(false);
+    expect(ferramentas.putArquivo).not.toHaveBeenCalled();
+
+    liberar[0]!();
+    await vi.waitFor(() => expect(enviou).toBe(true));
+    await fixture.whenStable();
+    expect(botao(el, 'Salvar')!.disabled).toBe(false);
+  });
+
+  it('deve avisar e não deixar salvar quando o desenho não abre, e abrir ao tentar de novo', async () => {
+    ferramentas.getArquivo.mockReturnValueOnce(throwError(() => new Error('API fora')));
+    const { fixture, el, carregar } = await abrir();
+
+    expect(el.querySelector('[role=alert]')!.textContent).toContain('Não foi possível abrir o desenho atual.');
+    expect(toast.erro).toHaveBeenCalledWith('Não foi possível abrir o desenho no CADCraft.');
+    expect(botao(el, 'Salvar')!.disabled).toBe(true);
+    expect(carregar).not.toHaveBeenCalled();
+
+    botao(el, 'Tentar de novo')!.click();
+    await vi.waitFor(() => expect(carregar).toHaveBeenCalledTimes(1));
+    await pausa();
+    await fixture.whenStable();
+
+    expect(el.querySelector('[role=alert]')).toBeNull();
     expect(botao(el, 'Salvar')!.disabled).toBe(false);
   });
 });

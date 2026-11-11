@@ -174,9 +174,18 @@ export class ConversaIaComponent {
     this.chats.set(null);
   }
 
+  /** Um Desfazer por vez: o segundo clique esperaria um arquivo que o primeiro já trocou. */
+  private desfazendo = false;
+
   protected async desfazer(ordem: number): Promise<void> {
-    this.conversa.set(await firstValueFrom(this.ferramentas.postDesfazer(this.projetoId(), this.escopo(), this.ferramenta(), ordem)));
-    this.arquivoMudou.emit();
+    if (this.desfazendo) return;
+    this.desfazendo = true;
+    try {
+      this.conversa.set(await firstValueFrom(this.ferramentas.postDesfazer(this.projetoId(), this.escopo(), this.ferramenta(), ordem)));
+      this.arquivoMudou.emit();
+    } finally {
+      this.desfazendo = false;
+    }
   }
 
   protected async apagar(): Promise<void> {

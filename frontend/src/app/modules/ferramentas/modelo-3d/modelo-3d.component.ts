@@ -89,8 +89,13 @@ export class Modelo3dComponent {
   protected readonly historico = signal<readonly VersaoDoArquivoDto[] | null>(null);
   /** Qual dos dois SolidCrafts está à vista (o outro prepara o próximo projeto por trás). */
   protected readonly ativo = signal<0 | 1>(0);
-  /** Trocando o projeto por trás (aviso discreto, sem bloquear). */
+  /** Trocando o projeto por trás (aviso discreto; o que grava ou troca o arquivo espera). */
   protected readonly trocando = signal(false);
+  /**
+   * O modelo não abriu, ou a troca falhou: o que está à vista não é o arquivo atual. Nada é gravado até abrir de novo
+   * (salvar agora poria um projeto em branco, ou o antigo, por cima do atual).
+   */
+  protected readonly falha = signal(false);
   /** Corpos do modelo sem material (o "Default" do SolidCraft): aviso discreto, sem bloquear a modelagem. */
   protected readonly semMaterial = signal<readonly string[]>([]);
   protected readonly avisoSemMaterial = computed(() => avisoDeCorposSemMaterial(this.semMaterial().length));
@@ -106,13 +111,24 @@ export class Modelo3dComponent {
 
   /** A IA está trabalhando: o SolidCraft avisa e o que conflita (salvar, restaurar) espera. */
   protected readonly pensando = computed(() => this.conversa().pensando());
+  /** Nada que grave ou troque o arquivo começa enquanto outra operação, a IA ou uma troca estiver em andamento. */
+  protected readonly ocupado = computed(() => !!this.sincronizando() || this.pensando() || this.trocando() || this.falha());
+
+  /** A primeira abertura: as trocas esperam por ela, para não descarregar o SolidCraft que ainda está subindo. */
+  private aberturaConcluida!: () => void;
+  private readonly abertura = new Promise<void>((concluida) => (this.aberturaConcluida = concluida));
+  /** A troca em andamento e se chegou outro pedido durante ela (uma troca por vez; ver `trazerArquivo`). */
+  private troca: Promise<void> | null = null;
+  private trocaPendente = false;
 
   /**
    * Antes de cada mensagem à IA: o que foi modelado à mão vai para o Castwork (a IA trabalha no arquivo guardado). O que a
    * IA fizer não muda o arquivo final da peça.
    */
   protected readonly antesDeEnviar = async (): Promise<void> => {
-    if (!(await this.ponte?.temAlteracoes())) return;
+    // Durante a troca, o SolidCraft à vista ainda é o antigo: guardá-lo agora apagaria o que acabou de chegar.
+    await this.troca;
+    if (this.falha() || !(await this.ponte?.temAlteracoes())) return;
     this.sincronizando.set('Guardando o seu modelo...');
     try {
       await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
@@ -131,13 +147,15 @@ export class Modelo3dComponent {
     this.sincronizando.set(this.daPeca() ? 'Abrindo o modelo da peça...' : 'Abrindo o modelo da versão...');
     try {
       const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
-      this.atualId.set(arquivo?.id ?? null);
       await this.ponte.carregar(arquivo?.conteudo ?? null, nomeDeArquivo(arquivo?.nome, 'json', 'modelo').replace(/\.json$/, ''));
+      this.atualId.set(arquivo?.id ?? null);
       void this.conferirMateriais();
     } catch {
+      this.falha.set(true);
       this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
     } finally {
       this.sincronizando.set(null);
+      this.aberturaConcluida();
     }
 
     if (this.conferir() && !this.daPeca()) void this.abrirConferencia();
@@ -148,15 +166,15 @@ export class Modelo3dComponent {
    * altera o arquivo guardado.
    */
   protected async abrirConferencia(): Promise<void> {
-    if (this.sincronizando() || this.pensando()) return;
+    if (this.ocupado()) return;
     try {
       if (await this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu modelo...');
         await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
       }
       this.conferindo.set(true);
-    } catch {
-      this.toast.erro('Não foi possível guardar o modelo antes de conferir.');
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível guardar o modelo antes de conferir.');
     } finally {
       this.sincronizando.set(null);
     }
@@ -178,7 +196,7 @@ export class Modelo3dComponent {
    * posicionar depois. O que foi modelado à mão é salvo antes (a montagem parte do arquivo guardado).
    */
   protected async montar(): Promise<void> {
-    if (this.daPeca() || this.sincronizando() || this.pensando()) return;
+    if (this.daPeca() || this.ocupado()) return;
     try {
       if (await this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu modelo...');
@@ -199,24 +217,31 @@ export class Modelo3dComponent {
 
   /** Salvar não muda o arquivo final da peça: vira mais uma versão no histórico. */
   protected async salvar(): Promise<void> {
-    if (!this.ponte || this.sincronizando() || this.pensando()) return;
+    if (!this.ponte || this.ocupado()) return;
     try {
       this.sincronizando.set('Guardando o modelo...');
       await this.ponte.salvar((arquivo) => this.guardar(arquivo, 'Modelo salvo no Castwork.'));
       void this.conferirMateriais();
-    } catch {
-      this.toast.erro('Não foi possível salvar o modelo.');
+    } catch (erro) {
+      // Os erros da API já viram toast no interceptor.
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível salvar o modelo.');
     } finally {
       this.sincronizando.set(null);
     }
   }
 
   protected async abrirHistorico(): Promise<void> {
-    this.historico.set(await firstValueFrom(this.ferramentas.getHistorico(this.projetoId, this.escopo(), FERRAMENTA)));
+    try {
+      this.historico.set(await firstValueFrom(this.ferramentas.getHistorico(this.projetoId, this.escopo(), FERRAMENTA)));
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o histórico.');
+    }
   }
 
   /** Antes de trocar o projeto, guarda o que foi feito à mão: vira mais uma versão no histórico. */
   protected async restaurar(versao: VersaoDoArquivoDto): Promise<void> {
+    if (this.ocupado()) return;
+    this.sincronizando.set('Restaurando o modelo...');
     try {
       if (await this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu modelo...');
@@ -231,6 +256,7 @@ export class Modelo3dComponent {
       this.toast.sucesso('Modelo restaurado.');
     } catch (erro) {
       if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível restaurar o modelo.');
+    } finally {
       this.sincronizando.set(null);
     }
   }
@@ -241,7 +267,7 @@ export class Modelo3dComponent {
    * versão nova do arquivo, que o SolidCraft à vista recarrega.
    */
   protected async marcarComoFinal(arquivoId?: number): Promise<void> {
-    if (!this.daPeca() || this.sincronizando() || this.pensando() || !(await this.avisoPublicada().confirmar())) return;
+    if (!this.daPeca() || this.ocupado() || !(await this.avisoPublicada().confirmar())) return;
     try {
       if (arquivoId === undefined && (await this.ponte?.temAlteracoes())) {
         this.sincronizando.set('Guardando o seu modelo...');
@@ -272,9 +298,20 @@ export class Modelo3dComponent {
 
   /** Na peça, o arquivo baixado leva o nome dela ("Elo oval.json"). */
   protected async baixar(versao: VersaoDoArquivoDto): Promise<void> {
-    const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
-    const nome = this.daPeca() ? nomeDeArquivoDaPeca(valorDe(this.peca)?.nome, 'json') : `modelo-${versao.id}.json`;
-    if (arquivo) this.download.salvar(arquivo, nome);
+    try {
+      const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
+      const nome = this.daPeca() ? nomeDeArquivoDaPeca(valorDe(this.peca)?.nome, 'json') : `modelo-${versao.id}.json`;
+      if (arquivo) this.download.salvar(arquivo, nome);
+      else this.toast.erro('Esta versão está em branco: não há arquivo para baixar.');
+    } catch {
+      // O arquivo vem como Blob: o interceptor não avisa.
+      this.toast.erro('Não foi possível baixar o modelo.');
+    }
+  }
+
+  /** Depois de uma falha ao abrir ou trocar: abre de novo o arquivo atual. */
+  protected tentarDeNovo(): void {
+    void this.trazerArquivo();
   }
 
   private get projetoId(): number {
@@ -291,25 +328,50 @@ export class Modelo3dComponent {
   /**
    * Traz o arquivo atual sem recarregar à vista: o outro SolidCraft abre o projeto por trás e, pronto, troca
    * de lugar com o que estava na tela, que é liberado.
+   *
+   * Uma troca por vez: um pedido que chega durante outra não abre uma segunda (as duas disputariam o mesmo iframe e
+   * acabariam com os dois vazios); a troca em andamento roda mais uma vez ao terminar, já com o arquivo mais novo.
+   * Nunca rejeita: a falha vira aviso na tela (`falha`).
    */
-  private async trazerArquivo(): Promise<void> {
-    const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
-    this.atualId.set(arquivo?.id ?? null);
+  private trazerArquivo(): Promise<void> {
+    if (this.troca) {
+      this.trocaPendente = true;
+      return this.troca;
+    }
+    this.trocando.set(true);
+    this.troca = (async () => {
+      try {
+        await this.abertura;
+        do {
+          this.trocaPendente = false;
+          await this.trocar();
+        } while (this.trocaPendente);
+      } finally {
+        this.troca = null;
+        this.trocando.set(false);
+      }
+    })();
+    return this.troca;
+  }
+
+  private async trocar(): Promise<void> {
     const atras = this.ativo() === 0 ? 1 : 0;
     const nova = this.criarPonte(atras);
-    this.trocando.set(true);
     try {
+      const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
       await nova.carregar(arquivo?.conteudo ?? null, nomeDeArquivo(arquivo?.nome, 'json', 'modelo').replace(/\.json$/, ''));
       const antiga = this.ponte;
       this.ponte = nova;
       this.ativo.set(atras);
       antiga?.descarregar();
+      // Só agora o arquivo novo é o que está à vista.
+      this.atualId.set(arquivo?.id ?? null);
+      this.falha.set(false);
       void this.conferirMateriais();
     } catch {
       nova.descarregar();
+      this.falha.set(true);
       this.toast.erro('Não foi possível abrir o modelo no SolidCraft.');
-    } finally {
-      this.trocando.set(false);
     }
   }
 

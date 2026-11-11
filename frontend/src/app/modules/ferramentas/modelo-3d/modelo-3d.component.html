@@ -12,24 +12,24 @@
     @if (!daPeca()) {
       @if (podeEditar()) {
         <!-- Uma cópia do modelo de cada peça da composição por unidade, enfileiradas para posicionar depois. -->
-        <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="montar()">
+        <button type="button" class="btn btn-sutil" [disabled]="ocupado()" (click)="montar()">
           <i class="bi bi-boxes" aria-hidden="true"></i> Montar a partir das peças
         </button>
       }
-      <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirConferencia()">
+      <button type="button" class="btn btn-sutil" [disabled]="ocupado()" (click)="abrirConferencia()">
         <i class="bi bi-rulers" aria-hidden="true"></i> Peso e materiais
       </button>
     }
     @if (daPeca() && podeEditar()) {
       <!-- O arquivo à vista vira o final da peça: o que vale para o peso, a montagem e a publicação. -->
-      <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando() || !atualNaoEFinal()" (click)="marcarComoFinal()">
+      <button type="button" class="btn btn-sutil" [disabled]="ocupado() || !atualNaoEFinal()" (click)="marcarComoFinal()">
         <i class="bi bi-patch-check" aria-hidden="true"></i> Marcar como final
       </button>
     }
-    <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
+    <button type="button" class="btn btn-sutil" [disabled]="ocupado()" (click)="abrirHistorico()">
       <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
     </button>
-    <button type="button" class="btn btn-secundario" [disabled]="!!sincronizando() || pensando()" (click)="salvar()">
+    <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="salvar()">
       <i class="bi bi-cloud-check" aria-hidden="true"></i> Salvar
     </button>
   </ng-container>
@@ -38,6 +38,12 @@
     <cw-aviso-peca-publicada [publicada]="publicada()" />
     @if (sincronizando(); as aviso) {
       <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
+    }
+    @if (falha() && !trocando() && !sincronizando()) {
+      <p class="sincronizando" role="alert">
+        Não foi possível abrir o modelo atual.
+        <button type="button" class="btn btn-secundario" (click)="tentarDeNovo()">Tentar de novo</button>
+      </p>
     }
     @if (pensando() && !sincronizando()) {
       <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o modelo. O que você mudar agora será substituído.</p>
@@ -87,7 +93,7 @@
   [finalId]="finalId()"
   [podeMarcarFinal]="daPeca() && podeEditar()"
   (marcarFinal)="marcarComoFinal($event.id)"
-  [ocupado]="!!sincronizando() || pensando()"
+  [ocupado]="ocupado()"
   (restaurar)="restaurar($event)"
   (baixar)="baixar($event)"
   (fechado)="historico.set(null)"
@@ -99,7 +105,7 @@
     [versaoId]="versao()"
     [aberta]="conferindo()"
     [podeEditar]="podeEditar()"
-    [ocupado]="!!sincronizando() || pensando() || trocando()"
+    [ocupado]="ocupado()"
     (alterado)="modeloConferido($event)"
     (fechado)="conferindo.set(false)"
   />

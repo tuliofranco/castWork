@@ -1041,9 +1041,28 @@ Atualizado a cada lote. Marcado quer dizer corrigido no branch `chore/code-revie
 - [x] **A5** Duplicar versão relê o projeto quando só o `:versaoId` muda. Spec refeito com a rota real.
 - [x] **A5** (efeito secundário) O aviso de publicação bloqueada e as quantidades escolhidas zeram ao trocar de versão.
 
-### Lotes 3 a 21
+### Lote 3: fila única de trocas e estado ocupado nas ferramentas (feito)
 
-- [ ] Lote 3: A2, M1, M8, M9, M10, B9
+Vale para o Desenho 2D e o Modelo 3D, com specs novos em `desenho-2d.component.spec.ts` e `modelo-3d.component.spec.ts`.
+
+- [x] **A2** `trazerArquivo` faz uma troca por vez: um pedido que chega durante outra vira uma troca a mais ao final, com o arquivo mais novo.
+- [x] **A2** Restaurar tem guarda de entrada e liga o aviso antes do primeiro `await` (duplo clique restaura uma vez só).
+- [x] **A2** Um Desfazer por vez na conversa (`conversa-ia.component.ts`).
+- [x] **M1** Um único `ocupado` (operação em andamento, IA trabalhando, troca ou falha) nas guardas e nos botões de Salvar, Histórico, Marcar como final, Montar e Peso e materiais.
+- [x] **M1** A mensagem à IA espera a troca terminar antes de guardar o que foi feito à mão.
+- [x] **M1** No Desenho 2D, o ⌘S de um CADCraft que já saiu de cena é ignorado, e durante uma troca avisa em vez de gravar.
+- [x] **M8** A troca espera a primeira abertura terminar, em vez de descarregar o editor que ainda está subindo.
+- [x] **M9** Se o arquivo não abre (ou a troca falha), a prancheta mostra "Não foi possível abrir… Tentar de novo" e nada é gravado até abrir.
+- [x] **M9** `atualId` só muda depois de o arquivo novo estar à vista.
+- [x] **M10** `getArquivo` dentro do `try` na abertura e na troca, com toast próprio; o `iniciar` do Desenho 2D não deixa mais o aviso preso.
+- [x] **B9** Histórico e Baixar com tratamento de erro (Baixar avisa também a versão em branco); Salvar e a conferência sem toast duplicado.
+- [ ] **M1** Reforço no servidor: o PUT enviar o arquivo-base e a API recusar com 409 (backend).
+- [ ] **M9** Trocar o polling com limite fixo pelo evento de pronto do SolidCraft, se existir.
+- [ ] **B9** Helper único de operação compartilhado entre 2D e 3D (fica com a extração da base comum, lote 17).
+- [ ] Conferir as corridas no navegador com o CADCraft e o SolidCraft reais.
+
+### Lotes 4 a 21
+
 - [ ] Lote 4: A3, M2, M13
 - [ ] Lote 5: A6, M4, B28, B29, M45
 - [ ] Lote 6: M5, B30, B22, B10
