@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -46,6 +47,7 @@ import { SeloComponent } from '@shared/ui/selo.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PecaDetalheComponent {
+  protected readonly valorDe = valorDe;
   private readonly pecasService = inject(PecasService);
   private readonly permissoes = inject(PermissaoService);
 

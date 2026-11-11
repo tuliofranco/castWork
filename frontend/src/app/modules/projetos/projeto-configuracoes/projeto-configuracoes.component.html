@@ -1,6 +1,6 @@
 @if (projeto.error()) {
   <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar o projeto." (tentarDeNovo)="projeto.reload()" />
-} @else if (projeto.value(); as p) {
+} @else if (valorDe(projeto); as p) {
   <cw-cabecalho-pagina titulo="Configurações" [voltarPara]="'/projetos/' + id()" [voltarRotulo]="p.nome" />
 
   <section class="secao" aria-labelledby="titulo-nome">
@@ -35,7 +35,7 @@
           @if (p.cliente; as atual) {
             <option [ngValue]="atual.id">{{ atual.nome }}</option>
           }
-          @for (opcao of clientes.value() ?? []; track opcao.id) {
+          @for (opcao of valorDe(clientes) ?? []; track opcao.id) {
             @if (opcao.id !== p.cliente?.id) {
               <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
             }
@@ -65,7 +65,7 @@
 
   <section class="secao" aria-labelledby="titulo-briefing">
     <h2 id="titulo-briefing">Briefing</h2>
-    @if (briefing.value(); as b) {
+    @if (valorDe(briefing); as b) {
       @if (b.documentos[0]; as ultimo) {
         <div class="definido">
           <i class="bi bi-check-circle" aria-hidden="true"></i>
@@ -93,7 +93,7 @@
           <span class="continuar">Continuar conversa <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
         </a>
       }
-    } @else if (briefing.value() === null) {
+    } @else if (valorDe(briefing) === null) {
       <div class="sem-briefing">
         <p>Defina o que será feito antes das versões: anote o pedido e converse com a IA para completar.</p>
         @if (podeEditar) {
@@ -103,7 +103,7 @@
     }
   </section>
 
-} @else if (projeto.value() === null) {
+} @else if (valorDe(projeto) === null) {
   <cw-cabecalho-pagina titulo="Projeto não encontrado" voltarPara="/projetos" voltarRotulo="Projetos" />
 } @else {
   <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="2" />

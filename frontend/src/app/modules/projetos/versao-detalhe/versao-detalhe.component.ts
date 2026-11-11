@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
@@ -52,6 +53,7 @@ import { PrecoVersaoComponent } from './preco-versao.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VersaoDetalheComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
@@ -92,7 +94,7 @@ export class VersaoDetalheComponent {
   });
 
   protected readonly versao = computed<VersaoProjetoDto | undefined>(() =>
-    this.projeto.value()?.versoes.find((v) => v.id === Number(this.versaoId())),
+    valorDe(this.projeto)?.versoes.find((v) => v.id === Number(this.versaoId())),
   );
   protected readonly voltarPara = computed(() => `/projetos/${this.id()}`);
   protected readonly editavel = computed(() => this.podeEditar && this.versao()?.status === 'EM_DESENVOLVIMENTO');
@@ -108,7 +110,7 @@ export class VersaoDetalheComponent {
 
   /** Soma do peso das peças que têm peso (quantidade × peso da peça, o do modelo 3D quando ela tem). */
   protected readonly pesoTotal = computed(() => {
-    const pesos = this.pesos.value();
+    const pesos = valorDe(this.pesos);
     return (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade * (pesos?.get(item.peca.id) ?? item.peca.pesoGramas ?? 0), 0);
   });
   protected readonly unidades = computed(() => (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade, 0));
@@ -118,7 +120,7 @@ export class VersaoDetalheComponent {
   private readonly termoPeca = toSignal(this.buscaPeca.valueChanges.pipe(debounceTime(150), distinctUntilChanged()), { initialValue: '' });
   protected readonly pecasDoProjeto = computed(() => {
     const termo = this.termoPeca().trim().toLocaleLowerCase('pt-BR');
-    return (this.projeto.value()?.pecas ?? [])
+    return (valorDe(this.projeto)?.pecas ?? [])
       .filter((p) => p.ativo)
       .filter((p) => !termo || p.nome.toLocaleLowerCase('pt-BR').includes(termo) || (p.material?.toLocaleLowerCase('pt-BR').includes(termo) ?? false));
   });

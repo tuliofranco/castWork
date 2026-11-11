@@ -3,7 +3,7 @@ import { FerramentasService } from '@data/assistente/ferramentas.service';
 import type { ConferenciaDoModeloDto } from '@data/ferramentas/modelo-3d/dto/conferencia-do-modelo.dto';
 import { Modelo3dService } from '@data/ferramentas/modelo-3d/modelo-3d.service';
 import { ToastService } from '@shared/services/toast.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { ConferenciaModeloComponent } from './conferencia-modelo.component';
 
@@ -176,5 +176,20 @@ describe('ConferenciaModeloComponent', () => {
     expect(el.querySelector('select')).toBeNull();
     expect(botao(el, 'Unir corpos')).toBeUndefined();
     expect(botao(el, 'Aplicar')).toBeUndefined();
+  });
+
+  it('deve avisar quando a medição falha e medir de novo ao tentar', async () => {
+    modelo3d.getConferencia.mockReturnValueOnce(throwError(() => new Error('API fora')));
+    const { el, estabilizar } = await abrir();
+
+    expect(texto(el.querySelector('.corpo [role=alert]'))).toContain('Não foi possível medir o modelo 3D.');
+    expect(el.querySelector('.corpos')).toBeNull();
+
+    botao(el, 'Tentar de novo')!.click();
+    await estabilizar();
+
+    expect(modelo3d.getConferencia).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('.corpo [role=alert]')).toBeNull();
+    expect(linhas(el).length).toBe(4);
   });
 });

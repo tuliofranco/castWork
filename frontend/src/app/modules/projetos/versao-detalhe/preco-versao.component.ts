@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -71,6 +72,7 @@ function linhaDoMetal(m: CustoDoMetalDto, perda: number): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrecoVersaoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly precosService = inject(PrecosService);
   private readonly toast = inject(ToastService);

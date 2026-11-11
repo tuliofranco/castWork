@@ -1,7 +1,7 @@
 <dialog #dialogo class="conferencia" aria-labelledby="titulo-conferencia" (close)="fechar()">
   <header>
     <h2 id="titulo-conferencia">Peso e materiais</h2>
-    @if (conferencia.value(); as c) {
+    @if (valorDe(conferencia); as c) {
       @if (c.medido) {
         <p class="peso-do-metal">Peso do metal: <strong>{{ gramas(c.pesoDoMetal) }}</strong></p>
       }
@@ -12,7 +12,12 @@
   <div class="corpo">
     @if (conferencia.isLoading()) {
       <p class="estado" aria-busy="true"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Medindo o modelo...</p>
-    } @else if (conferencia.value(); as c) {
+    } @else if (conferencia.error()) {
+      <p class="estado" role="alert">
+        Não foi possível medir o modelo 3D.
+        <button type="button" class="btn btn-sutil" (click)="conferencia.reload()">Tentar de novo</button>
+      </p>
+    } @else if (valorDe(conferencia); as c) {
       @if (c.arquivoId === null) {
         <p class="estado">A versão ainda não tem modelo 3D salvo.</p>
       } @else if (!c.medido) {
@@ -119,7 +124,7 @@
       } @else {
         <small>{{ pendentes() === 0 ? 'Escolha o material de um ou vários corpos.' : pendentes() === 1 ? '1 corpo para aplicar' : pendentes() + ' corpos para aplicar' }}</small>
       }
-      @if (conferencia.value(); as c) {
+      @if (valorDe(conferencia); as c) {
         <button type="button" class="btn btn-primary" [disabled]="pendentes() === 0 || salvando() || ocupado()" (click)="aplicar(c)">
           @if (salvando()) {
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>

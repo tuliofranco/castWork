@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -51,14 +52,14 @@ const PARAMETROS: readonly { readonly chave: keyof ParametrosDePrecoDto; readonl
     <section class="secao" aria-labelledby="titulo-precos-projeto">
       <div class="cabecalho-secao">
         <h2 id="titulo-precos-projeto">Preços deste projeto</h2>
-        @if (podeEditar() && precos.value() && !editando()) {
+        @if (podeEditar() && valorDe(precos) && !editando()) {
           <button type="button" class="btn btn-sutil" [disabled]="salvando()" (click)="abrirEdicao()"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</button>
         }
       </div>
 
       @if (precos.error()) {
         <p class="falha" role="alert">Não foi possível carregar os preços do projeto.</p>
-      } @else if (precos.value(); as p) {
+      } @else if (valorDe(precos); as p) {
         @if (editando()) {
           <form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
             <div class="grade">
@@ -201,6 +202,7 @@ const PARAMETROS: readonly { readonly chave: keyof ParametrosDePrecoDto; readonl
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrecosProjetoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly precosService = inject(PrecosService);
   private readonly toast = inject(ToastService);
@@ -236,7 +238,7 @@ export class PrecosProjetoComponent {
 
   /** "Ouro R$ 640,00/g · Prata R$ 6,80/g · Perda 8 % · Hora R$ 90,00 · Markup 1,8×". */
   protected readonly resumo = computed(() => {
-    const p = this.precos.value();
+    const p = valorDe(this.precos);
     if (!p) return '';
     const cotacoes = METAIS.flatMap((m) => {
       const cotacao = p.cotacoes.find((c) => c.metal === m.valor);
@@ -248,8 +250,8 @@ export class PrecosProjetoComponent {
 
   /** O que o ateliê tem hoje de diferente do projeto (editado aqui ou mudado lá depois da herança). */
   protected readonly diferencas = computed(() => {
-    const p = this.precos.value();
-    const a = this.atelie.value();
+    const p = valorDe(this.precos);
+    const a = valorDe(this.atelie);
     if (!p || !a) return [];
     const cotacoes = METAIS.flatMap((m) => {
       const hoje = a.cotacoes.find((c) => c.metal === m.valor)?.atual?.valor ?? null;
@@ -261,7 +263,7 @@ export class PrecosProjetoComponent {
   });
 
   protected abrirEdicao(): void {
-    const p = this.precos.value();
+    const p = valorDe(this.precos);
     if (!p) return;
     this.preencher(p);
     this.confirmandoAtualizar.set(false);

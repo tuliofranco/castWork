@@ -1,3 +1,5 @@
+import { PermissaoService } from '@core/services/permissao.service';
+import { valorDe } from '@shared/recursos/valor-de';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,7 +12,7 @@ import { CabecalhoPaginaComponent } from '@shared/ui/cabecalho-pagina.component'
 import { CampoComponent } from '@shared/ui/campo.component';
 
 import { ToastService } from '@shared/services/toast.service';
-import { finalize } from 'rxjs';
+import { finalize, of } from 'rxjs';
 
 @Component({
   selector: 'cw-novo-projeto',
@@ -19,17 +21,20 @@ import { finalize } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NovoProjetoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly clientesService = inject(ClientesService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
-  protected readonly clientes = rxResource({ stream: () => this.clientesService.getClientesOpcoes() });
+  /** `clientes.ler`: sem a regra, a lista de clientes não é pedida e o projeto nasce sem cliente. */
+  protected readonly podeVerClientes = inject(PermissaoService).temAlguma(['clientes.ler']);
+  protected readonly clientes = rxResource({ stream: () => (this.podeVerClientes ? this.clientesService.getClientesOpcoes() : of([])) });
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.maxLength(150)]],
     descricao: ['', Validators.maxLength(2000)],
-    clienteId: [null as number | null],
+    clienteId: [{ value: null as number | null, disabled: !this.podeVerClientes }],
   });
 
   protected readonly enviando = signal(false);

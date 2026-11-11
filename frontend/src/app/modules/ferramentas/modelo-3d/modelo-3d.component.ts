@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, computed, inject, input, signal, viewChild } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -69,15 +70,15 @@ export class Modelo3dComponent {
     stream: ({ params }) =>
       params ? this.projetos.getPecasDoProjeto(params.projetoId, false).pipe(map((pecas) => pecas?.find((p) => p.id === params.pecaId) ?? null)) : of(null),
   });
-  protected readonly publicada = computed(() => this.peca.value()?.status === 'PUBLICADA');
+  protected readonly publicada = computed(() => valorDe(this.peca)?.status === 'PUBLICADA');
   /** "Elo oval · Modelo 3D" na peça; na versão, só "Modelo 3D". */
-  protected readonly titulo = computed(() => (this.daPeca() ? `${this.peca.value()?.nome ?? 'Peça'} · Modelo 3D` : 'Modelo 3D'));
+  protected readonly titulo = computed(() => (this.daPeca() ? `${valorDe(this.peca)?.nome ?? 'Peça'} · Modelo 3D` : 'Modelo 3D'));
   /** Os arquivos finais da peça (só na rota da peça). */
   protected readonly finais = rxResource({
     params: () => (this.daPeca() ? { projetoId: Number(this.id()), pecaId: Number(this.pecaId()) } : undefined),
     stream: ({ params }) => (params ? this.projetos.getArquivosFinaisDaPeca(params.projetoId, params.pecaId) : of([])),
   });
-  protected readonly finalId = computed(() => this.finais.value()?.find((f) => f.ferramenta === FERRAMENTA)?.arquivoId ?? null);
+  protected readonly finalId = computed(() => valorDe(this.finais)?.find((f) => f.ferramenta === FERRAMENTA)?.arquivoId ?? null);
   /** O arquivo à vista (o atual); nulo sem modelo. */
   protected readonly atualId = signal<number | null>(null);
   /** Na peça, o arquivo à vista não é o final: o peso, a montagem e a publicação usam o final. */
@@ -272,7 +273,7 @@ export class Modelo3dComponent {
   /** Na peça, o arquivo baixado leva o nome dela ("Elo oval.json"). */
   protected async baixar(versao: VersaoDoArquivoDto): Promise<void> {
     const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
-    const nome = this.daPeca() ? nomeDeArquivoDaPeca(this.peca.value()?.nome, 'json') : `modelo-${versao.id}.json`;
+    const nome = this.daPeca() ? nomeDeArquivoDaPeca(valorDe(this.peca)?.nome, 'json') : `modelo-${versao.id}.json`;
     if (arquivo) this.download.salvar(arquivo, nome);
   }
 

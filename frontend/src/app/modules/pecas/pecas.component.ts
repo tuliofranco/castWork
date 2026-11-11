@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
@@ -29,6 +30,7 @@ const POR_PAGINA = 20;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PecasComponent {
+  protected readonly valorDe = valorDe;
   private readonly pecasService = inject(PecasService);
   protected readonly paginacao = new PaginacaoCursor();
   protected readonly rotuloTipo = rotuloTipoPeca;

@@ -1,8 +1,8 @@
 @if (peca.error()) {
   <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar a peça." (tentarDeNovo)="peca.reload()" />
-} @else if (peca.value() === null) {
+} @else if (valorDe(peca) === null) {
   <cw-cabecalho-pagina titulo="Peça não encontrada" voltarPara="/pecas" voltarRotulo="Peças" subtitulo="O endereço pode estar incompleto." />
-} @else if (peca.value(); as p) {
+} @else if (valorDe(peca); as p) {
   <cw-cabecalho-pagina [titulo]="p.nome" voltarPara="/pecas" voltarRotulo="Peças" subtitulo="Peça da biblioteca: só consulta. Para usar, importe-a num projeto.">
     <ng-container acoes>
       @if (!p.ativo) {

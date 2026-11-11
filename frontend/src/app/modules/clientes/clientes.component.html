@@ -8,7 +8,7 @@
   <cw-campo-busca [controle]="busca" placeholder="Buscar por nome" rotulo="Buscar clientes" />
 </div>
 
-@let pagina = clientes.value();
+@let pagina = valorDe(clientes);
 <cw-estado-lista
   [carregando]="!clientes.hasValue() && clientes.isLoading()"
   [erro]="!!clientes.error()"

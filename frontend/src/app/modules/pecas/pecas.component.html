@@ -4,7 +4,7 @@
   <cw-campo-busca [controle]="busca" placeholder="Buscar por nome ou material" rotulo="Buscar peças" />
 </div>
 
-@let pagina = pecas.value();
+@let pagina = valorDe(pecas);
 <cw-estado-lista
   [carregando]="!pecas.hasValue() && pecas.isLoading()"
   [erro]="!!pecas.error()"

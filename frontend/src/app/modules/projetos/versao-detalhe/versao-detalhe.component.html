@@ -1,9 +1,9 @@
 @if (projeto.error()) {
   <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar a versão." (tentarDeNovo)="projeto.reload()" />
-} @else if (projeto.value() === null || (projeto.hasValue() && !versao())) {
+} @else if (valorDe(projeto) === null || (projeto.hasValue() && !versao())) {
   <cw-cabecalho-pagina titulo="Versão não encontrada" [voltarPara]="voltarPara()" voltarRotulo="Projeto" subtitulo="Ela pode ter sido removida, ou o endereço está incompleto." />
 } @else if (versao(); as v) {
-  <cw-cabecalho-pagina [titulo]="v.numero + '. ' + v.nome" [voltarPara]="voltarPara()" [voltarRotulo]="projeto.value()?.nome ?? 'Projeto'" />
+  <cw-cabecalho-pagina [titulo]="v.numero + '. ' + v.nome" [voltarPara]="voltarPara()" [voltarRotulo]="valorDe(projeto)?.nome ?? 'Projeto'" />
 
   <div class="barra-versao">
     <cw-selo [tom]="status[v.status].tom" [icone]="status[v.status].icone">{{ status[v.status].rotulo }}</cw-selo>
@@ -75,7 +75,7 @@
       <span class="descricao">
         <strong>Briefing</strong>
         <small>
-          @if (briefing.value(); as b) {
+          @if (valorDe(briefing); as b) {
             @if (b.documentos[0]; as ultimo) {
               PDF de {{ ultimo.geradoEm | date: 'dd/MM/yyyy' }}
             } @else {
@@ -86,7 +86,7 @@
           }
         </small>
       </span>
-      @if (briefing.value()?.documentos?.[0]; as ultimo) {
+      @if (valorDe(briefing)?.documentos?.[0]; as ultimo) {
         <button type="button" class="btn btn-sutil" (click)="verBriefing(ultimo.id, ultimo.nomeArquivo, ultimo.geradoEm)"><i class="bi bi-eye" aria-hidden="true"></i> Ver</button>
       }
       <a class="btn btn-sutil" [routerLink]="['/projetos', id(), 'briefing']">Editar no projeto <i class="bi bi-chevron-right" aria-hidden="true"></i></a>

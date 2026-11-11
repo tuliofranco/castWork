@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
@@ -98,6 +99,7 @@ interface OpcaoDeLiga {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PecaDoProjetoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly precosService = inject(PrecosService);
   private readonly router = inject(Router);
@@ -163,15 +165,15 @@ export class PecaDoProjetoComponent {
 
   /** As ligas ativas e, se a gravada foi desativada, ela também (com o nome e o teor copiados na peça). */
   protected readonly opcoesDeLiga = computed<readonly OpcaoDeLiga[]>(() => {
-    const ativas: OpcaoDeLiga[] = (this.ligas.value() ?? []).map((l) => ({ id: l.id, nome: l.nome, teor: l.teor, metal: l.metal }));
-    const peca = this.peca.value();
+    const ativas: OpcaoDeLiga[] = (valorDe(this.ligas) ?? []).map((l) => ({ id: l.id, nome: l.nome, teor: l.teor, metal: l.metal }));
+    const peca = valorDe(this.peca);
     if (!peca || peca.ligaId === null || ativas.some((l) => l.id === peca.ligaId)) return ativas;
     return [...ativas, { id: peca.ligaId, nome: `${peca.material ?? 'Liga'} (desativada)`, teor: peca.teor, metal: null }];
   });
 
   /** Peça de metal anterior à liga: ficou com o material em texto, sem liga; salvar sem escolher uma liga o mantém. */
   protected readonly materialSemLiga = computed(() => {
-    const peca = this.peca.value();
+    const peca = valorDe(this.peca);
     return peca && peca.tipo !== 'PEDRA' && peca.ligaId === null && peca.material ? peca.material : null;
   });
 
@@ -180,7 +182,7 @@ export class PecaDoProjetoComponent {
     const id = this.ligaId();
     const opcao = this.opcoesDeLiga().find((l) => l.id === id);
     if (opcao) return `Teor ${formatarTeor(opcao.teor, opcao.metal)}, da liga.`;
-    const peca = this.peca.value();
+    const peca = valorDe(this.peca);
     return id === null && this.materialSemLiga() && peca?.teor ? `Teor ${formatarTeor(peca.teor)}.` : 'O teor vem da liga.';
   });
 
@@ -191,7 +193,7 @@ export class PecaDoProjetoComponent {
 
   constructor() {
     effect(() => {
-      const peca = this.peca.value();
+      const peca = valorDe(this.peca);
       if (peca) this.preencher(peca);
     });
     if (!this.podeEditar) this.form.disable();
@@ -203,7 +205,7 @@ export class PecaDoProjetoComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const peca = this.peca.value();
+    const peca = valorDe(this.peca);
     if (peca?.status === 'PUBLICADA' && this.dadosMudaram(peca) && !this.confirmandoOutraPeca()) {
       this.confirmandoOutraPeca.set(true);
       return;
@@ -258,7 +260,7 @@ export class PecaDoProjetoComponent {
   }
 
   protected salvarValor(): void {
-    const peca = this.peca.value();
+    const peca = valorDe(this.peca);
     if (!peca || this.valor.invalid) {
       this.valor.markAsTouched();
       return;
@@ -278,7 +280,7 @@ export class PecaDoProjetoComponent {
   }
 
   protected publicar(): void {
-    const peca = this.peca.value();
+    const peca = valorDe(this.peca);
     if (!peca) return;
     this.enviando.set(true);
     this.projetosService
@@ -300,14 +302,14 @@ export class PecaDoProjetoComponent {
 
   /** O arquivo final da ferramenta no cartão: o nome dado ou a data; sem final, "Sem arquivo final". */
   protected descreverFinal(ferramenta: string): string {
-    const final = this.finais.value()?.find((f) => f.ferramenta === ferramenta);
+    const final = valorDe(this.finais)?.find((f) => f.ferramenta === ferramenta);
     if (!final) return 'Sem arquivo final';
     const quando = new Date(final.criadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     return `Final: ${final.nome ?? quando}`;
   }
 
   protected temFinal(ferramenta: string): boolean {
-    return !!this.finais.value()?.some((f) => f.ferramenta === ferramenta);
+    return !!valorDe(this.finais)?.some((f) => f.ferramenta === ferramenta);
   }
 
   /** Gera a ficha técnica e salva o arquivo. */
@@ -326,7 +328,7 @@ export class PecaDoProjetoComponent {
   }
 
   private gerarFichaTecnica(usar: (pdf: Blob) => void): void {
-    const peca = this.peca.value();
+    const peca = valorDe(this.peca);
     if (!peca) return;
     this.gerandoFicha.set(true);
     this.projetosService
@@ -337,7 +339,7 @@ export class PecaDoProjetoComponent {
 
   /** Nome da peça sem acentos nem espaços, para o arquivo baixado ("Elo oval" → "elo-oval"). */
   private nomeDoArquivo(): string {
-    const nome = this.peca.value()?.nome ?? 'peca';
+    const nome = valorDe(this.peca)?.nome ?? 'peca';
     return (
       nome
         .normalize('NFD')

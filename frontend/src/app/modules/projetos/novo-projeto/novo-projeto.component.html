@@ -6,10 +6,10 @@
       <input id="nome" class="form-control" formControlName="nome" placeholder="Ex.: Colar Raízes" autocomplete="off" />
     </cw-campo>
 
-    <cw-campo class="c6" rotulo="Cliente" para="clienteId" [opcional]="true" [controle]="form.controls.clienteId" dica="Deixe sem cliente para um projeto autoral.">
+    <cw-campo class="c6" rotulo="Cliente" para="clienteId" [opcional]="true" [controle]="form.controls.clienteId" [dica]="podeVerClientes ? 'Deixe sem cliente para um projeto autoral.' : 'Seu acesso não inclui a lista de clientes: o projeto começa sem cliente.'">
       <select id="clienteId" class="form-select" formControlName="clienteId">
         <option [ngValue]="null">Sem cliente</option>
-        @for (opcao of clientes.value() ?? []; track opcao.id) {
+        @for (opcao of valorDe(clientes) ?? []; track opcao.id) {
           <option [ngValue]="opcao.id">{{ opcao.nome }}</option>
         }
       </select>

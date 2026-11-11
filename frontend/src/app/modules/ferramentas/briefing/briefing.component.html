@@ -1,18 +1,18 @@
-@let p = projeto.value();
-@if (mostrarFormulario() || briefing.error() || (briefing.isLoading() && briefing.value() === undefined)) {
+@let p = valorDe(projeto);
+@if (mostrarFormulario() || briefing.error() || (briefing.isLoading() && valorDe(briefing) === undefined)) {
   <!-- Fora do layout com menu: a tela do briefing é de foco, como as outras ferramentas. -->
   <div class="pagina-formulario">
     <cw-cabecalho-pagina titulo="Briefing" [subtitulo]="p ? p.nome : undefined" [voltarPara]="voltarPara()" [voltarRotulo]="p?.nome ?? 'Projeto'" />
 
     @if (briefing.error()) {
       <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar o briefing." (tentarDeNovo)="briefing.reload()" />
-    } @else if (briefing.isLoading() && briefing.value() === undefined) {
+    } @else if (briefing.isLoading() && valorDe(briefing) === undefined) {
       <cw-estado-lista [carregando]="true" [quantidadeEsqueleto]="3" />
     } @else if (!podeEditar) {
       <cw-estado-lista [vazio]="true" iconeVazio="journal-text" tituloVazio="Este projeto ainda não tem briefing." />
     } @else {
       <p class="introducao">
-        @if (briefing.value() === null) {
+        @if (valorDe(briefing) === null) {
           Anote o que o cliente pediu. Depois, a IA conversa com você para completar o que falta e escreve o PDF.
         } @else {
           Corrija o formulário. A conversa continua de onde parou, já considerando a correção.
@@ -70,13 +70,13 @@
       }
 
       <cw-barra-acoes>
-        @if (briefing.value() !== null) {
+        @if (valorDe(briefing) !== null) {
           <button type="button" class="btn btn-secundario" (click)="editandoFormulario.set(false)">Cancelar</button>
         }
         <button type="submit" class="btn btn-primary" [disabled]="salvandoFormulario()">
           @if (salvandoFormulario()) {
             Salvando...
-          } @else if (briefing.value() === null) {
+          } @else if (valorDe(briefing) === null) {
             <i class="bi bi-chat-dots" aria-hidden="true"></i> Começar a conversa
           } @else {
             Salvar correção
@@ -86,7 +86,7 @@
     </form>
     }
   </div>
-} @else if (briefing.value(); as b) {
+} @else if (valorDe(briefing); as b) {
   <cw-conversa-ia
     ferramenta="briefing"
     titulo="Briefing"

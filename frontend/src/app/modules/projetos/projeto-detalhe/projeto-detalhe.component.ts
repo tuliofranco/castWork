@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -31,6 +32,7 @@ import { PrecosProjetoComponent } from './precos-projeto.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjetoDetalheComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly briefingService = inject(BriefingService);
   private readonly router = inject(Router);
@@ -60,10 +62,10 @@ export class ProjetoDetalheComponent {
     stream: ({ params }) => this.briefingService.getBriefing(params),
   });
 
-  protected readonly arquivadas = computed(() => (this.projeto.value()?.versoes ?? []).filter((v) => v.status === 'ARQUIVADA'));
+  protected readonly arquivadas = computed(() => (valorDe(this.projeto)?.versoes ?? []).filter((v) => v.status === 'ARQUIVADA'));
   /** Lista ordenada pelo número da versão, da primeira para a mais recente. */
   protected readonly versoesVisiveis = computed(() =>
-    (this.projeto.value()?.versoes ?? [])
+    (valorDe(this.projeto)?.versoes ?? [])
       .filter((v) => this.mostrarArquivadas() || v.status !== 'ARQUIVADA')
       .sort((a, b) => a.numero - b.numero),
   );

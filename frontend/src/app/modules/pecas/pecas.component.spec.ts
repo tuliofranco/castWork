@@ -4,7 +4,7 @@ import { LOCALE_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PecasService } from '@data/pecas/pecas/pecas.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { PecasComponent } from './pecas.component';
 
@@ -58,5 +58,30 @@ describe('PecasComponent', () => {
     expect([...el.querySelectorAll('a.cw-linha')].map((a) => a.getAttribute('href'))).toEqual(['/1', '/2', '/3']);
     expect(el.querySelector('a[href$="editar"]')).toBeNull();
     expect(el.querySelector('cw-campo-busca')).not.toBeNull();
+  });
+
+  it('deve mostrar o erro com Tentar de novo quando a biblioteca não carrega', async () => {
+    const getPecas = vi
+      .fn()
+      .mockReturnValueOnce(throwError(() => new Error('API fora')))
+      .mockReturnValue(of({ ...pagina, totalCount: 1, nodes: [pagina.nodes[0]] }));
+    TestBed.configureTestingModule({
+      imports: [PecasComponent],
+      providers: [provideRouter([]), { provide: LOCALE_ID, useValue: 'pt-BR' }, { provide: PecasService, useValue: { getPecas } }],
+    });
+    const fixture = TestBed.createComponent(PecasComponent);
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const tentar = [...el.querySelectorAll<HTMLButtonElement>('[role=alert] button')].find((b) => b.textContent?.trim() === 'Tentar de novo');
+    expect(el.querySelector('[role=alert]')!.textContent).toContain('Não foi possível carregar');
+    expect(el.querySelector('.cw-linha')).toBeNull();
+
+    tentar!.click();
+    await fixture.whenStable();
+
+    expect(getPecas).toHaveBeenCalledTimes(2);
+    expect(el.querySelector('[role=alert]')).toBeNull();
+    expect(el.querySelectorAll('.cw-linha').length).toBe(1);
   });
 });

@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -78,7 +79,7 @@ const POR_PAGINA = 10;
         <div class="historico">
           @if (historico.error()) {
             <p class="quando">Não foi possível carregar o histórico.</p>
-          } @else if (historico.value(); as pagina) {
+          } @else if (valorDe(historico); as pagina) {
             @if (pagina.nodes.length === 0) {
               <p class="quando">Nenhuma cotação registrada.</p>
             } @else {
@@ -200,6 +201,7 @@ const POR_PAGINA = 10;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CotacaoMetalComponent {
+  protected readonly valorDe = valorDe;
   private readonly precosService = inject(PrecosService);
   private readonly toast = inject(ToastService);
 

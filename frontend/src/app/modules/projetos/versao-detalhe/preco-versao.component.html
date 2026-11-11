@@ -1,7 +1,7 @@
 <section class="preco-versao" aria-labelledby="titulo-preco-versao">
   <header class="cabecalho">
     <h2 id="titulo-preco-versao">Preço</h2>
-    @if (preco.value(); as p) {
+    @if (valorDe(preco); as p) {
       @if (p.status === 'COMPLETO') {
         <cw-selo tom="sucesso" icone="check2-circle">Completo</cw-selo>
       } @else {
@@ -12,7 +12,7 @@
 
   @if (preco.error()) {
     <p class="falha" role="alert">Não foi possível calcular o preço da versão.</p>
-  } @else if (preco.value(); as p) {
+  } @else if (valorDe(preco); as p) {
     <p class="destaque">
       <span class="valor">{{ moeda(p.preco) }}</span>
       <span class="legenda">{{
@@ -238,7 +238,7 @@
                     <label class="form-label" [for]="'metal-liga-' + i">Liga</label>
                     <select [id]="'metal-liga-' + i" class="form-select" formControlName="ligaId">
                       <option [ngValue]="null" disabled>Escolha a liga</option>
-                      @for (liga of ligas.value()?.ligas ?? []; track liga.id) {
+                      @for (liga of valorDe(ligas)?.ligas ?? []; track liga.id) {
                         <option [ngValue]="liga.id">{{ liga.nome }}</option>
                       }
                     </select>

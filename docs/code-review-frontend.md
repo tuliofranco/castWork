@@ -1018,3 +1018,47 @@ Um PR por lote, em ordem de prioridade. Cada lote traz os próprios testes; os l
 | 21 | **Sessão, segunda etapa** (decisão de produto e backend): coordenação entre abas, refresh em cookie HttpOnly | M31, M32 | G |
 
 Todos os 92 achados estão em algum lote. Os lotes 1 a 5 resolvem os 6 Altos e os Médios confirmados mais ligados a perda de trabalho.
+
+## 5. Andamento das correções
+
+Atualizado a cada lote. Marcado quer dizer corrigido no branch `chore/code-review-frontend`, com lint, build e testes passando; nenhuma correção foi conferida no navegador com a API, o CADCraft ou o SolidCraft reais.
+
+### Lote 1: guarda de `resource.value()` (feito)
+
+- [x] **A1** Helper `valorDe` em `frontend/src/app/shared/recursos/valor-de.ts`, com spec.
+- [x] **A1** 85 leituras de recurso trocadas por `valorDe(...)` em 18 componentes (projetos, peças, precificação, clientes, briefing, Desenho 2D e Modelo 3D). A única leitura direta que ficou é a do PDF do briefing, dentro de `@if (pdfAtual.hasValue())`.
+- [x] **A1** Conferência do Modelo 3D: medição com falha mostra "Não foi possível medir o modelo 3D" e "Tentar de novo".
+- [x] **A1** Briefing: a releitura depois da resposta da IA não apaga mais o briefing da tela quando falha.
+- [x] **A1** Specs de erro: listas de projetos, peças e clientes; página do projeto com o briefing falhando; conferência do Modelo 3D.
+- [x] **M22** Novo projeto e configurações do projeto só pedem os clientes com `clientes.ler`; sem a permissão, o seletor de Novo projeto fica desabilitado com uma dica. Spec novo em `novo-projeto.component.spec.ts`.
+- [ ] **A1** Spec de erro do Briefing (o componente não tem spec; fica para o lote 18).
+- [ ] **A1** Spec de erro próprio nas demais telas que receberam a guarda (peça do projeto, versão, preços, precificação, ferramentas).
+- [ ] **A1** Regra de lint ou de revisão para barrar `recurso.value()` sem guarda.
+
+### Lote 2: correções de uma tela (feito, commit `407b3dd`)
+
+- [x] **A4** Restaurar no Desenho 2D libera a prancheta antes da troca de arquivo. Spec novo em `desenho-2d.component.spec.ts`.
+- [x] **A5** Duplicar versão relê o projeto quando só o `:versaoId` muda. Spec refeito com a rota real.
+- [x] **A5** (efeito secundário) O aviso de publicação bloqueada e as quantidades escolhidas zeram ao trocar de versão.
+
+### Lotes 3 a 21
+
+- [ ] Lote 3: A2, M1, M8, M9, M10, B9
+- [ ] Lote 4: A3, M2, M13
+- [ ] Lote 5: A6, M4, B28, B29, M45
+- [ ] Lote 6: M5, B30, B22, B10
+- [ ] Lote 7: M3, M19, M16, M21, B11
+- [ ] Lote 8: M6, M33, M35, M38, B26
+- [ ] Lote 9: M12, M25, B19, M11
+- [ ] Lote 10: M23, M26, M27, M28, B17, B18, B20, B31
+- [ ] Lote 11: M24
+- [ ] Lote 12: M7, B4, B5, B2, B1
+- [ ] Lote 13: M17, M18, M14, M20, B15, B13, B14, B16, B12
+- [ ] Lote 14: M36, M37, M39, M40, B33, B34, B35, B36, B32
+- [ ] Lote 15: M30, M29, B25, B27, B37, B21
+- [ ] Lote 16: M34, M41, B38, B39, B40
+- [ ] Lote 17: M15
+- [ ] Lote 18: M42
+- [ ] Lote 19: M43, M44, M46
+- [ ] Lote 20: B7, B3, B8, B6, B24, B23
+- [ ] Lote 21: M31, M32
