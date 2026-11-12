@@ -1120,9 +1120,18 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **M38** Trocar as duas cópias manuais de download (configurações do projeto e peça do projeto) pelo `DownloadService`; spec do serviço.
 - [ ] **B26** Ateliê: estado de erro próprio para o logo e confirmação no "Remover" (por ora a falha só deixou de ser candidata a toast).
 
-### Lotes 9 a 21
+### Lote 9: permissões na interface (feito)
 
-- [ ] Lote 9: M12, M25, B19, M11
+- [x] **M12** Chat somente leitura para quem não tem `projetos.editar` (Desenho 2D, Modelo 3D e Briefing): sem compositor, Desfazer, Novo chat nem Apagar; a conversa fica para consulta.
+- [x] **M12** Nas duas ferramentas, quem só lê não vê Salvar, tem um aviso na prancheta, e nem o ⌘S, o Restaurar ou a mensagem à IA tentam gravar. No Modelo 3D, "Peso e materiais" abre sem tentar salvar antes. Spec nos dois componentes.
+- [x] **M25** Pasta de arquivos da versão: renomear, arquivar, desarquivar e apagar só com `projetos.editar`.
+- [x] **B19** "Definir valor" só aparece para quem também pode ver o valor.
+- [x] **M11** "Marcar como final" pelo Histórico fecha o Histórico antes de pedir a confirmação da peça publicada, e reconfere se a tela está ocupada depois da resposta.
+- [ ] **M12** "Conversas anteriores" continua abrindo outro chat por POST; para quem só lê, o clique é ignorado em vez de mostrar o chat antigo.
+- [ ] **M25/B19** Specs próprios da pasta de arquivos e do botão de valor.
+
+### Lotes 10 a 21
+
 - [ ] Lote 10: M23, M26, M27, M28, B17, B18, B20, B31
 - [ ] Lote 11: M24
 - [ ] Lote 12: M7, B4, B5, B2, B1

@@ -129,7 +129,7 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
   protected readonly antesDeEnviar = async (): Promise<void> => {
     // Durante a troca, o SolidCraft à vista ainda é o antigo: guardá-lo agora apagaria o que acabou de chegar.
     await this.troca;
-    if (this.falha() || !(await this.ponte?.temAlteracoes())) return;
+    if (!this.podeEditar() || this.falha() || !(await this.ponte?.temAlteracoes())) return;
     this.sincronizando.set('Guardando o seu modelo...');
     try {
       await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
@@ -182,7 +182,8 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
   protected async abrirConferencia(): Promise<void> {
     if (this.ocupado()) return;
     try {
-      if (await this.ponte?.temAlteracoes()) {
+      // Quem só lê confere o arquivo guardado, sem tentar gravar antes.
+      if (this.podeEditar() && (await this.ponte?.temAlteracoes())) {
         this.sincronizando.set('Guardando o seu modelo...');
         await this.ponte?.salvar((arquivo) => this.guardar(arquivo));
       }
@@ -210,7 +211,7 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
    * posicionar depois. O que foi modelado à mão é salvo antes (a montagem parte do arquivo guardado).
    */
   protected async montar(): Promise<void> {
-    if (this.daPeca() || this.ocupado()) return;
+    if (this.daPeca() || !this.podeEditar() || this.ocupado()) return;
     try {
       if (await this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu modelo...');
@@ -231,6 +232,10 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
 
   /** Salvar não muda o arquivo final da peça: vira mais uma versão no histórico. */
   protected async salvar(): Promise<void> {
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: nada do que você mudar aqui é salvo.');
+      return;
+    }
     if (!this.ponte || this.ocupado()) return;
     try {
       this.sincronizando.set('Guardando o modelo...');
@@ -254,6 +259,10 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
 
   /** Antes de trocar o projeto, guarda o que foi feito à mão: vira mais uma versão no histórico. */
   protected async restaurar(versao: VersaoDoArquivoDto): Promise<void> {
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: não dá para restaurar.');
+      return;
+    }
     if (this.ocupado()) return;
     this.sincronizando.set('Restaurando o modelo...');
     try {
@@ -281,7 +290,11 @@ export class Modelo3dComponent implements TelaComTrabalhoNaoSalvo {
    * versão nova do arquivo, que o SolidCraft à vista recarrega.
    */
   protected async marcarComoFinal(arquivoId?: number): Promise<void> {
-    if (!this.daPeca() || this.ocupado() || !(await this.avisoPublicada().confirmar())) return;
+    if (!this.daPeca() || !this.podeEditar() || this.ocupado()) return;
+    // O Histórico é um diálogo modal: a confirmação da peça publicada ficaria atrás dele, sem dar para clicar.
+    this.historico.set(null);
+    // A resposta pode demorar: a IA pode ter começado a trabalhar nesse meio-tempo.
+    if (!(await this.avisoPublicada().confirmar()) || this.ocupado()) return;
     try {
       if (arquivoId === undefined && (await this.ponte?.temAlteracoes())) {
         this.sincronizando.set('Guardando o seu modelo...');

@@ -117,7 +117,7 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   protected readonly antesDeEnviar = async (): Promise<void> => {
     // Durante a troca, o CADCraft à vista ainda é o antigo: guardá-lo agora apagaria o que acabou de chegar.
     await this.troca;
-    if (this.falha() || !this.ponte?.temAlteracoes()) return;
+    if (!this.podeEditar() || this.falha() || !this.ponte?.temAlteracoes()) return;
     this.sincronizando.set('Guardando o seu desenho...');
     try {
       await this.guardar(await this.ponte.salvar());
@@ -168,6 +168,10 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
 
   /** Salvar não muda o arquivo final da peça: vira mais uma versão no histórico. */
   protected async salvar(): Promise<void> {
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: nada do que você mudar aqui é salvo.');
+      return;
+    }
     if (!this.ponte || this.ocupado()) return;
     try {
       this.sincronizando.set('Guardando o desenho...');
@@ -190,6 +194,10 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
 
   /** Antes de trocar o desenho, guarda o que foi feito à mão: vira mais uma versão no histórico. */
   protected async restaurar(versao: VersaoDoArquivoDto): Promise<void> {
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: não dá para restaurar.');
+      return;
+    }
     if (this.ocupado()) return;
     this.sincronizando.set('Restaurando o desenho...');
     try {
@@ -217,7 +225,11 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
    * antes). Numa peça publicada, trocar o final faz dela outra peça: confirma antes.
    */
   protected async marcarComoFinal(arquivoId?: number): Promise<void> {
-    if (!this.daPeca() || this.ocupado() || !(await this.avisoPublicada().confirmar())) return;
+    if (!this.daPeca() || !this.podeEditar() || this.ocupado()) return;
+    // O Histórico é um diálogo modal: a confirmação da peça publicada ficaria atrás dele, sem dar para clicar.
+    this.historico.set(null);
+    // A resposta pode demorar: a IA pode ter começado a trabalhar nesse meio-tempo.
+    if (!(await this.avisoPublicada().confirmar()) || this.ocupado()) return;
     try {
       if (arquivoId === undefined && this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu desenho...');
@@ -349,6 +361,10 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
    */
   private async salvoPeloJoalheiro(ponte: PonteCadCraft, arquivo: Blob): Promise<void> {
     if (ponte !== this.ponte) return;
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: nada do que você mudar aqui é salvo.');
+      return;
+    }
     if (this.ocupado()) {
       this.toast.erro('O desenho está sendo atualizado. Salve de novo em instantes.');
       return;

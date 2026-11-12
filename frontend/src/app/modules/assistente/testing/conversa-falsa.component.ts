@@ -20,6 +20,7 @@ export class ConversaFalsaComponent {
   readonly voltarPara = input<string>();
   readonly voltarRotulo = input<string>();
   readonly antesDeEnviar = input<(() => Promise<void>) | null>(null);
+  readonly somenteLeitura = input(false);
   readonly arquivoMudou = output();
   readonly pensando = signal(false);
 

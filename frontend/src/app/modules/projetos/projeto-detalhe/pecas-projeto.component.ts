@@ -102,7 +102,8 @@ import { STATUS_PECA_DO_PROJETO } from '../status-peca-do-projeto';
                   }
                 </a>
                 <span class="acoes">
-                  @if (podeEditarValor()) {
+                  <!-- Sem ver o valor atual, "Definir valor" abriria vazio e salvar apagaria o que existe. -->
+                  @if (podeEditarValor() && podeVerValor()) {
                     <button type="button" class="btn btn-sutil" [disabled]="salvando()" (click)="abrirValor(p)">Definir valor</button>
                   }
                   @if (podeEditar() && p.status === 'RASCUNHO' && p.ativo) {

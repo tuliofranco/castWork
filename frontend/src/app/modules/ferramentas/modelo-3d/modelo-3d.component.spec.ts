@@ -26,7 +26,7 @@ describe('Modelo3dComponent', () => {
   const toast = { sucesso: vi.fn(), erro: vi.fn() };
 
   /** Abre o modelo da versão com o SolidCraft simulado; `comAlteracoes` é o que ele diz ter sem salvar. */
-  async function abrir(comAlteracoes = false) {
+  async function abrir(comAlteracoes = false, podeEditar = true) {
     vi.restoreAllMocks();
     [...Object.values(ferramentas), ...Object.values(toast)].forEach((f) => f.mockClear());
     const carregar = vi.spyOn(PonteSolidCraft.prototype, 'carregar').mockResolvedValue();
@@ -43,7 +43,7 @@ describe('Modelo3dComponent', () => {
         { provide: DownloadService, useValue: {} },
         { provide: ProjetosService, useValue: {} },
         { provide: Modelo3dService, useValue: {} },
-        { provide: PermissaoService, useValue: { temAlguma: () => true } },
+        { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
       ],
     });
     TestBed.overrideComponent(Modelo3dComponent, { remove: { imports: [ConversaIaComponent] }, add: { imports: [ConversaFalsaComponent] } });
@@ -180,5 +180,21 @@ describe('Modelo3dComponent', () => {
     await vi.waitFor(() => expect(carregar).toHaveBeenCalledTimes(2));
 
     expect(ferramentas.getArquivo).toHaveBeenLastCalledWith(1, 21, 'modelo-3d');
+  });
+
+  it('deve ser só para consulta a quem não pode editar', async () => {
+    const { fixture, el, conversa } = await abrir(true, false);
+
+    expect(botao(el, 'Salvar')).toBeUndefined();
+    expect(el.textContent).toContain('Seu acesso é só de leitura');
+    expect(conversa.somenteLeitura()).toBe(true);
+
+    // Nem a mensagem à IA nem o Restaurar gravam o que foi mudado à mão.
+    await conversa.antesDeEnviar()!();
+    fixture.debugElement.query(By.css('cw-historico-modelo')).triggerEventHandler('restaurar', versao);
+    await pausa();
+
+    expect(ferramentas.putArquivo).not.toHaveBeenCalled();
+    expect(ferramentas.postRestaurar).not.toHaveBeenCalled();
   });
 });

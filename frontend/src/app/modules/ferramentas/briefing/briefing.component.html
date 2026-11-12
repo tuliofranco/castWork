@@ -88,6 +88,7 @@
   </div>
 } @else if (valorDe(briefing); as b) {
   <cw-conversa-ia
+    [somenteLeitura]="!podeEditar"
     ferramenta="briefing"
     titulo="Briefing"
     [projetoId]="projetoNumero()"

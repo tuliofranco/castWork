@@ -105,7 +105,7 @@
         </span>
       </header>
 
-      <cw-arquivos-versao [projetoId]="+id()" [versaoId]="v.id" />
+      <cw-arquivos-versao [projetoId]="+id()" [versaoId]="v.id" [podeEditar]="podeEditar" />
 
       @if (v.itens.length === 0) {
         <div class="vazia">

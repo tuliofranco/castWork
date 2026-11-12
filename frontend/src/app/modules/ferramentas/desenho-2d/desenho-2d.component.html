@@ -6,6 +6,7 @@
   [voltarPara]="voltarPara()"
   [voltarRotulo]="daPeca() ? 'Peça' : 'Versão'"
   [antesDeEnviar]="antesDeEnviar"
+  [somenteLeitura]="!podeEditar()"
   (arquivoMudou)="arquivoMudou()"
 >
   <ng-container acoes>
@@ -18,9 +19,11 @@
     <button type="button" class="btn btn-sutil" [disabled]="ocupado()" (click)="abrirHistorico()">
       <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
     </button>
-    <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="salvar()">
+@if (podeEditar()) {
+        <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="salvar()">
       <i class="bi bi-cloud-check" aria-hidden="true"></i> Salvar
     </button>
+    }
   </ng-container>
 
   <div area class="prancheta">
@@ -34,7 +37,9 @@
         <button type="button" class="btn btn-secundario" (click)="tentarDeNovo()">Tentar de novo</button>
       </p>
     }
-    @if (pensando() && !sincronizando()) {
+    @if (!podeEditar() && !sincronizando() && !falha()) {
+      <p class="aviso-ia" role="status"><i class="bi bi-eye" aria-hidden="true"></i> Seu acesso é só de leitura: nada do que você mudar aqui é salvo.</p>
+    } @else if (pensando() && !sincronizando()) {
       <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o desenho. O que você mudar agora será substituído.</p>
     } @else if (trocando()) {
       <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o desenho…</p>

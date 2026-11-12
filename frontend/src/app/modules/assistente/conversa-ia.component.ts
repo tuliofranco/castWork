@@ -35,6 +35,7 @@ const STATUS_DE_CONEXAO: readonly number[] = [0, 502, 503, 504];
       [boasVindas]="boasVindas()"
       [ferramenta]="ferramenta()"
       [chatUnico]="daPeca()"
+      [somenteLeitura]="somenteLeitura()"
       (enviar)="enviar($event)"
       (desfazer)="desfazer($event)"
       (apagarConversa)="apagar()"
@@ -66,6 +67,8 @@ export class ConversaIaComponent {
   readonly titulo = input.required<string>();
   readonly voltarPara = input.required<string>();
   readonly voltarRotulo = input('Voltar');
+  /** Sem `projetos.editar`: a conversa é só para consulta (a API recusaria qualquer envio com 403). */
+  readonly somenteLeitura = input(false);
   /**
    * Chamado antes de cada mensagem: a ferramenta guarda o que foi feito à mão, para a IA trabalhar no
    * arquivo atual. Um erro aqui cancela o envio (e vira aviso).
@@ -119,6 +122,7 @@ export class ConversaIaComponent {
     firstValueFrom(this.ferramentas.getAnexosDoProjeto(this.projetoId()));
 
   protected async enviar({ texto, imagens, arquivos, modelo, esforco }: FalaFerramenta): Promise<void> {
+    if (this.somenteLeitura()) return;
     this.pensando.set(true);
     let aoVivo: Subscription | undefined;
     // A abertura (sem texto nem imagem) não aparece como fala no chat.
@@ -173,7 +177,7 @@ export class ConversaIaComponent {
   private agindo = false;
 
   private async acao(executar: () => Promise<void>): Promise<void> {
-    if (this.agindo || this.pensando()) return;
+    if (this.agindo || this.pensando() || this.somenteLeitura()) return;
     this.agindo = true;
     try {
       await executar();

@@ -25,7 +25,7 @@ describe('Desenho2dComponent', () => {
   const toast = { sucesso: vi.fn(), erro: vi.fn() };
 
   /** Abre o desenho da versão com o CADCraft simulado; `comAlteracoes` é o "•" no título dele. */
-  async function abrir(comAlteracoes = false) {
+  async function abrir(comAlteracoes = false, podeEditar = true) {
     vi.restoreAllMocks();
     [...Object.values(ferramentas), ...Object.values(toast)].forEach((f) => f.mockClear());
     const carregar = vi.spyOn(PonteCadCraft.prototype, 'carregar').mockResolvedValue();
@@ -40,7 +40,7 @@ describe('Desenho2dComponent', () => {
         { provide: ToastService, useValue: toast },
         { provide: DownloadService, useValue: {} },
         { provide: ProjetosService, useValue: {} },
-        { provide: PermissaoService, useValue: { temAlguma: () => true } },
+        { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
       ],
     });
     TestBed.overrideComponent(Desenho2dComponent, { remove: { imports: [ConversaIaComponent] }, add: { imports: [ConversaFalsaComponent] } });
@@ -203,5 +203,21 @@ describe('Desenho2dComponent', () => {
     await vi.waitFor(() => expect(carregar).toHaveBeenCalledTimes(2));
 
     expect(ferramentas.getArquivo).toHaveBeenLastCalledWith(1, 21, 'desenho-2d');
+  });
+
+  it('deve ser só para consulta a quem não pode editar', async () => {
+    const { fixture, el, conversa } = await abrir(true, false);
+
+    expect(botao(el, 'Salvar')).toBeUndefined();
+    expect(el.textContent).toContain('Seu acesso é só de leitura');
+    expect(conversa.somenteLeitura()).toBe(true);
+
+    // Nem a mensagem à IA nem o Restaurar gravam o que foi mudado à mão.
+    await conversa.antesDeEnviar()!();
+    fixture.debugElement.query(By.css('cw-historico-desenho')).triggerEventHandler('restaurar', versao);
+    await pausa();
+
+    expect(ferramentas.putArquivo).not.toHaveBeenCalled();
+    expect(ferramentas.postRestaurar).not.toHaveBeenCalled();
   });
 });

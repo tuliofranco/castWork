@@ -136,22 +136,30 @@ const ORIGENS: Record<OrigemArquivo, string> = {
                     <i class="bi bi-download" aria-hidden="true"></i>
                   </button>
                   @if (arquivados()) {
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Desarquivar ' + nome(arquivo)" [disabled]="ocupado()" (click)="desarquivar(arquivo)">
                       <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                     </button>
+                    }
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-perigo-sutil btn-icone" [attr.aria-label]="'Apagar ' + nome(arquivo)" (click)="apagando.set(arquivo.id)">
                       <i class="bi bi-trash3" aria-hidden="true"></i>
                     </button>
+                    }
                   } @else {
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Renomear ' + nome(arquivo)" (click)="renomeando.set(arquivo.id)">
                       <i class="bi bi-pencil" aria-hidden="true"></i>
                     </button>
+                    }
                     <a class="btn btn-sutil btn-icone" [routerLink]="arquivo.ferramenta" [attr.aria-label]="'Abrir no ' + ferramenta(arquivo).nome" (click)="dialogo.close()">
                       <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                     </a>
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Arquivar ' + nome(arquivo)" [disabled]="ocupado()" (click)="arquivar(arquivo)">
                       <i class="bi bi-archive" aria-hidden="true"></i>
                     </button>
+                    }
                   }
                 </span>
                 }
@@ -404,6 +412,8 @@ export class ArquivosVersaoComponent {
 
   readonly projetoId = input.required<number>();
   readonly versaoId = input.required<number>();
+  /** `projetos.editar`: sem a regra, a pasta é só para ver e baixar (sem renomear, arquivar nem apagar). */
+  readonly podeEditar = input(false);
 
   protected readonly pagina = signal<ListaDeArquivosDto | null>(null);
   protected readonly arquivados = signal(false);
