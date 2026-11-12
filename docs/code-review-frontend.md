@@ -1154,9 +1154,19 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [x] Spec novo em `arquivos-versao.component.spec.ts`.
 - [ ] **M24** Migrar a listagem para `rxResource` (a correção usa um contador de pedidos; o efeito para o usuário é o mesmo).
 
-### Lotes 12 a 21
+### Lote 12: dados GraphQL e SSE (parcial)
 
-- [ ] Lote 12: M7, B4, B5, B2, B1
+- [x] **M7** `dadosGql` lança quando a resposta traz erro junto de um campo raiz nulo: a falha de um resolver vira estado de erro na tela, em vez de "não encontrado" ou lista vazia. Vale para todos os serviços que usam o operador. Specs no operador.
+- [x] **B4** (em parte) Com o M7, a listagem cujo resolver falha não chega mais ao `dados.clientes.nodes` que lançava `TypeError`.
+- [x] **B2** `getArquivo` falha quando o cabeçalho `X-Arquivo-Id` falta ou não é um id válido, em vez de devolver o arquivo 0. Spec no serviço.
+- [x] **B1** Parser do ao vivo (SSE): bloco que não é JSON é ignorado, e o trecho é marcado como lido antes da entrega (sem eventos em dobro, e o `fim` chega). Spec no serviço.
+- [ ] **M7** Um caso de spec por serviço com `data` nulo + `errors`; tratar connection nula sem erro.
+- [ ] **B4** Refletir a nulabilidade do schema nos DTOs (ou gerar os tipos com graphql-codegen).
+- [ ] **B5** Apollo: política de cache única, remover `typePolicies` de exemplo e `clearStore()` no logout.
+- [ ] **B2** (backend) Expor `X-Arquivo-Id` e `X-Arquivo-Nome` no CORS, se a API for servida em outro domínio.
+
+### Lotes 13 a 21
+
 - [ ] Lote 13: M17, M18, M14, M20, B15, B13, B14, B16, B12
 - [ ] Lote 14: M36, M37, M39, M40, B33, B34, B35, B36, B32
 - [ ] Lote 15: M30, M29, B25, B27, B37, B21

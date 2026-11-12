@@ -77,7 +77,13 @@ export class FerramentasService {
         for (const bloco of blocos) {
           const dados = bloco.split('\n').filter((l) => l.startsWith('data: ')).map((l) => l.slice(6)).join('\n');
           if (!dados) continue;
-          const evento = JSON.parse(dados) as EventoDoTurnoDto;
+          let evento: EventoDoTurnoDto;
+          try {
+            evento = JSON.parse(dados) as EventoDoTurnoDto;
+          } catch {
+            // Um bloco que não é JSON (página de erro de um proxy no meio do stream) é ignorado: os seguintes continuam valendo.
+            continue;
+          }
           assinante.next(evento);
           if (evento.tipo === 'fim') assinante.complete();
         }
@@ -91,8 +97,10 @@ export class FerramentasService {
             if (evento.type === HttpEventType.DownloadProgress) parcial = evento.partialText;
             else if (evento.type === HttpEventType.Response) parcial = evento.body;
             if (parcial == null || parcial.length <= lido) return;
-            entregar(parcial.slice(lido));
+            // Marca como lido antes de entregar: se a entrega falhar, o mesmo trecho não é entregue de novo no próximo evento.
+            const novo = parcial.slice(lido);
             lido = parcial.length;
+            entregar(novo);
           },
           error: (erro: unknown) => assinante.error(erro),
           complete: () => assinante.complete(),
@@ -130,7 +138,11 @@ export class FerramentasService {
         map((r) => {
           if (r.status === 204 || !r.body) return null;
           const nome = r.headers.get('X-Arquivo-Nome');
-          return { id: Number(r.headers.get('X-Arquivo-Id')), conteudo: r.body, nome: nome ? decodeURIComponent(nome) : null };
+          // Sem o cabeçalho (API em outro domínio sem expô-lo no CORS), `Number(null)` daria o arquivo 0 e as ações
+          // seguintes iriam para ele. Melhor falhar ao abrir.
+          const id = Number(r.headers.get('X-Arquivo-Id') ?? Number.NaN);
+          if (!Number.isSafeInteger(id) || id <= 0) throw new Error('A resposta do arquivo veio sem o identificador (X-Arquivo-Id).');
+          return { id, conteudo: r.body, nome: nome ? decodeURIComponent(nome) : null };
         }),
       );
   }
