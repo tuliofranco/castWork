@@ -1165,9 +1165,24 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **B5** Apollo: política de cache única, remover `typePolicies` de exemplo e `clearStore()` no logout.
 - [ ] **B2** (backend) Expor `X-Arquivo-Id` e `X-Arquivo-Nome` no CORS, se a API for servida em outro domínio.
 
-### Lotes 13 a 21
+### Lote 13: pontes e pontas das ferramentas (parcial)
 
-- [ ] Lote 13: M17, M18, M14, M20, B15, B13, B14, B16, B12
+- [x] **M17** `PonteCadCraft.salvar()`: depois de um timeout, o próximo ⌘S não é mais engolido; o timer é limpo ao receber o arquivo.
+- [x] **M18** Desenho 2D: o ⌘S que não chega ao Castwork (gravação falhou ou tela ocupada) fica guardado e é reenviado na próxima mensagem à IA; conta como trabalho não salvo ao sair. Spec no componente.
+- [x] **M14** Chamadas à API do SolidCraft com limite de 60 s: se ele travar, a operação falha em vez de prender a tela em "Guardando…".
+- [x] **M20** (em parte) O limite de imagens por mensagem é conferido de novo depois do preparo de cada uma.
+- [x] **B14** A largura salva do assistente é limitada à janela atual ao carregar.
+- [x] **B12** Ids distintos nos títulos do histórico do desenho, do modelo e das conversas anteriores.
+- [ ] **M17** Rejeitar a chamada anterior quando `salvar()` é chamado de novo.
+- [ ] **M14** Um único `exportar()` reutilizado entre `temAlteracoes` e `salvar`.
+- [ ] **M20** Estado "preparando" que segura o Enviar, id por anexo e aviso de arquivo ignorado.
+- [ ] **B15** CADCraft carregado uma vez só na abertura do Desenho 2D.
+- [ ] **B13** Textos por ferramenta no componente compartilhado ("desenho" aparece no 3D e no Briefing).
+- [ ] **B16** Rolagem do chat só quando já está perto do fim.
+- [ ] Specs das duas pontes (ficam com o lote 18).
+
+### Lotes 14 a 21
+
 - [ ] Lote 14: M36, M37, M39, M40, B33, B34, B35, B36, B32
 - [ ] Lote 15: M30, M29, B25, B27, B37, B21
 - [ ] Lote 16: M34, M41, B38, B39, B40

@@ -21,9 +21,9 @@ const ROTULOS: Record<OrigemArquivo, string> = {
   selector: 'cw-historico-modelo',
   imports: [DatePipe],
   template: `
-    <dialog #dialogo class="historico" aria-labelledby="titulo-historico" (close)="fechado.emit()">
+    <dialog #dialogo class="historico" aria-labelledby="titulo-historico-modelo" (close)="fechado.emit()">
       <header>
-        <h2 id="titulo-historico">{{ titulo() }}</h2>
+        <h2 id="titulo-historico-modelo">{{ titulo() }}</h2>
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="dialogo.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
       <ol>

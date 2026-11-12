@@ -278,9 +278,9 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
       (fechado)="arquivosDisponiveis.set(null)"
     />
 
-    <dialog #historico class="historico" aria-labelledby="titulo-historico" (close)="fecharChats.emit()">
+    <dialog #historico class="historico" aria-labelledby="titulo-conversas-anteriores" (close)="fecharChats.emit()">
       <header>
-        <h2 id="titulo-historico">Conversas anteriores</h2>
+        <h2 id="titulo-conversas-anteriores">Conversas anteriores</h2>
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="historico.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
       @if (chats(); as lista) {
@@ -501,7 +501,8 @@ export class FerramentaIaComponent {
 function lerLarguraSalva(): number {
   try {
     const salva = Number(localStorage.getItem(CHAVE_LARGURA));
-    return salva >= LARGURA_MINIMA ? salva : LARGURA_PADRAO;
+    // A largura foi salva numa janela talvez maior: o mesmo teto do arrasto vale na leitura.
+    return salva >= LARGURA_MINIMA ? Math.round(Math.min(salva, Math.max(LARGURA_MINIMA, window.innerWidth * 0.7))) : LARGURA_PADRAO;
   } catch {
     return LARGURA_PADRAO;
   }

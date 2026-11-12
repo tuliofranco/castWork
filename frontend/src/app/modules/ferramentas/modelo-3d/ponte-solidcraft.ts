@@ -13,6 +13,9 @@ interface ProjetoExportado {
   readonly text: string;
 }
 
+/** Abrir um projeto grande (`document.import`) pode levar bem mais que exportar ou medir. */
+const LIMITE_DA_CHAMADA_MS = 60_000;
+
 type JanelaSolidCraft = Window & typeof globalThis & { solidcraft?: ApiSolidCraft };
 
 /**
@@ -42,9 +45,8 @@ export class PonteSolidCraft {
 
   /** O projeto tem alterações que ainda não foram para o Castwork. */
   async temAlteracoes(): Promise<boolean> {
-    const api = this.janela().solidcraft;
-    if (!api) return false;
-    return (await api.request<ProjetoExportado>('document.export')).dirty;
+    if (!this.janela().solidcraft) return false;
+    return (await this.api().request<ProjetoExportado>('document.export')).dirty;
   }
 
   /**
@@ -108,10 +110,19 @@ export class PonteSolidCraft {
     );
   }
 
+  /** A API do SolidCraft com limite de tempo: se ele travar, a chamada falha em vez de prender a tela em "Guardando…". */
   private api(): ApiSolidCraft {
     const api = this.janela().solidcraft;
     if (!api) throw new Error('SolidCraft indisponível');
-    return api;
+    return {
+      request: <T>(metodo: string, parametros?: Record<string, unknown>) => {
+        let limite: ReturnType<typeof setTimeout>;
+        const semResposta = new Promise<never>((_, reject) => {
+          limite = setTimeout(() => reject(new Error('O SolidCraft não respondeu a tempo.')), LIMITE_DA_CHAMADA_MS);
+        });
+        return Promise.race([api.request<T>(metodo, parametros), semResposta]).finally(() => clearTimeout(limite));
+      },
+    };
   }
 
   private janela(): JanelaSolidCraft {

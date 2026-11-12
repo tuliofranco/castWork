@@ -107,6 +107,8 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   private aberturaConcluida!: () => void;
   private readonly abertura = new Promise<void>((concluida) => (this.aberturaConcluida = concluida));
   /** A troca em andamento e se chegou outro pedido durante ela (uma troca por vez; ver `trazerArquivo`). */
+  /** O último ⌘S do joalheiro que não chegou ao Castwork (a gravação falhou ou a tela estava ocupada). */
+  private naoEnviado: Blob | null = null;
   private troca: Promise<void> | null = null;
   private trocaPendente = false;
 
@@ -117,7 +119,12 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   protected readonly antesDeEnviar = async (): Promise<void> => {
     // Durante a troca, o CADCraft à vista ainda é o antigo: guardá-lo agora apagaria o que acabou de chegar.
     await this.troca;
-    if (!this.podeEditar() || this.falha() || !this.ponte?.temAlteracoes()) return;
+    if (!this.podeEditar() || this.falha()) return;
+    // Um ⌘S que não chegou ao Castwork: o CADCraft já dá o desenho por salvo, então é este arquivo que vai agora.
+    if (!this.ponte?.temAlteracoes()) {
+      if (this.naoEnviado) await this.guardar(this.naoEnviado);
+      return;
+    }
     this.sincronizando.set('Guardando o seu desenho...');
     try {
       await this.guardar(await this.ponte.salvar());
@@ -277,7 +284,7 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
 
   private temTrabalhoNaoSalvo(): boolean {
     try {
-      return !this.falha() && !!this.ponte?.temAlteracoes();
+      return !this.falha() && (!!this.naoEnviado || !!this.ponte?.temAlteracoes());
     } catch {
       return false;
     }
@@ -296,6 +303,7 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
     const arquivoId = await firstValueFrom(this.ferramentas.putArquivo(this.projetoId, this.escopo(), FERRAMENTA, await emBase64(arquivo)));
     this.conversa().registrarArquivo(arquivoId);
     this.atualId.set(arquivoId);
+    this.naoEnviado = null;
     if (aviso) this.toast.sucesso(aviso);
   }
 
@@ -338,7 +346,8 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
       this.ponte = nova;
       this.ativo.set(atras);
       antiga?.descarregar();
-      // Só agora o arquivo novo é o que está à vista.
+      // Só agora o arquivo novo é o que está à vista (e um ⌘S antigo que não foi enviado não vale mais).
+      this.naoEnviado = null;
       this.atualId.set(arquivo?.id ?? null);
       this.falha.set(false);
     } catch (erro) {
@@ -366,13 +375,16 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
       return;
     }
     if (this.ocupado()) {
+      this.naoEnviado = arquivo;
       this.toast.erro('O desenho está sendo atualizado. Salve de novo em instantes.');
       return;
     }
     try {
       await this.guardar(arquivo, 'Desenho salvo no Castwork.');
-    } catch (erro) {
-      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível salvar o desenho.');
+    } catch {
+      // O CADCraft já tirou o "•" do título: sem guardar o arquivo aqui, ele nunca mais seria enviado.
+      this.naoEnviado = arquivo;
+      this.toast.erro('O desenho não chegou ao Castwork. Toque em Salvar para enviar de novo.');
     }
   }
 

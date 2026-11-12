@@ -92,7 +92,8 @@ export class AnexosImagemComponent {
     for (const arquivo of imagens.slice(0, Math.max(0, livres))) {
       try {
         const imagem = await prepararImagem(arquivo);
-        this.imagens.update((lista) => [...lista, imagem]);
+        // O espaço livre é conferido de novo aqui: outra leva (colar e arrastar juntos) pode ter entrado durante o preparo.
+        this.imagens.update((lista) => (lista.length < this.maximo() ? [...lista, imagem] : lista));
       } catch {
         this.toast.erro(`Não foi possível abrir ${arquivo.name}.`);
       }

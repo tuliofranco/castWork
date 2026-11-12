@@ -47,8 +47,16 @@ export class PonteCadCraft {
     const janela = this.janela();
     const canvas = await this.canvas(janela);
     const salvo = new Promise<Blob>((resolve, reject) => {
-      this.esperandoSalvar = resolve;
-      setTimeout(() => reject(new Error('O CADCraft não salvou o desenho.')), 10_000);
+      const receber = (arquivo: Blob) => {
+        clearTimeout(limite);
+        resolve(arquivo);
+      };
+      const limite = setTimeout(() => {
+        // Sem isto, o próximo ⌘S do joalheiro seria entregue a esta chamada que já desistiu, e se perderia.
+        if (this.esperandoSalvar === receber) this.esperandoSalvar = null;
+        reject(new Error('O CADCraft não salvou o desenho.'));
+      }, 10_000);
+      this.esperandoSalvar = receber;
     });
 
     const mac = /Mac|iPad|iPhone/.test(janela.navigator.userAgent);

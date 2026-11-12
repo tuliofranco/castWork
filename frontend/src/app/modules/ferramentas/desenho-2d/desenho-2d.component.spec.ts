@@ -220,4 +220,19 @@ describe('Desenho2dComponent', () => {
     expect(ferramentas.putArquivo).not.toHaveBeenCalled();
     expect(ferramentas.postRestaurar).not.toHaveBeenCalled();
   });
+
+  it('deve reenviar na próxima mensagem o ⌘S que não chegou ao Castwork', async () => {
+    const { carregar, conversa } = await abrir(false);
+    // O ⌘S dentro do CADCraft chega pelo callback da ponte; o CADCraft já dá o desenho por salvo (sem alterações).
+    const ponte = carregar.mock.contexts[0] as unknown as { aoSalvar(arquivo: Blob): void };
+    ferramentas.putArquivo.mockReturnValueOnce(throwError(() => new Error('API fora')));
+
+    ponte.aoSalvar(dxf);
+    await vi.waitFor(() => expect(toast.erro).toHaveBeenCalledWith('O desenho não chegou ao Castwork. Toque em Salvar para enviar de novo.'));
+    expect(ferramentas.putArquivo).toHaveBeenCalledTimes(1);
+
+    await conversa.antesDeEnviar()!();
+
+    expect(ferramentas.putArquivo).toHaveBeenCalledTimes(2);
+  });
 });
