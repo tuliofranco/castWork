@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { TelaComTrabalhoNaoSalvo } from '@core/guards/sair-da-ferramenta.guard';
+import { emBase64 } from '@shared/arquivos/em-base64';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 import { type ArquivoFerramenta, type EscopoDaFerramenta, FerramentasService } from '@data/assistente/ferramentas.service';
@@ -14,8 +15,9 @@ import { AvisoPecaPublicadaComponent } from '@shared/ui/ferramenta-ia/aviso-peca
 import { firstValueFrom, map, of } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
+import { FilaDeTrocas } from '../fila-de-trocas';
+import { HistoricoArquivoComponent } from '../historico-arquivo.component';
 
-import { HistoricoDesenhoComponent } from './historico-desenho.component';
 import { PonteCadCraft } from './ponte-cadcraft';
 
 const FERRAMENTA = 'desenho-2d';
@@ -34,7 +36,7 @@ const FERRAMENTA = 'desenho-2d';
  */
 @Component({
   selector: 'cw-desenho-2d',
-  imports: [ConversaIaComponent, HistoricoDesenhoComponent, AvisoPecaPublicadaComponent],
+  imports: [ConversaIaComponent, HistoricoArquivoComponent, AvisoPecaPublicadaComponent],
   templateUrl: './desenho-2d.component.html',
   styleUrl: './desenho-2d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,8 +86,6 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   protected readonly historico = signal<readonly VersaoDoArquivoDto[] | null>(null);
   /** Qual dos dois CADCrafts está à vista (o outro prepara o próximo desenho por trás). */
   protected readonly ativo = signal<0 | 1>(0);
-  /** Trocando o desenho por trás (aviso discreto; o que grava ou troca o arquivo espera). */
-  protected readonly trocando = signal(false);
   /**
    * O desenho não abriu, ou a troca falhou: o que está à vista não é o arquivo atual. Nada é gravado até abrir de novo
    * (salvar agora poria um desenho em branco, ou o antigo, por cima do atual).
@@ -106,11 +106,11 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   /** A primeira abertura: as trocas esperam por ela, para não descarregar o CADCraft que ainda está subindo. */
   private aberturaConcluida!: () => void;
   private readonly abertura = new Promise<void>((concluida) => (this.aberturaConcluida = concluida));
-  /** A troca em andamento e se chegou outro pedido durante ela (uma troca por vez; ver `trazerArquivo`). */
+  private readonly fila = new FilaDeTrocas(this.abertura, () => this.trocar());
+  /** Trocando o arquivo por trás (aviso discreto; o que grava ou troca o arquivo espera). */
+  protected readonly trocando = this.fila.trocando;
   /** O último ⌘S do joalheiro que não chegou ao Castwork (a gravação falhou ou a tela estava ocupada). */
   private naoEnviado: Blob | null = null;
-  private troca: Promise<void> | null = null;
-  private trocaPendente = false;
 
   /**
    * Antes de cada mensagem à IA: o que foi desenhado à mão vai para o Castwork (a IA trabalha no arquivo guardado). O que a
@@ -118,7 +118,7 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
    */
   protected readonly antesDeEnviar = async (): Promise<void> => {
     // Durante a troca, o CADCraft à vista ainda é o antigo: guardá-lo agora apagaria o que acabou de chegar.
-    await this.troca;
+    await this.fila.atual;
     if (!this.podeEditar() || this.falha()) return;
     // Um ⌘S que não chegou ao Castwork: o CADCraft já dá o desenho por salvo, então é este arquivo que vai agora.
     if (!this.ponte?.temAlteracoes()) {
@@ -307,33 +307,9 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
     if (aviso) this.toast.sucesso(aviso);
   }
 
-  /**
-   * Traz o arquivo atual sem recarregar à vista: o outro CADCraft abre o desenho por trás e, pronto, troca
-   * de lugar com o que estava na tela, que é liberado.
-   *
-   * Uma troca por vez: um pedido que chega durante outra não abre uma segunda (as duas disputariam o mesmo iframe e
-   * acabariam com os dois vazios); a troca em andamento roda mais uma vez ao terminar, já com o arquivo mais novo.
-   * Nunca rejeita: a falha vira aviso na tela (`falha`).
-   */
+  /** Traz o arquivo atual sem recarregar à vista, uma troca por vez (ver `FilaDeTrocas`). Nunca rejeita. */
   private trazerArquivo(): Promise<void> {
-    if (this.troca) {
-      this.trocaPendente = true;
-      return this.troca;
-    }
-    this.trocando.set(true);
-    this.troca = (async () => {
-      try {
-        await this.abertura;
-        do {
-          this.trocaPendente = false;
-          await this.trocar();
-        } while (this.trocaPendente);
-      } finally {
-        this.troca = null;
-        this.trocando.set(false);
-      }
-    })();
-    return this.troca;
+    return this.fila.pedir();
   }
 
   private async trocar(): Promise<void> {
@@ -392,13 +368,4 @@ export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   private async conteudoOuVazio(arquivo: ArquivoFerramenta | null): Promise<Blob> {
     return arquivo?.conteudo ?? (await (await fetch('/desenho-vazio.dxf')).blob());
   }
-}
-
-async function emBase64(arquivo: Blob): Promise<string> {
-  const bytes = new Uint8Array(await arquivo.arrayBuffer());
-  let binario = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binario);
 }

@@ -10,9 +10,9 @@ import { of, throwError } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
 import { ConversaFalsaComponent } from '../../assistente/testing/conversa-falsa.component';
+import { HistoricoArquivoComponent } from '../historico-arquivo.component';
 
 import { Desenho2dComponent } from './desenho-2d.component';
-import { HistoricoDesenhoComponent } from './historico-desenho.component';
 import { PonteCadCraft } from './ponte-cadcraft';
 
 describe('Desenho2dComponent', () => {
@@ -62,7 +62,7 @@ describe('Desenho2dComponent', () => {
   const versao = { id: 7 } as VersaoDoArquivoDto;
   const botao = (el: HTMLElement, texto: string) => [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === texto);
   const pedirRestaurar = (fixture: Awaited<ReturnType<typeof abrir>>['fixture']) =>
-    fixture.debugElement.query(By.directive(HistoricoDesenhoComponent)).triggerEventHandler('restaurar', versao);
+    fixture.debugElement.query(By.directive(HistoricoArquivoComponent)).triggerEventHandler('restaurar', versao);
 
   /** O CADCraft de trás demora a abrir: cada `carregar` fica esperando até o teste liberar. */
   function segurarCarregar(carregar: Awaited<ReturnType<typeof abrir>>['carregar']) {
@@ -214,7 +214,7 @@ describe('Desenho2dComponent', () => {
 
     // Nem a mensagem à IA nem o Restaurar gravam o que foi mudado à mão.
     await conversa.antesDeEnviar()!();
-    fixture.debugElement.query(By.css('cw-historico-desenho')).triggerEventHandler('restaurar', versao);
+    fixture.debugElement.query(By.css('cw-historico-arquivo')).triggerEventHandler('restaurar', versao);
     await pausa();
 
     expect(ferramentas.putArquivo).not.toHaveBeenCalled();

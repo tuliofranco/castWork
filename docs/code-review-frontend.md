@@ -1225,9 +1225,20 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **B39** Medir o volume com a regra `types` do knip ligada.
 - [ ] **M34** Recarregar sozinho quando o arquivo da tela não vem (hoje só avisa, para não derrubar trabalho não salvo nas ferramentas).
 
-### Lotes 17 a 21
+### Lote 17: base comum 2D/3D (parcial)
 
-- [ ] Lote 17: M15
+Refatoração sem mudança de comportamento; os specs das corridas dos dois componentes (lote 3) passam sem alteração de expectativa.
+
+- [x] **M15** Um único `cw-historico-arquivo` (`modules/ferramentas/historico-arquivo.component.ts`), com os textos por `tipo` (`desenho` ou `modelo`), no lugar das duas cópias de 159 linhas.
+- [x] **M15** `FilaDeTrocas` (`modules/ferramentas/fila-de-trocas.ts`): a fila "uma troca por vez" existe uma vez só, usada pelas duas ferramentas.
+- [x] **M15** `emBase64` em `shared/arquivos/em-base64.ts`, com spec.
+- [ ] **M15** Extrair o restante da orquestração comum ("arquivo da ferramenta": estado ocupado, salvar, restaurar, marcar final, baixar, guardar), parametrizada por ferramenta.
+- [ ] **M15** Interface de ponte comum (`carregar`, `temAlteracoes`, `salvar`, `descarregar`); hoje `temAlteracoes` é síncrono no CADCraft e assíncrono no SolidCraft.
+- [ ] **M15** Estilos da prancheta num lugar comum (os dois `.scss` diferem em 5 linhas).
+- [ ] Spec próprio da `FilaDeTrocas` e o caso `desenho` no spec do histórico.
+
+### Lotes 18 a 21
+
 - [ ] Lote 18: M42
 - [ ] Lote 19: M43, M44, M46
 - [ ] Lote 20: B7, B3, B8, B6, B24, B23

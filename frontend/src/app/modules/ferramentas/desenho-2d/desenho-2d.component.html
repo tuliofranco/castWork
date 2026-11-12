@@ -77,9 +77,10 @@
   </div>
 </cw-conversa-ia>
 
-<cw-historico-desenho
+<cw-historico-arquivo
+  tipo="desenho"
   [versoes]="historico()"
-  [titulo]="daPeca() ? titulo() : 'Histórico do desenho'"
+  [titulo]="daPeca() ? titulo() : null"
   [finalId]="finalId()"
   [podeMarcarFinal]="daPeca() && podeEditar()"
   (marcarFinal)="marcarComoFinal($event.id)"

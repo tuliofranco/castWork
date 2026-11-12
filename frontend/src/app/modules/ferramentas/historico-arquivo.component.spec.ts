@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 
-import { HistoricoModeloComponent } from './historico-modelo.component';
+import { HistoricoArquivoComponent } from './historico-arquivo.component';
 
-describe('HistoricoModeloComponent', () => {
+describe('HistoricoArquivoComponent', () => {
   const versoes: readonly VersaoDoArquivoDto[] = [
     { id: 3, origem: 'Joalheiro', criadoEm: '2026-11-10T12:00:00Z', tamanho: 10, nome: null },
     { id: 2, origem: 'NomesDaPeca', criadoEm: '2026-11-10T11:00:00Z', tamanho: 10, nome: null },
@@ -13,8 +13,9 @@ describe('HistoricoModeloComponent', () => {
     HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
       this.open = true;
     };
-    TestBed.configureTestingModule({ imports: [HistoricoModeloComponent] });
-    const fixture = TestBed.createComponent(HistoricoModeloComponent);
+    TestBed.configureTestingModule({ imports: [HistoricoArquivoComponent] });
+    const fixture = TestBed.createComponent(HistoricoArquivoComponent);
+    fixture.componentRef.setInput('tipo', 'modelo');
     fixture.componentRef.setInput('versoes', versoes);
     fixture.componentRef.setInput('titulo', 'Elo Infinito 2,5 cm · Modelo 3D');
     fixture.componentRef.setInput('finalId', 2);

@@ -11,8 +11,8 @@ import { of, throwError } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
 import { ConversaFalsaComponent } from '../../assistente/testing/conversa-falsa.component';
+import { HistoricoArquivoComponent } from '../historico-arquivo.component';
 
-import { HistoricoModeloComponent } from './historico-modelo.component';
 import { Modelo3dComponent } from './modelo-3d.component';
 import { PonteSolidCraft } from './ponte-solidcraft';
 
@@ -80,7 +80,7 @@ describe('Modelo3dComponent', () => {
 
   it('deve restaurar uma vez só no duplo clique', async () => {
     const { fixture, carregar } = await abrir();
-    const historico = fixture.debugElement.query(By.directive(HistoricoModeloComponent));
+    const historico = fixture.debugElement.query(By.directive(HistoricoArquivoComponent));
 
     historico.triggerEventHandler('restaurar', versao);
     historico.triggerEventHandler('restaurar', versao);
@@ -191,7 +191,7 @@ describe('Modelo3dComponent', () => {
 
     // Nem a mensagem à IA nem o Restaurar gravam o que foi mudado à mão.
     await conversa.antesDeEnviar()!();
-    fixture.debugElement.query(By.css('cw-historico-modelo')).triggerEventHandler('restaurar', versao);
+    fixture.debugElement.query(By.css('cw-historico-arquivo')).triggerEventHandler('restaurar', versao);
     await pausa();
 
     expect(ferramentas.putArquivo).not.toHaveBeenCalled();
