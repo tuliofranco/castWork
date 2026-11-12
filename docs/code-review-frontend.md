@@ -1116,7 +1116,7 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [x] **M38** `DownloadService.salvar` revoga a URL com 60 s de folga e anexa o link ao documento em volta do clique.
 - [ ] **M6** Estado `baixando` nos botões de download e try/catch nos `firstValueFrom` dos chamadores listados no achado.
 - [ ] **M33** `traceId` na mensagem do 500.
-- [ ] **M35** Spec da imagem protegida.
+- [x] **M35** Spec da imagem protegida (lote 19).
 - [ ] **M38** Trocar as duas cópias manuais de download (configurações do projeto e peça do projeto) pelo `DownloadService`; spec do serviço.
 - [ ] **B26** Ateliê: estado de erro próprio para o logo e confirmação no "Remover" (por ora a falha só deixou de ser candidata a toast).
 
@@ -1253,8 +1253,17 @@ Estado da cobertura do achado **M42** depois deste lote e dos anteriores:
 - [ ] `FerramentaIaComponent` (o chat em si: compositor, anexos, menu) e `AnexosImagemComponent`.
 - [ ] Marcar como final, Montar a partir das peças e a conferência aberta por `?conferir=1` nos componentes das ferramentas.
 
-### Lotes 19 a 21
+### Lote 19: testes das demais áreas (parcial)
 
-- [ ] Lote 19: M43, M44, M46
+- [x] **M46** Specs novos em shared: `cw-imagem-protegida` (sucesso, erro com tentar de novo, troca de endereço com revogação, endereço local) e `DownloadService` (link, saída do documento, revogação com folga).
+- [x] **M46** Casos acrescentados: toast (erro por 10 s, repetição renova o tempo), paginação por cursor (cursor repetido), `aplicarErrosDoServidor` (campo de item de lista, lista vazia). O stepper de quantidade já tinha ganhado spec no lote 10.
+- [x] **M44** (em parte) Spec novo de `ParametrosPrecoComponent`: acompanha os valores salvos e não apaga a edição não salva (cobre o M28).
+- [x] **M43** (em parte) Já entregue em lotes anteriores: erro nas listas e na página do projeto (lote 1), Duplicar com a rota real (lote 2), `novo-projeto` (lote 1), `arquivos-versao` (lote 11).
+- [ ] **M43** `peca-do-projeto` (o M23 segue sem teste), `projeto-configuracoes`, permissões da pasta de arquivos, validação e 400 no `novo-projeto`.
+- [ ] **M44** Ateliê (módulo sem nenhum teste), `formatos.spec.ts` com as fronteiras, erro e vazio em peças, falhas do visualizador de desenho.
+- [ ] **M46** Painel e visualizador de PDF, anexos (limite e concorrência), separar o `ui.spec.ts` por componente.
+
+### Lotes 20 e 21
+
 - [ ] Lote 20: B7, B3, B8, B6, B24, B23
 - [ ] Lote 21: M31, M32
