@@ -33,15 +33,22 @@ export class ToastService {
     this.exibir('info', mensagem);
   }
 
+  private readonly temporizadores = new Map<number, ReturnType<typeof setTimeout>>();
+
   remover(id: number): void {
+    clearTimeout(this.temporizadores.get(id));
+    this.temporizadores.delete(id);
     this._toasts.update((lista) => lista.filter((toast) => toast.id !== id));
   }
 
   private exibir(tipo: TipoToast, mensagem: string): void {
     // Evita empilhar a mesma mensagem quando várias requisições falham juntas (ex.: servidor fora).
-    if (this._toasts().some((toast) => toast.tipo === tipo && toast.mensagem === mensagem)) return;
-    const id = this.proximoId++;
-    this._toasts.update((lista) => [...lista, { id, tipo, mensagem }]);
-    setTimeout(() => this.remover(id), DURACAO_MS);
+    // A repetição renova o tempo do aviso que já está na tela, em vez de deixá-lo sumir logo depois.
+    const repetido = this._toasts().find((toast) => toast.tipo === tipo && toast.mensagem === mensagem);
+    const id = repetido?.id ?? this.proximoId++;
+    if (!repetido) this._toasts.update((lista) => [...lista, { id, tipo, mensagem }]);
+    clearTimeout(this.temporizadores.get(id));
+    // Erro fica mais tempo: é o que a pessoa precisa conseguir ler.
+    this.temporizadores.set(id, setTimeout(() => this.remover(id), tipo === 'erro' ? DURACAO_MS * 2 : DURACAO_MS));
   }
 }

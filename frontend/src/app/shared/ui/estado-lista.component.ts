@@ -17,7 +17,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
         <button type="button" class="btn btn-secundario" (click)="tentarDeNovo.emit()">Tentar de novo</button>
       </div>
     } @else if (carregando()) {
-      <div class="esqueleto" aria-busy="true" aria-label="Carregando">
+      <div class="esqueleto" role="status" aria-busy="true" aria-label="Carregando">
         @for (linha of linhas(); track linha) {
           <div class="barra"><span></span><span></span></div>
         }

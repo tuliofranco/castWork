@@ -1181,9 +1181,26 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **B16** Rolagem do chat só quando já está perto do fim.
 - [ ] Specs das duas pontes (ficam com o lote 18).
 
-### Lotes 14 a 21
+### Lote 14: componentes de shared (parcial)
 
-- [ ] Lote 14: M36, M37, M39, M40, B33, B34, B35, B36, B32
+- [x] **M36** `cw-visualizador-pdf`: trocar de arquivo durante a renderização não mistura mais páginas de dois PDFs (contador de geração).
+- [x] **M37** (em parte) Teto na escala final das páginas (3×).
+- [x] **M39** (em parte) Toast de erro fica 10 s (os demais, 5 s) e a mensagem repetida renova o tempo.
+- [x] **B33** `aplicarErrosDoServidor` resolve chaves de coleção (`Itens[0].Quantidade`) e ignora lista de mensagens vazia.
+- [x] **B34** (em parte) `cw-painel-pdf` com id de título por instância.
+- [x] **B35** (em parte) Esqueleto de carregamento com `role="status"`.
+- [x] **B36** `PaginacaoCursor.proxima` ignora o mesmo cursor repetido.
+- [x] **B32** `cw-imagem-protegida` revoga a object URL anterior quando o `src` muda.
+- [ ] **M37** Renderizar as páginas do PDF sob demanda (IntersectionObserver).
+- [ ] **M39** `role="alert"` nos toasts de erro e pausa em hover/foco.
+- [ ] **M40** `cw-campo`: `aria-describedby`/`aria-invalid` e mensagem genérica para chave sem tradução.
+- [ ] **B34** Lightbox da imagem fechar com toque fora (a regra de acessibilidade do lint exige alternativa de teclado no mesmo elemento; hoje fecha com Esc e com o botão).
+- [ ] **B35** Texto de erro fixo de conexão no `cw-estado-lista`.
+- [ ] **B33** Exibir `semCampo` nos chamadores que hoje o descartam.
+- [ ] Specs novos para as correções deste lote (nenhuma delas ganhou teste próprio).
+
+### Lotes 15 a 21
+
 - [ ] Lote 15: M30, M29, B25, B27, B37, B21
 - [ ] Lote 16: M34, M41, B38, B39, B40
 - [ ] Lote 17: M15

@@ -110,12 +110,21 @@ export class ImagemProtegidaComponent {
         return;
       }
 
+      // A imagem anterior sai de cena (e da memória) quando o `src` muda.
+      this.url.set(null);
+      let criada: string | null = null;
       const assinatura = this.http.get(src, { responseType: 'blob', context: semErro() }).subscribe({
-        next: (blob) => this.url.set(URL.createObjectURL(blob)),
+        next: (blob) => {
+          criada = URL.createObjectURL(blob);
+          this.url.set(criada);
+        },
         // Sem isto a miniatura ficava "carregando" para sempre.
         error: () => this.falhou.set(true),
       });
-      onCleanup(() => assinatura.unsubscribe());
+      onCleanup(() => {
+        assinatura.unsubscribe();
+        if (criada) URL.revokeObjectURL(criada);
+      });
     });
     inject(DestroyRef).onDestroy(() => {
       const url = this.url();

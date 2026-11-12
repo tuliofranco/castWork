@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inj
 
 /** Escala máxima ao renderizar: nítido em tela retina sem estourar memória no tablet. */
 const PIXELS_POR_PONTO_MAXIMO = 3;
+const ESCALA_MAXIMA = 3;
 
 /**
  * Mostra um PDF página a página com o PDF.js, igual em iPad, Android e computador (o leitor nativo em
@@ -60,6 +61,8 @@ export class VisualizadorPdfComponent {
 
   private readonly paginas = viewChild.required<ElementRef<HTMLElement>>('paginas');
   private destruido = false;
+  /** Cada troca de arquivo começa uma geração: a renderização de um arquivo antigo para de desenhar. */
+  private geracao = 0;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => (this.destruido = true));
@@ -67,6 +70,8 @@ export class VisualizadorPdfComponent {
   }
 
   private async renderizar(arquivo: Blob): Promise<void> {
+    const geracao = ++this.geracao;
+    const atual = () => !this.destruido && geracao === this.geracao;
     this.carregando.set(true);
     this.erro.set(false);
     const alvo = this.paginas().nativeElement;
@@ -78,9 +83,12 @@ export class VisualizadorPdfComponent {
       const carregamento = pdfjs.getDocument({ data: new Uint8Array(await arquivo.arrayBuffer()) });
       tarefa = carregamento;
       const documento = await carregamento.promise;
-      const escala = Math.min(window.devicePixelRatio || 1, PIXELS_POR_PONTO_MAXIMO) * 1.5;
-      for (let numero = 1; numero <= documento.numPages && !this.destruido; numero++) {
+      // Teto na escala final: em tela de alta densidade cada página virava um canvas de dezenas de megabytes.
+      const escala = Math.min(Math.min(window.devicePixelRatio || 1, PIXELS_POR_PONTO_MAXIMO) * 1.5, ESCALA_MAXIMA);
+      for (let numero = 1; numero <= documento.numPages && atual(); numero++) {
         const pagina = await documento.getPage(numero);
+        // O arquivo mudou enquanto a página vinha: não mistura páginas de dois PDFs.
+        if (!atual()) break;
         const viewport = pagina.getViewport({ scale: escala });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width;
@@ -90,11 +98,11 @@ export class VisualizadorPdfComponent {
         await pagina.render({ canvas, viewport }).promise;
       }
     } catch {
-      this.erro.set(true);
+      if (atual()) this.erro.set(true);
     } finally {
       // Libera o worker e a memória das páginas; os canvas já desenhados continuam na tela.
-      await tarefa?.destroy();
-      this.carregando.set(false);
+      await tarefa?.destroy().catch(() => undefined);
+      if (atual()) this.carregando.set(false);
     }
   }
 }

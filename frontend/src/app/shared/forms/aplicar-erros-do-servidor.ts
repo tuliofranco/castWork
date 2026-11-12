@@ -11,8 +11,9 @@ export function aplicarErrosDoServidor(form: FormGroup, erro: unknown): string[]
 
   const semCampo: string[] = [];
   for (const [campo, mensagens] of Object.entries(errors)) {
-    const controle = form.get(campo);
-    if (controle) {
+    // "Itens[0].Quantidade" (coleção) vira o caminho que o Angular entende: "Itens.0.Quantidade".
+    const controle = form.get(campo.replace(/\[(\d+)\]/g, '.$1'));
+    if (controle && mensagens.length > 0) {
       controle.setErrors({ servidor: mensagens[0] });
       controle.markAsTouched();
     } else {
