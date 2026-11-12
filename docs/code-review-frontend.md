@@ -1213,9 +1213,19 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **M29** "Baixar imagem" habilitado só quando a vista tem original.
 - [ ] Specs novos para as correções deste lote (nenhuma ganhou teste próprio).
 
-### Lotes 16 a 21
+### Lote 16: infraestrutura de erro e build (parcial)
 
-- [ ] Lote 16: M34, M41, B38, B39, B40
+- [x] **M34** `GlobalErrorHandler` (`core/error-handlers`): erro que ninguém tratou é registrado e vira aviso, em vez de a tela parar de responder; erro HTTP fica de fora (o interceptor já avisa). Spec novo.
+- [x] **M34** `withNavigationErrorHandler`: navegação que falha avisa; quando o arquivo da tela não vem (app atualizado com a aba aberta), pede para recarregar.
+- [x] **B39** knip nas `devDependencies` com versão fixa (6.45.1), script `npm run knip` e `$schema` alinhado.
+- [x] **B40** Conferido, sem mudança: o `import('heic-to')` só acontece para arquivo HEIC que o navegador não abriu sozinho.
+- [ ] **M41** SCSS do `ferramenta-ia` a 60 bytes do limite que quebra o build de produção: dividir o componente ou subir o budget é decisão sua.
+- [ ] **B38** Bundle inicial a 24 kB do aviso: imports parciais do Bootstrap e do bootstrap-icons.
+- [ ] **B39** Medir o volume com a regra `types` do knip ligada.
+- [ ] **M34** Recarregar sozinho quando o arquivo da tela não vem (hoje só avisa, para não derrubar trabalho não salvo nas ferramentas).
+
+### Lotes 17 a 21
+
 - [ ] Lote 17: M15
 - [ ] Lote 18: M42
 - [ ] Lote 19: M43, M44, M46
