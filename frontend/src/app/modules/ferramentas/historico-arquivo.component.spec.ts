@@ -42,4 +42,17 @@ describe('HistoricoArquivoComponent', () => {
 
     expect(el.textContent).not.toContain('Marcar como final');
   });
+
+  it('deve usar os textos do desenho no histórico do Desenho 2D', () => {
+    TestBed.configureTestingModule({ imports: [HistoricoArquivoComponent] });
+    const fixture = TestBed.createComponent(HistoricoArquivoComponent);
+    fixture.componentRef.setInput('tipo', 'desenho');
+    fixture.componentRef.setInput('versoes', [{ id: 1, origem: 'Ia', criadoEm: '2026-11-10T12:00:00Z', tamanho: 10, nome: null }]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('h2')!.textContent).toBe('Histórico do desenho');
+    expect(el.textContent).toContain('Desenhado pela IA');
+    expect(el.querySelector('button[aria-label="Baixar o DXF"]')).not.toBeNull();
+  });
 });

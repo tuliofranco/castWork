@@ -1237,9 +1237,24 @@ Refatoração sem mudança de comportamento; os specs das corridas dos dois comp
 - [ ] **M15** Estilos da prancheta num lugar comum (os dois `.scss` diferem em 5 linhas).
 - [ ] Spec próprio da `FilaDeTrocas` e o caso `desenho` no spec do histórico.
 
-### Lotes 18 a 21
+### Lote 18: testes das ferramentas e do assistente (parcial)
 
-- [ ] Lote 18: M42
+Estado da cobertura do achado **M42** depois deste lote e dos anteriores:
+
+- [x] `Desenho2dComponent` e `Modelo3dComponent`: abrir, restaurar, corridas de troca, salvar durante a troca, falha ao abrir, sair com trabalho não salvo, somente leitura, troca de parâmetro (lotes 2, 3, 4, 6, 9, 13).
+- [x] `PonteSolidCraft`: alterações, salvar na ordem certa, não marcar salvo quando guardar falha, limite de tempo, descarregar sem histórico. Spec novo.
+- [x] `PonteCadCraft`: alterações pelo título, ⌘S devolvendo o arquivo, espera liberada após o tempo limite, descarregar sem histórico. Spec novo.
+- [x] `FilaDeTrocas`: uma troca por vez, espera da abertura, liberação após falha. Spec novo.
+- [x] `HistoricoArquivoComponent`: caso do desenho acrescentado.
+- [x] `ConversaIaComponent`: retomada do turno, recusa da API, apagar bloqueado (lote 7).
+- [x] Parser do ao vivo (SSE) e `getArquivo` (lote 12).
+- [ ] `PonteSolidCraft.carregar` e `PonteCadCraft.carregar` (recarregar o iframe e abrir o arquivo): dependem do editor real; só dá para cobrir bem com teste no navegador.
+- [ ] `BriefingComponent` (sem spec nenhum).
+- [ ] `FerramentaIaComponent` (o chat em si: compositor, anexos, menu) e `AnexosImagemComponent`.
+- [ ] Marcar como final, Montar a partir das peças e a conferência aberta por `?conferir=1` nos componentes das ferramentas.
+
+### Lotes 19 a 21
+
 - [ ] Lote 19: M43, M44, M46
 - [ ] Lote 20: B7, B3, B8, B6, B24, B23
 - [ ] Lote 21: M31, M32
