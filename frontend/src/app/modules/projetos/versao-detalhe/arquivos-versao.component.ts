@@ -182,6 +182,11 @@ const ORIGENS: Record<OrigemArquivo, string> = {
               (proxima)="carregar(p.pagina + 1)"
             />
           }
+        } @else if (erro()) {
+          <p class="carregando" role="alert">
+            Não foi possível carregar os arquivos.
+            <button type="button" class="btn btn-sutil" (click)="carregar(1)">Tentar de novo</button>
+          </p>
         } @else {
           <p class="carregando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Carregando...</p>
         }
@@ -417,6 +422,10 @@ export class ArquivosVersaoComponent {
 
   protected readonly pagina = signal<ListaDeArquivosDto | null>(null);
   protected readonly arquivados = signal(false);
+  /** A listagem falhou (o modal mostra "Tentar de novo" em vez de ficar carregando para sempre). */
+  protected readonly erro = signal(false);
+  /** Número do último pedido de listagem: a resposta de um pedido antigo (aba trocada no meio) é descartada. */
+  private pedido = 0;
   /** Arquivo com o campo de nome aberto. */
   protected readonly renomeando = signal<number | null>(null);
   /** Arquivo pedindo a confirmação de apagar. */
@@ -465,7 +474,11 @@ export class ArquivosVersaoComponent {
   }
 
   protected async baixarBriefing(documento: DocumentoBriefingDto): Promise<void> {
-    this.download.salvar(await firstValueFrom(this.briefings.getDocumento(this.projetoId(), documento.id)), documento.nomeArquivo);
+    try {
+      this.download.salvar(await firstValueFrom(this.briefings.getDocumento(this.projetoId(), documento.id)), documento.nomeArquivo);
+    } catch {
+      // O interceptor já avisou a falha do download.
+    }
   }
 
   protected semExtensao(nomeArquivo: string): string {
@@ -475,7 +488,17 @@ export class ArquivosVersaoComponent {
   protected async carregar(pagina: number): Promise<void> {
     this.renomeando.set(null);
     this.apagando.set(null);
-    const lista = await firstValueFrom(this.ferramentas.getArquivosDaVersao(this.projetoId(), this.versaoId(), this.arquivados(), pagina, POR_PAGINA));
+    const pedido = ++this.pedido;
+    this.erro.set(false);
+    let lista: ListaDeArquivosDto;
+    try {
+      lista = await firstValueFrom(this.ferramentas.getArquivosDaVersao(this.projetoId(), this.versaoId(), this.arquivados(), pagina, POR_PAGINA));
+    } catch {
+      // O interceptor já avisou. Sem lista na tela, o modal oferece tentar de novo; com lista, ela continua à vista.
+      if (pedido === this.pedido) this.erro.set(this.pagina() === null);
+      return;
+    }
+    if (pedido !== this.pedido) return;
     // A última página pode ficar vazia depois de arquivar ou apagar: volta uma.
     if (lista.lista.length === 0 && pagina > 1) return this.carregar(pagina - 1);
     this.pagina.set(lista);

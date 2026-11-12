@@ -1146,9 +1146,16 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **B20** Os outros commands sem callback de erro (`projeto-detalhe`, `projeto-configuracoes`, `precos-projeto`, `preco-versao`) e o helper único.
 - [ ] Specs de M23 e M28 (peça do projeto e parâmetros de preço).
 
-### Lotes 11 a 21
+### Lote 11: pasta de arquivos da versão (feito)
 
-- [ ] Lote 11: M24
+- [x] **M24** Listagem com tratamento de erro: se falha, o modal mostra "Não foi possível carregar os arquivos" com "Tentar de novo", em vez de ficar em "Carregando..." para sempre.
+- [x] **M24** A resposta de um pedido antigo (aba deixada no meio da carga) é descartada.
+- [x] **M6** (resto) Baixar o briefing pela pasta não deixa mais promessa rejeitada solta.
+- [x] Spec novo em `arquivos-versao.component.spec.ts`.
+- [ ] **M24** Migrar a listagem para `rxResource` (a correção usa um contador de pedidos; o efeito para o usuário é o mesmo).
+
+### Lotes 12 a 21
+
 - [ ] Lote 12: M7, B4, B5, B2, B1
 - [ ] Lote 13: M17, M18, M14, M20, B15, B13, B14, B16, B12
 - [ ] Lote 14: M36, M37, M39, M40, B33, B34, B35, B36, B32
