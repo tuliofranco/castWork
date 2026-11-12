@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, linkedSignal, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, linkedSignal, output, ElementRef } from '@angular/core';
 
 /**
  * Stepper − / + para toque, com campo editável. Atualiza na hora na tela e só emite `alterado`
@@ -19,7 +19,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, linkedSi
       [value]="atual()"
       [disabled]="desabilitado()"
       [attr.aria-label]="'Quantidade de ' + rotulo()"
-      (change)="digitar($any($event.target).value)"
+      (change)="digitar($any($event.target))"
     />
     <button type="button" class="btn btn-secundario" [disabled]="desabilitado() || atual() >= maximo()" [attr.aria-label]="'Aumentar ' + rotulo()" (click)="somar(1)">
       <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -59,6 +59,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, linkedSi
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(focusout)': 'aoSair($event)' },
 })
 export class QuantidadeComponent {
   readonly valor = input.required<number>();
@@ -71,7 +72,14 @@ export class QuantidadeComponent {
 
   readonly alterado = output<number>();
 
-  protected readonly atual = linkedSignal(() => this.valor());
+  /**
+   * Muda quando uma gravação falhou: o número à vista volta ao `valor`, mesmo que o `valor` continue igual (sem isso, o
+   * número recusado pelo servidor ficaria na tela como se tivesse sido salvo).
+   */
+  readonly revisao = input(0);
+
+  protected readonly atual = linkedSignal({ source: () => ({ valor: this.valor(), revisao: this.revisao() }), computation: (fonte) => fonte.valor });
+  private readonly elemento = inject<ElementRef<HTMLElement>>(ElementRef);
   private temporizador: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
@@ -82,9 +90,19 @@ export class QuantidadeComponent {
     this.definir(this.atual() + delta);
   }
 
-  protected digitar(texto: string): void {
-    const numero = Math.trunc(Number(texto));
+  protected digitar(campo: HTMLInputElement): void {
+    const numero = Math.trunc(Number(campo.value));
     this.definir(Number.isFinite(numero) ? numero : this.valor());
+    // Quando o limite devolve o mesmo número de antes, o signal não muda e o campo ficaria com o texto digitado.
+    campo.value = String(this.atual());
+  }
+
+  /** Sair do controle antes do tempo de espera grava na hora: a alteração não se perde se a tela mudar em seguida. */
+  protected aoSair(evento: FocusEvent): void {
+    if (this.temporizador === undefined || this.elemento.nativeElement.contains(evento.relatedTarget as Node | null)) return;
+    clearTimeout(this.temporizador);
+    this.temporizador = undefined;
+    if (this.atual() !== this.valor()) this.alterado.emit(this.atual());
   }
 
   private definir(valor: number): void {
@@ -92,6 +110,7 @@ export class QuantidadeComponent {
     this.atual.set(limitado);
     clearTimeout(this.temporizador);
     const emitir = () => {
+      this.temporizador = undefined;
       if (this.atual() !== this.valor()) this.alterado.emit(this.atual());
     };
     if (this.espera() === 0) emitir();

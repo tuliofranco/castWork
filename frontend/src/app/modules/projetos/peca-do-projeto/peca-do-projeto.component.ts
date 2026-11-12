@@ -1,6 +1,6 @@
 import { valorDe } from '@shared/recursos/valor-de';
 import { CurrencyPipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -194,7 +194,8 @@ export class PecaDoProjetoComponent {
   constructor() {
     effect(() => {
       const peca = valorDe(this.peca);
-      if (peca) this.preencher(peca);
+      // Uma releitura (depois de definir o valor, por exemplo) não pode apagar o que está sendo editado e ainda não foi salvo.
+      if (peca && !untracked(() => this.form.dirty)) this.preencher(peca);
     });
     if (!this.podeEditar) this.form.disable();
     if (!this.podeEditarValor) this.valor.disable();
@@ -233,7 +234,11 @@ export class PecaDoProjetoComponent {
       next: (resposta) => {
         if (peca) {
           this.toast.sucesso('Peça alterada.');
+          // Salvo: o formulário volta a acompanhar o servidor, e o peso e os arquivos finais podem ter mudado.
+          this.form.markAsPristine();
           this.peca.reload();
+          this.peso.reload();
+          this.finais.reload();
         } else {
           this.toast.sucesso('Peça criada no projeto, em rascunho.');
           void this.router.navigate(['/projetos', projetoId, 'pecas', (resposta as { id: number }).id]);
@@ -282,6 +287,11 @@ export class PecaDoProjetoComponent {
   protected publicar(): void {
     const peca = valorDe(this.peca);
     if (!peca) return;
+    // Publicar relê a peça: o que foi editado e não salvo ficaria de fora da publicação sem ninguém perceber.
+    if (this.form.dirty) {
+      this.toast.erro('Salve as alterações da peça antes de publicar.');
+      return;
+    }
     this.enviando.set(true);
     this.projetosService
       .postPublicarPeca(Number(this.id()), peca.id)

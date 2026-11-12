@@ -1,7 +1,7 @@
 <cw-cabecalho-pagina [titulo]="editando() ? (valorDe(peca)?.nome ?? 'Peça do projeto') : 'Nova peça'" [voltarPara]="voltarPara()" voltarRotulo="Projeto" />
 
 <cw-estado-lista
-  [carregando]="editando() && peca.isLoading()"
+  [carregando]="editando() && !peca.hasValue() && peca.isLoading()"
   [erro]="!!peca.error()"
   mensagemErro="Não foi possível carregar a peça."
   [vazio]="editando() && peca.hasValue() && !valorDe(peca)"

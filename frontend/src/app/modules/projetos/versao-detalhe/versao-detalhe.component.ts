@@ -75,6 +75,8 @@ export class VersaoDetalheComponent {
   protected readonly iconeTipo = iconeTipoPeca;
   protected readonly formatarTeor = formatarTeor;
   protected readonly salvando = signal(false);
+  /** Gravações que falharam: os steppers de quantidade voltam ao valor salvo. */
+  protected readonly falhas = signal(0);
 
   /** O briefing do projeto, só para ver aqui (a edição é na página do projeto). */
   protected readonly briefing = rxResource({
@@ -189,9 +191,12 @@ export class VersaoDetalheComponent {
     this.projetosService
       .postArquivarVersao(this.projetoId(), versao.id)
       .pipe(finalize(() => this.salvando.set(false)))
-      .subscribe(() => {
-        this.toast.sucesso(`Versão ${versao.numero} arquivada.`);
-        void this.router.navigateByUrl(this.voltarPara());
+      .subscribe({
+        next: () => {
+          this.toast.sucesso(`Versão ${versao.numero} arquivada.`);
+          void this.router.navigateByUrl(this.voltarPara());
+        },
+        error: () => this.projeto.reload(),
       });
   }
 
@@ -203,9 +208,12 @@ export class VersaoDetalheComponent {
     this.projetosService
       .postDuplicarVersao(this.projetoId(), versao.id)
       .pipe(finalize(() => this.salvando.set(false)))
-      .subscribe(({ id }) => {
-        this.toast.sucesso(`Nova versão criada a partir da v${versao.numero}.`);
-        void this.router.navigate(['/projetos', this.projetoId(), 'versoes', id]);
+      .subscribe({
+        next: ({ id }) => {
+          this.toast.sucesso(`Nova versão criada a partir da v${versao.numero}.`);
+          void this.router.navigate(['/projetos', this.projetoId(), 'versoes', id]);
+        },
+        error: () => this.projeto.reload(),
       });
   }
 
@@ -222,7 +230,11 @@ export class VersaoDetalheComponent {
         depois?.();
         this.projeto.reload();
       },
-      error: () => this.projeto.reload(),
+      error: () => {
+        // O número que não foi gravado sai da tela (o interceptor já avisou o erro).
+        this.falhas.update((n) => n + 1);
+        this.projeto.reload();
+      },
     });
   }
 

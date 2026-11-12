@@ -1130,9 +1130,24 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **M12** "Conversas anteriores" continua abrindo outro chat por POST; para quem só lê, o clique é ignorado em vez de mostrar o chat antigo.
 - [ ] **M25/B19** Specs próprios da pasta de arquivos e do botão de valor.
 
-### Lotes 10 a 21
+### Lote 10: formulários e stepper de projetos e precificação (parcial)
 
-- [ ] Lote 10: M23, M26, M27, M28, B17, B18, B20, B31
+- [x] **M23** Peça do projeto: uma releitura (definir valor, por exemplo) não apaga mais o formulário com edição não salva; publicar com alterações não salvas avisa e não publica.
+- [x] **M28** Parâmetros de preço: outro bloco da página salvar não apaga o que está sendo digitado.
+- [x] **M27** `cw-quantidade` grava na hora ao sair do controle antes do tempo de espera.
+- [x] **M26** (em parte) O stepper volta ao valor salvo quando a gravação falha (`revisao`).
+- [x] **B31** O campo digitado é reescrito com o número limitado.
+- [x] **B17** Depois de salvar a peça, o peso e os arquivos finais são relidos.
+- [x] **B18** (em parte) A página da peça não troca o conteúdo por esqueleto numa recarga.
+- [x] **B20** (em parte) Arquivar e Duplicar versão com tratamento de erro.
+- [x] Spec novo em `quantidade.component.spec.ts`.
+- [ ] **M26** Serializar as gravações de quantidade (fila) e contador no lugar do booleano `salvando`.
+- [ ] **B18** `params` só com primitivos em `preco-versao` e chave estável em `pesos` (ainda piscam "Calculando…").
+- [ ] **B20** Os outros commands sem callback de erro (`projeto-detalhe`, `projeto-configuracoes`, `precos-projeto`, `preco-versao`) e o helper único.
+- [ ] Specs de M23 e M28 (peça do projeto e parâmetros de preço).
+
+### Lotes 11 a 21
+
 - [ ] Lote 11: M24
 - [ ] Lote 12: M7, B4, B5, B2, B1
 - [ ] Lote 13: M17, M18, M14, M20, B15, B13, B14, B16, B12
