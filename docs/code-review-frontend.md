@@ -1199,9 +1199,22 @@ Spec novo em `conversa-ia.component.spec.ts` (o componente não tinha nenhum).
 - [ ] **B33** Exibir `semCampo` nos chamadores que hoje o descartam.
 - [ ] Specs novos para as correções deste lote (nenhuma delas ganhou teste próprio).
 
-### Lotes 15 a 21
+### Lote 15: briefing, visualizador de desenho, ateliê e clientes (parcial)
 
-- [ ] Lote 15: M30, M29, B25, B27, B37, B21
+- [x] **M30** Briefing: o PDF é pedido uma vez por resposta da IA (antes eram duas), e reler o briefing com o mesmo documento não refaz o pedido.
+- [x] **M29** Visualizador de desenho: se a vista nova falha ou não tem imagem, a imagem da vista anterior sai da tela.
+- [x] **B25** (em parte) Visualizador de desenho não cria object URL depois de a tela ser fechada.
+- [x] **B27** Ateliê: "Desfazer" volta aos valores salvos na hora, sem reler do servidor, limpa os erros e desabilita de novo.
+- [x] **B37** (em parte) Novo cliente: o subtítulo não promete mais "completar depois"; limite de tamanho no documento.
+- [x] **B21** (em parte) Novo projeto avisa quando a lista de clientes está cortada em 50.
+- [ ] **B21** Seletor de cliente com busca (o 51º cliente continua sem caminho para ser escolhido; o aviso só torna o limite visível).
+- [ ] **B37** Edição de cliente (depende de `PUT clientes/{id}` no backend).
+- [ ] **B25** Carga reativa do visualizador de desenho (`rxResource`).
+- [ ] **M29** "Baixar imagem" habilitado só quando a vista tem original.
+- [ ] Specs novos para as correções deste lote (nenhuma ganhou teste próprio).
+
+### Lotes 16 a 21
+
 - [ ] Lote 16: M34, M41, B38, B39, B40
 - [ ] Lote 17: M15
 - [ ] Lote 18: M42

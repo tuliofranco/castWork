@@ -1,6 +1,6 @@
 import { PermissaoService } from '@core/services/permissao.service';
 import { valorDe } from '@shared/recursos/valor-de';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -30,6 +30,9 @@ export class NovoProjetoComponent {
   /** `clientes.ler`: sem a regra, a lista de clientes não é pedida e o projeto nasce sem cliente. */
   protected readonly podeVerClientes = inject(PermissaoService).temAlguma(['clientes.ler']);
   protected readonly clientes = rxResource({ stream: () => (this.podeVerClientes ? this.clientesService.getClientesOpcoes() : of([])) });
+
+  /** A consulta traz no máximo 50 clientes: com a lista cheia, pode haver cliente fora dela. */
+  protected readonly listaCortada = computed(() => (valorDe(this.clientes)?.length ?? 0) >= 50);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.maxLength(150)]],

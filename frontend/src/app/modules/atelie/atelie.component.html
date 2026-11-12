@@ -78,7 +78,7 @@
     }
 
     <cw-barra-acoes>
-      <button type="button" class="btn btn-secundario" (click)="carregar()" [disabled]="salvando() || form.pristine">Desfazer</button>
+      <button type="button" class="btn btn-secundario" (click)="desfazer()" [disabled]="salvando() || form.pristine">Desfazer</button>
       <button type="submit" class="btn btn-primary" [disabled]="salvando()">{{ salvando() ? 'Salvando...' : 'Salvar marca' }}</button>
     </cw-barra-acoes>
   </form>

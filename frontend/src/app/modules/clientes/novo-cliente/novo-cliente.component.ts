@@ -24,7 +24,7 @@ export class NovoClienteComponent {
   // CPF/CNPJ: a validação dos dígitos é do servidor (inclusive CNPJ alfanumérico); aqui só o obrigatório e o tamanho.
   protected readonly form = inject(FormBuilder).nonNullable.group({
     nome: ['', [Validators.required, Validators.maxLength(150)]],
-    documento: [''],
+    documento: ['', Validators.maxLength(18)],
     email: ['', Validators.email],
     telefone: ['', Validators.maxLength(20)],
   });
