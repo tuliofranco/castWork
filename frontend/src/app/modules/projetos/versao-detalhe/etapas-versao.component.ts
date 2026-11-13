@@ -13,6 +13,12 @@ const ETAPAS_PADRAO = ['Desenho', 'Modelagem 3D', 'Cera / impressão', 'Fundiç�
  * PROTÓTIPO (só frontend): etapas da prototipação de uma versão, marcadas conforme o trabalho avança.
  * O estado fica no navegador (localStorage) até existir o modelo no backend.
  */
+function ehEtapa(valor: unknown): valor is Etapa {
+  if (typeof valor !== 'object' || valor === null) return false;
+  const etapa = valor as Record<string, unknown>;
+  return typeof etapa['id'] === 'number' && typeof etapa['nome'] === 'string' && typeof etapa['concluida'] === 'boolean';
+}
+
 @Component({
   selector: 'cw-etapas-versao',
   imports: [FormsModule],
@@ -214,7 +220,9 @@ export class EtapasVersaoComponent {
       const chave = this.chave();
       let salvas: Etapa[] | null = null;
       try {
-        salvas = JSON.parse(localStorage.getItem(chave) ?? 'null') as Etapa[] | null;
+        const lido: unknown = JSON.parse(localStorage.getItem(chave) ?? 'null');
+        // O localStorage é do navegador, não do servidor: só vale se for mesmo uma lista de etapas.
+        salvas = Array.isArray(lido) && lido.every(ehEtapa) ? lido : null;
       } catch {
         salvas = null;
       }

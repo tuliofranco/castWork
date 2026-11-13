@@ -1263,7 +1263,19 @@ Estado da cobertura do achado **M42** depois deste lote e dos anteriores:
 - [ ] **M44** Ateliê (módulo sem nenhum teste), `formatos.spec.ts` com as fronteiras, erro e vazio em peças, falhas do visualizador de desenho.
 - [ ] **M46** Painel e visualizador de PDF, anexos (limite e concorrência), separar o `ui.spec.ts` por componente.
 
-### Lotes 20 e 21
+### Lote 20: limpeza e organização (parcial)
 
-- [ ] Lote 20: B7, B3, B8, B6, B24, B23
-- [ ] Lote 21: M31, M32
+- [x] **B24** (em parte) `moeda` e `numero` num lugar só (`shared/formatos/numeros.ts`, com spec), no lugar das duas cópias nos preços do projeto e da versão.
+- [x] **B23** (em parte) Etapas da versão: o que vem do localStorage só vale se for mesmo uma lista de etapas.
+- [x] **B7** (em parte) Removido `DownloadService.abrir`, sem nenhum uso.
+- [ ] **B7** Decisão sua: tirar Documentos e Portfólio do menu ou marcar "em breve"; remover `documento.service`. Ficaram também membros usados só em specs (`temTodas`, `semUrlBase`, `criarHttpParams`, `ToastService.aviso`/`info`): não removi para não apagar testes.
+- [ ] **B3** Decisão sua: remover ou completar o modo mock (`usarMocks`), que vai no bundle de produção.
+- [ ] **B23** Decisão de produto: etapas da versão são um protótipo em localStorage (não vão para o servidor nem para outro aparelho).
+- [ ] **B6** Dividir o `projetos.service.ts` (505 linhas, quatro assuntos).
+- [ ] **B8** Reescrever os READMEs com a estrutura real e barrar import relativo entre módulos no lint.
+- [ ] **B24** Helper único de command (`executar` repetido em três componentes) e `cw-valor-da-peca`.
+
+### Lote 21: sessão, segunda etapa (não iniciado)
+
+- [ ] **M31** Coordenação do refresh entre abas.
+- [ ] **M32** Refresh token em cookie HttpOnly. Depende de backend e de decisão de produto.

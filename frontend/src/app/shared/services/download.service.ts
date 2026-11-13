@@ -18,11 +18,4 @@ export class DownloadService {
     // Com folga: o navegador pode ainda estar lendo a URL (arquivo grande, diálogo de "salvar como").
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
-
-  /** Abre o PDF numa nova aba (visualizador do navegador). */
-  abrir(arquivo: Blob): void {
-    const url = URL.createObjectURL(arquivo);
-    this.document.defaultView?.open(url, '_blank', 'noopener');
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }
 }

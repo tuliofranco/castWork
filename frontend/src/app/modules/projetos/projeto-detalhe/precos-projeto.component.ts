@@ -1,3 +1,4 @@
+import { moeda, numero } from '@shared/formatos/numeros';
 import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
@@ -20,16 +21,6 @@ const METAIS: readonly { readonly valor: Metal; readonly rotulo: string; readonl
 const PERCENTUAL = [Validators.required, Validators.min(0), Validators.max(50)];
 const MENSAGENS_PERCENTUAL = { required: 'Informe o percentual.', min: 'Entre 0% e 50%.', max: 'Entre 0% e 50%.' };
 const MENSAGENS_COTACAO = { min: 'Deve ser maior que zero.' };
-
-/** 640 → "R$ 640,00". */
-function moeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-/** 1.8 → "1,8". */
-function numero(valor: number): string {
-  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-}
 
 /** Cada parâmetro como aparece no resumo ("Perda 8 %"). */
 const PARAMETROS: readonly { readonly chave: keyof ParametrosDePrecoDto; readonly rotulo: (v: number) => string }[] = [

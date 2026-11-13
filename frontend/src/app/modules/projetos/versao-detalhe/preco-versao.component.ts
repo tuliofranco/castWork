@@ -1,3 +1,4 @@
+import { moeda, numero } from '@shared/formatos/numeros';
 import { valorDe } from '@shared/recursos/valor-de';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -27,16 +28,6 @@ const ICONE_DO_AVISO: Readonly<Record<TipoDeAviso, string>> = {
   CORPOS_SOBREPOSTOS: 'bi-intersect',
   CORPO_ABERTO: 'bi-exclamation-circle',
 };
-
-/** 7850 → "R$ 7.850,00". */
-function moeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-/** 1.8 → "1,8". */
-function numero(valor: number): string {
-  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-}
 
 /** 5 → "5,00 g"; 5.125 → "5,125 g". */
 function gramas(valor: number): string {
