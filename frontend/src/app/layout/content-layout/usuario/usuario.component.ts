@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { PermissaoService } from '@core/services/permissao.service';
@@ -9,6 +9,8 @@ import { IniciaisComponent } from '@shared/ui/iniciais.component';
  * Usuário logado: iniciais no rail e, ao tocar, um painel com nome, ateliê, configurações da marca e "Sair".
  * Fecha ao tocar fora ou com Esc. `posicao` define para onde o painel abre (lado do rail ou abaixo, no celular).
  */
+let paineis = 0;
+
 @Component({
   selector: 'cw-usuario',
   imports: [IniciaisComponent, RouterLink],
@@ -25,9 +27,14 @@ export class UsuarioComponent {
   private readonly auth = inject(AuthService);
   private readonly elemento = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly sessao = inject(SessaoService);
-  protected readonly podeConfigurar = inject(PermissaoService).temAlguma(['atelie.configurar']);
+  private readonly permissao = inject(PermissaoService);
+  /** Recalculada quando as permissões da sessão mudam (refresh do token). */
+  protected readonly podeConfigurar = computed(() => this.permissao.temAlguma(['atelie.configurar']));
 
   readonly posicao = input<'lateral' | 'abaixo'>('lateral');
+
+  /** O componente aparece duas vezes no layout (lateral e topo): cada painel tem o próprio id. */
+  protected readonly idPainel = `painel-usuario-${++paineis}`;
 
   protected readonly aberto = signal(false);
 

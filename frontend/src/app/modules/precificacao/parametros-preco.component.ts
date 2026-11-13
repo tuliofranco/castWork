@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { ParametrosDePrecoDto } from '@data/precificacao/precos/dto/precos.dto';
 import { PrecosService } from '@data/precificacao/precos/precos.service';
@@ -95,9 +95,11 @@ export class ParametrosPrecoComponent {
   });
 
   constructor() {
-    // Volta aos valores salvos sempre que a página relê; sem a regra, o formulário é só leitura.
+    // Acompanha os valores salvos quando a página relê, menos enquanto há edição não salva aqui: outro bloco da
+    // página salvar não pode apagar o que está sendo digitado. Sem a regra, o formulário é só leitura.
     effect(() => {
-      this.preencher(this.parametros());
+      const parametros = this.parametros();
+      if (!untracked(() => this.form.dirty)) this.preencher(parametros);
       if (this.podeEditar()) this.form.enable();
       else this.form.disable();
     });

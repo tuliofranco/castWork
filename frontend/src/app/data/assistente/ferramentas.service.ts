@@ -1,7 +1,7 @@
 import { HttpClient, type HttpEvent, HttpEventType } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { IdCriadoDto } from '@data/common/http/id-criado.dto';
-import { semLoading } from '@shared/injection-tokens/http-context.tokens';
+import { semErro, semLoading } from '@shared/injection-tokens/http-context.tokens';
 import { Observable, map } from 'rxjs';
 
 import type {
@@ -38,8 +38,10 @@ export class FerramentasService {
   private readonly http = inject(HttpClient);
 
   /** Sem a barra de carregamento global: enquanto a IA trabalha, quem mostra o andamento é o chat. */
-  getConversa(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string): Observable<ConversaFerramentaDto> {
-    return this.http.get<ConversaFerramentaDto>(`${this.base(projetoId, escopo, ferramenta)}/conversa`, { context: semLoading() });
+  /** `silencioso`: sem o toast de erro global (a consulta repetida enquanto a IA trabalha trata a falha por conta própria). */
+  getConversa(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string, silencioso = false): Observable<ConversaFerramentaDto> {
+    const context = silencioso ? semErro(semLoading()) : semLoading();
+    return this.http.get<ConversaFerramentaDto>(`${this.base(projetoId, escopo, ferramenta)}/conversa`, { context });
   }
 
   /**
@@ -75,7 +77,13 @@ export class FerramentasService {
         for (const bloco of blocos) {
           const dados = bloco.split('\n').filter((l) => l.startsWith('data: ')).map((l) => l.slice(6)).join('\n');
           if (!dados) continue;
-          const evento = JSON.parse(dados) as EventoDoTurnoDto;
+          let evento: EventoDoTurnoDto;
+          try {
+            evento = JSON.parse(dados) as EventoDoTurnoDto;
+          } catch {
+            // Um bloco que não é JSON (página de erro de um proxy no meio do stream) é ignorado: os seguintes continuam valendo.
+            continue;
+          }
           assinante.next(evento);
           if (evento.tipo === 'fim') assinante.complete();
         }
@@ -89,8 +97,10 @@ export class FerramentasService {
             if (evento.type === HttpEventType.DownloadProgress) parcial = evento.partialText;
             else if (evento.type === HttpEventType.Response) parcial = evento.body;
             if (parcial == null || parcial.length <= lido) return;
-            entregar(parcial.slice(lido));
+            // Marca como lido antes de entregar: se a entrega falhar, o mesmo trecho não é entregue de novo no próximo evento.
+            const novo = parcial.slice(lido);
             lido = parcial.length;
+            entregar(novo);
           },
           error: (erro: unknown) => assinante.error(erro),
           complete: () => assinante.complete(),
@@ -128,7 +138,11 @@ export class FerramentasService {
         map((r) => {
           if (r.status === 204 || !r.body) return null;
           const nome = r.headers.get('X-Arquivo-Nome');
-          return { id: Number(r.headers.get('X-Arquivo-Id')), conteudo: r.body, nome: nome ? decodeURIComponent(nome) : null };
+          // Sem o cabeçalho (API em outro domínio sem expô-lo no CORS), `Number(null)` daria o arquivo 0 e as ações
+          // seguintes iriam para ele. Melhor falhar ao abrir.
+          const id = Number(r.headers.get('X-Arquivo-Id') ?? Number.NaN);
+          if (!Number.isSafeInteger(id) || id <= 0) throw new Error('A resposta do arquivo veio sem o identificador (X-Arquivo-Id).');
+          return { id, conteudo: r.body, nome: nome ? decodeURIComponent(nome) : null };
         }),
       );
   }
@@ -141,14 +155,14 @@ export class FerramentasService {
   /** Prévia (SVG) do arquivo atual da ferramenta (ou do final da peça, com `final`); nulo se não há arquivo ou prévia. */
   getPreviaAtual(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string, final = false): Observable<Blob | null> {
     return this.http
-      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/previa`, { params: paramsDoFinal(final), observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/previa`, { params: paramsDoFinal(final), observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 
   /** Prévia (SVG) de um arquivo do histórico; nula se não há prévia (204). */
   getPrevia(projetoId: number, escopo: EscopoDaFerramenta, ferramenta: string, arquivoId: number): Observable<Blob | null> {
     return this.http
-      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/historico/${arquivoId}/previa`, { observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/historico/${arquivoId}/previa`, { observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 
@@ -171,7 +185,7 @@ export class FerramentasService {
   ): Observable<Blob | null> {
     const params: Record<string, string> = { ...(formato ? { formato } : {}), ...paramsDoFinal(final) };
     return this.http
-      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/imagens/${vista}`, { params, observe: 'response', responseType: 'blob' })
+      .get(`${this.base(projetoId, escopo, ferramenta)}/arquivo/imagens/${vista}`, { params, observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 

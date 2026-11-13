@@ -1,29 +1,52 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, effect, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, input, output, viewChild } from '@angular/core';
 import type { OrigemArquivo, VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 
-const ROTULOS: Record<OrigemArquivo, string> = {
-  Ia: 'Desenhado pela IA',
+/** O que muda de uma ferramenta para a outra no histórico: só os textos. */
+export type TipoDeArquivo = 'desenho' | 'modelo';
+
+const TEXTOS: Record<TipoDeArquivo, { readonly titulo: string; readonly daIa: string; readonly final: string; readonly baixar: string; readonly vazio: string; readonly emBranco: string }> = {
+  desenho: {
+    titulo: 'Histórico do desenho',
+    daIa: 'Desenhado pela IA',
+    final: 'Marcado como final',
+    baixar: 'Baixar o DXF',
+    vazio: 'O desenho ainda não foi salvo.',
+    emBranco: 'Desenho em branco',
+  },
+  modelo: {
+    titulo: 'Histórico do modelo',
+    daIa: 'Modelado pela IA',
+    final: 'Marcado como final (corpos com o nome da peça)',
+    baixar: 'Baixar o projeto',
+    vazio: 'O modelo ainda não foi salvo.',
+    emBranco: 'Modelo em branco',
+  },
+};
+
+const ROTULOS: Record<Exclude<OrigemArquivo, 'Ia' | 'NomesDaPeca'>, string> = {
   Joalheiro: 'Salvo por você',
   Desfazer: 'Ação da IA desfeita',
   Restauracao: 'Restaurado do histórico',
   Conferencia: 'Conferência de peso e materiais',
   Biblioteca: 'Cópia da peça da biblioteca',
   Montagem: 'Montado a partir das peças',
-  NomesDaPeca: 'Marcado como final',
 };
 
+let historicos = 0;
+
 /**
- * Histórico do desenho: cada vez que a IA desenhou, o joalheiro salvou, desfez ou restaurou. Nada é
+ * Histórico do arquivo de uma ferramenta (o desenho 2D ou o modelo 3D): cada vez que a IA mexeu nele, o joalheiro
+ * salvou, desfez ou restaurou. Nada é
  * apagado; restaurar grava uma cópia da versão escolhida como a atual. Abre quando recebe a lista.
  */
 @Component({
-  selector: 'cw-historico-desenho',
+  selector: 'cw-historico-arquivo',
   imports: [DatePipe],
   template: `
-    <dialog #dialogo class="historico" aria-labelledby="titulo-historico" (close)="fechado.emit()">
+    <dialog #dialogo class="historico" [attr.aria-labelledby]="idTitulo" (close)="fechado.emit()">
       <header>
-        <h2 id="titulo-historico">{{ titulo() }}</h2>
+        <h2 [id]="idTitulo">{{ titulo() ?? textos().titulo }}</h2>
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="dialogo.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
       <ol>
@@ -35,7 +58,7 @@ const ROTULOS: Record<OrigemArquivo, string> = {
             </div>
             <div class="acoes">
               @if (versao.tamanho > 0) {
-                <button type="button" class="btn btn-sutil btn-icone" aria-label="Baixar o DXF" (click)="baixar.emit(versao)"><i class="bi bi-download" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="textos().baixar" (click)="baixar.emit(versao)"><i class="bi bi-download" aria-hidden="true"></i></button>
               }
               @if (!atual) {
                 <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="restaurar.emit(versao)">Restaurar</button>
@@ -46,7 +69,7 @@ const ROTULOS: Record<OrigemArquivo, string> = {
             </div>
           </li>
         } @empty {
-          <li class="vazio">O desenho ainda não foi salvo.</li>
+          <li class="vazio">{{ textos().vazio }}</li>
         }
       </ol>
     </dialog>
@@ -129,11 +152,16 @@ const ROTULOS: Record<OrigemArquivo, string> = {
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HistoricoDesenhoComponent {
+export class HistoricoArquivoComponent {
+  /** De qual ferramenta é o arquivo: escolhe os textos. */
+  readonly tipo = input.required<TipoDeArquivo>();
+  protected readonly textos = computed(() => TEXTOS[this.tipo()]);
+  protected readonly idTitulo = `titulo-historico-arquivo-${++historicos}`;
+
   readonly versoes = input<readonly VersaoDoArquivoDto[] | null>(null);
   readonly ocupado = input(false);
-  /** "Elo oval · Modelo 3D" na peça do projeto. */
-  readonly titulo = input('Histórico do desenho');
+  /** "Elo oval · Modelo 3D" na peça do projeto; sem ele, o título padrão da ferramenta. */
+  readonly titulo = input<string | null>(null);
   /** O arquivo final da peça (nulo fora da peça ou sem final). */
   readonly finalId = input<number | null>(null);
   /** Na peça do projeto, com permissão de editar: cada versão com desenho pode virar a final. */
@@ -154,6 +182,10 @@ export class HistoricoDesenhoComponent {
   }
 
   protected rotulo(versao: VersaoDoArquivoDto): string {
-    return versao.tamanho === 0 ? 'Desenho em branco' : (versao.nome ?? ROTULOS[versao.origem]);
+    if (versao.tamanho === 0) return this.textos().emBranco;
+    if (versao.nome) return versao.nome;
+    if (versao.origem === 'Ia') return this.textos().daIa;
+    if (versao.origem === 'NomesDaPeca') return this.textos().final;
+    return ROTULOS[versao.origem];
   }
 }

@@ -1,3 +1,4 @@
+import { semErro } from '@shared/injection-tokens/http-context.tokens';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { AMBIENTE } from '@shared/injection-tokens/ambiente.token';
@@ -19,7 +20,7 @@ export class DocumentoService {
   getDocumentoPdf(pecaId: string, tipo: TipoDocumento): Observable<Blob> {
     if (this.ambiente.usarMocks) return of(criarPdfMock(`Castwork - ${tipo} da peca ${pecaId}`)).pipe(delay(300));
     return this.http
-      .get(`documentos/pecas/${encodeURIComponent(pecaId)}/${tipo}.pdf`, { responseType: 'blob' })
+      .get(`documentos/pecas/${encodeURIComponent(pecaId)}/${tipo}.pdf`, { responseType: 'blob', context: semErro() })
       .pipe(lerErroBlob());
   }
 }

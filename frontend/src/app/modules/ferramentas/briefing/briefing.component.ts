@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -42,6 +43,7 @@ import { MATERIAIS_COMUNS, TIPOS_JOIA } from '../../projetos/tipo-joia';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BriefingComponent {
+  protected readonly valorDe = valorDe;
   private readonly briefingService = inject(BriefingService);
   private readonly projetosService = inject(ProjetosService);
   private readonly toast = inject(ToastService);
@@ -75,11 +77,20 @@ export class BriefingComponent {
    * O PDF da área de trabalho: o último guardado (o padrão). Sem nenhum guardado, a prévia de como está agora.
    * Depende do briefing carregado, então volta a aparecer ao reabrir a conversa.
    */
-  protected readonly pdfAtual = rxResource({
-    params: () => {
-      const b = this.briefing.value();
+  /**
+   * Qual PDF mostrar. Comparada pelo conteúdo: reler o briefing com o mesmo documento não refaz o pedido do PDF (cada
+   * objeto novo aqui era uma requisição a mais e o visualizador recomeçando do início).
+   */
+  private readonly chaveDoPdf = computed(
+    () => {
+      const b = valorDe(this.briefing);
       return b ? { projetoId: b.projetoId, documentoId: b.documentos[0]?.id ?? null } : undefined;
     },
+    { equal: (a, b) => a?.projetoId === b?.projetoId && a?.documentoId === b?.documentoId },
+  );
+
+  protected readonly pdfAtual = rxResource({
+    params: () => this.chaveDoPdf(),
     stream: ({ params }) =>
       params.documentoId !== null
         ? this.briefingService.getDocumento(params.projetoId, params.documentoId)
@@ -89,7 +100,7 @@ export class BriefingComponent {
   protected readonly visualizando = signal<{ readonly arquivo: Blob; readonly titulo: string } | null>(null);
   protected readonly mostrandoDocumentos = signal(false);
 
-  protected readonly mostrarFormulario = computed(() => this.briefing.value() === null || this.editandoFormulario());
+  protected readonly mostrarFormulario = computed(() => valorDe(this.briefing) === null || this.editandoFormulario());
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     tipoJoia: ['Anel' as TipoJoia, Validators.required],
@@ -131,7 +142,7 @@ export class BriefingComponent {
       return;
     }
     const v = this.form.getRawValue();
-    const primeiraVez = this.briefing.value() === null;
+    const primeiraVez = valorDe(this.briefing) === null;
     this.salvandoFormulario.set(true);
     this.errosGerais.set([]);
     this.briefingService
@@ -162,8 +173,15 @@ export class BriefingComponent {
 
   /** A IA respondeu: os campos e os documentos podem ter mudado, e o PDF da área de trabalho também. */
   protected aposResposta(): void {
-    this.briefing.reload();
-    this.pdfAtual.reload();
+    // Relê por fora do recurso: se a leitura falhar, o briefing que está na tela continua (um `reload()` com erro o apagaria).
+    // Primeiro o briefing, depois o PDF, uma vez só (o `reload` mantém o PDF anterior à vista enquanto o novo vem).
+    this.briefingService.getBriefing(this.projetoId()).subscribe({
+      next: (briefing) => {
+        this.briefing.set(briefing);
+        this.pdfAtual.reload();
+      },
+      error: () => this.pdfAtual.reload(),
+    });
   }
 
   /** Guarda o PDF como está e o define como padrão da área de trabalho. */

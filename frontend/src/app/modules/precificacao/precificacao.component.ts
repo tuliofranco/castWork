@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { PermissaoService } from '@core/services/permissao.service';
@@ -21,6 +22,7 @@ import { ParametrosPrecoComponent } from './parametros-preco.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrecificacaoComponent {
+  protected readonly valorDe = valorDe;
   private readonly precosService = inject(PrecosService);
 
   protected readonly podeEditar = inject(PermissaoService).temAlguma(['precificacao.editar']);

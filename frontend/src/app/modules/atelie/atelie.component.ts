@@ -35,6 +35,8 @@ export class AtelieComponent {
   protected readonly logoUrl = signal<string | null>(null);
 
   /** Campos que esta tela não edita, devolvidos como estão ao salvar. */
+  /** Os valores como estão salvos: o Desfazer volta a eles aqui mesmo, sem reler do servidor. */
+  private salvos: ReturnType<typeof this.form.getRawValue> | null = null;
   private preservado: Pick<ConfiguracaoAtelieDto, 'endereco'> | null = null;
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
@@ -54,6 +56,12 @@ export class AtelieComponent {
     inject(DestroyRef).onDestroy(() => this.trocarLogoUrl(null));
   }
 
+  protected desfazer(): void {
+    if (!this.salvos) return;
+    this.form.reset(this.salvos);
+    this.errosGerais.set([]);
+  }
+
   protected carregar(): void {
     this.carregando.set(true);
     this.erro.set(false);
@@ -63,7 +71,7 @@ export class AtelieComponent {
       .subscribe({
         next: (c) => {
           this.preservado = { endereco: c.endereco };
-          this.form.setValue({
+          this.salvos = {
             nome: c.nome,
             assinatura: c.assinatura ?? '',
             corMarca: c.corMarca,
@@ -73,7 +81,8 @@ export class AtelieComponent {
             site: c.site ?? '',
             documento: c.documento ?? '',
             avisoBriefing: c.avisoBriefing ?? '',
-          });
+          };
+          this.form.setValue(this.salvos);
           if (c.possuiLogo) this.carregarLogo();
           else this.trocarLogoUrl(null);
         },
@@ -146,6 +155,7 @@ export class AtelieComponent {
       .subscribe({
         next: () => {
           this.form.markAsPristine();
+          this.salvos = this.form.getRawValue();
           this.toast.sucesso('Marca salva. Os próximos documentos já saem com ela.');
         },
         error: (erro: unknown) => this.errosGerais.set(aplicarErrosDoServidor(this.form, erro)),

@@ -132,6 +132,7 @@ export class DesenhoDaPecaComponent {
   });
   protected readonly estado = signal('Abrindo o desenho...');
   protected readonly imagem = signal<string | null>(null);
+  private destruido = false;
   protected readonly temArquivo = signal(false);
   /** As vistas guardadas, na ordem do servidor; vazia quando a tela usa a prévia sob demanda. */
   protected readonly vistas = signal<readonly VistaDaImagem[]>([]);
@@ -154,6 +155,7 @@ export class DesenhoDaPecaComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
+      this.destruido = true;
       for (const url of this.carregadas.values()) URL.revokeObjectURL(url);
       const url = this.imagem();
       if (url && ![...this.carregadas.values()].includes(url)) URL.revokeObjectURL(url);
@@ -178,12 +180,20 @@ export class DesenhoDaPecaComponent {
     }
     try {
       const blob = await firstValueFrom(this.imagemGuardada(vista));
-      if (!blob) return;
-      const url = URL.createObjectURL(await this.paraFundoEscuro(blob));
+      if (!blob) {
+        // Sem imagem para esta vista: a da vista anterior não pode ficar sob o botão da nova.
+        if (this.vista() === vista) this.imagem.set(null);
+        return;
+      }
+      const preparada = await this.paraFundoEscuro(blob);
+      // A tela fechou enquanto a imagem vinha: não cria uma URL que ninguém vai liberar.
+      if (this.destruido) return;
+      const url = URL.createObjectURL(preparada);
       this.originais.set(vista, blob);
       this.carregadas.set(vista, url);
       if (this.vista() === vista) this.imagem.set(url);
     } catch {
+      if (this.vista() === vista) this.imagem.set(null);
       this.estado.set('Não foi possível abrir esta vista.');
     }
   }

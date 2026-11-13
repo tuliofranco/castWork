@@ -1,6 +1,9 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, input, signal, viewChild, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import type { TelaComTrabalhoNaoSalvo } from '@core/guards/sair-da-ferramenta.guard';
+import { emBase64 } from '@shared/arquivos/em-base64';
 import { PermissaoService } from '@core/services/permissao.service';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 import { type ArquivoFerramenta, type EscopoDaFerramenta, FerramentasService } from '@data/assistente/ferramentas.service';
@@ -12,8 +15,9 @@ import { AvisoPecaPublicadaComponent } from '@shared/ui/ferramenta-ia/aviso-peca
 import { firstValueFrom, map, of } from 'rxjs';
 
 import { ConversaIaComponent } from '../../assistente/conversa-ia.component';
+import { FilaDeTrocas } from '../fila-de-trocas';
+import { HistoricoArquivoComponent } from '../historico-arquivo.component';
 
-import { HistoricoDesenhoComponent } from './historico-desenho.component';
 import { PonteCadCraft } from './ponte-cadcraft';
 
 const FERRAMENTA = 'desenho-2d';
@@ -32,12 +36,13 @@ const FERRAMENTA = 'desenho-2d';
  */
 @Component({
   selector: 'cw-desenho-2d',
-  imports: [ConversaIaComponent, HistoricoDesenhoComponent, AvisoPecaPublicadaComponent],
+  imports: [ConversaIaComponent, HistoricoArquivoComponent, AvisoPecaPublicadaComponent],
   templateUrl: './desenho-2d.component.html',
   styleUrl: './desenho-2d.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:beforeunload)': 'aoFecharAPagina($event)' },
 })
-export class Desenho2dComponent {
+export class Desenho2dComponent implements TelaComTrabalhoNaoSalvo {
   private readonly ferramentas = inject(FerramentasService);
   private readonly toast = inject(ToastService);
   private readonly download = inject(DownloadService);
@@ -61,16 +66,16 @@ export class Desenho2dComponent {
     stream: ({ params }) =>
       params ? this.projetos.getPecasDoProjeto(params.projetoId, false).pipe(map((pecas) => pecas?.find((p) => p.id === params.pecaId) ?? null)) : of(null),
   });
-  protected readonly publicada = computed(() => this.peca.value()?.status === 'PUBLICADA');
+  protected readonly publicada = computed(() => valorDe(this.peca)?.status === 'PUBLICADA');
   protected readonly podeEditar = computed(() => this.permissao.temAlguma(['projetos.editar']));
   /** "Elo oval · Desenho 2D" na peça; na versão, só "Desenho 2D". */
-  protected readonly titulo = computed(() => (this.daPeca() ? `${this.peca.value()?.nome ?? 'Peça'} · Desenho 2D` : 'Desenho 2D'));
+  protected readonly titulo = computed(() => (this.daPeca() ? `${valorDe(this.peca)?.nome ?? 'Peça'} · Desenho 2D` : 'Desenho 2D'));
   /** Os arquivos finais da peça (só na rota da peça). */
   protected readonly finais = rxResource({
     params: () => (this.daPeca() ? { projetoId: Number(this.id()), pecaId: Number(this.pecaId()) } : undefined),
     stream: ({ params }) => (params ? this.projetos.getArquivosFinaisDaPeca(params.projetoId, params.pecaId) : of([])),
   });
-  protected readonly finalId = computed(() => this.finais.value()?.find((f) => f.ferramenta === FERRAMENTA)?.arquivoId ?? null);
+  protected readonly finalId = computed(() => valorDe(this.finais)?.find((f) => f.ferramenta === FERRAMENTA)?.arquivoId ?? null);
   /** O arquivo à vista (o atual); nulo sem desenho. */
   protected readonly atualId = signal<number | null>(null);
   /** Na peça, o arquivo à vista não é o final: a publicação e a ficha técnica usam o final. */
@@ -81,8 +86,11 @@ export class Desenho2dComponent {
   protected readonly historico = signal<readonly VersaoDoArquivoDto[] | null>(null);
   /** Qual dos dois CADCrafts está à vista (o outro prepara o próximo desenho por trás). */
   protected readonly ativo = signal<0 | 1>(0);
-  /** Trocando o desenho por trás (aviso discreto, sem bloquear). */
-  protected readonly trocando = signal(false);
+  /**
+   * O desenho não abriu, ou a troca falhou: o que está à vista não é o arquivo atual. Nada é gravado até abrir de novo
+   * (salvar agora poria um desenho em branco, ou o antigo, por cima do atual).
+   */
+  protected readonly falha = signal(false);
 
   private readonly cadcraftA = viewChild.required<ElementRef<HTMLIFrameElement>>('cadcraftA');
   private readonly cadcraftB = viewChild.required<ElementRef<HTMLIFrameElement>>('cadcraftB');
@@ -92,13 +100,31 @@ export class Desenho2dComponent {
 
   /** A IA está trabalhando: o CADCraft avisa e o que conflita (salvar, restaurar) espera. */
   protected readonly pensando = computed(() => this.conversa().pensando());
+  /** Nada que grave ou troque o arquivo começa enquanto outra operação, a IA ou uma troca estiver em andamento. */
+  protected readonly ocupado = computed(() => !!this.sincronizando() || this.pensando() || this.trocando() || this.falha());
+
+  /** A primeira abertura: as trocas esperam por ela, para não descarregar o CADCraft que ainda está subindo. */
+  private aberturaConcluida!: () => void;
+  private readonly abertura = new Promise<void>((concluida) => (this.aberturaConcluida = concluida));
+  private readonly fila = new FilaDeTrocas(this.abertura, () => this.trocar());
+  /** Trocando o arquivo por trás (aviso discreto; o que grava ou troca o arquivo espera). */
+  protected readonly trocando = this.fila.trocando;
+  /** O último ⌘S do joalheiro que não chegou ao Castwork (a gravação falhou ou a tela estava ocupada). */
+  private naoEnviado: Blob | null = null;
 
   /**
    * Antes de cada mensagem à IA: o que foi desenhado à mão vai para o Castwork (a IA trabalha no arquivo guardado). O que a
    * IA fizer não muda o arquivo final da peça.
    */
   protected readonly antesDeEnviar = async (): Promise<void> => {
-    if (!this.ponte?.temAlteracoes()) return;
+    // Durante a troca, o CADCraft à vista ainda é o antigo: guardá-lo agora apagaria o que acabou de chegar.
+    await this.fila.atual;
+    if (!this.podeEditar() || this.falha()) return;
+    // Um ⌘S que não chegou ao Castwork: o CADCraft já dá o desenho por salvo, então é este arquivo que vai agora.
+    if (!this.ponte?.temAlteracoes()) {
+      if (this.naoEnviado) await this.guardar(this.naoEnviado);
+      return;
+    }
     this.sincronizando.set('Guardando o seu desenho...');
     try {
       await this.guardar(await this.ponte.salvar());
@@ -107,12 +133,39 @@ export class Desenho2dComponent {
     }
   };
 
+  constructor() {
+    // A rota reaproveita esta tela quando só muda a versão ou a peça (Voltar/Avançar, endereço editado): o arquivo
+    // do novo endereço é trazido pela mesma fila das trocas. A conversa se recarrega sozinha.
+    let aberto: string | undefined;
+    effect(() => {
+      const endereco = `${this.id()}|${this.versaoId()}|${this.pecaId()}`;
+      untracked(() => {
+        if (aberto !== undefined && endereco !== aberto) {
+          this.historico.set(null);
+          void this.trazerArquivo();
+        }
+        aberto = endereco;
+      });
+    });
+  }
+
   protected async iniciar(): Promise<void> {
     if (this.ponte) return;
     this.ponte = this.criarPonte(0);
-    const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
-    this.atualId.set(arquivo?.id ?? null);
-    await this.abrir(arquivo, this.daPeca() ? 'Abrindo o desenho da peça...' : 'Abrindo o desenho da versão...');
+    this.sincronizando.set(this.daPeca() ? 'Abrindo o desenho da peça...' : 'Abrindo o desenho da versão...');
+    try {
+      const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
+      // Sem arquivo, abre um DXF vazio em milímetros com nome: um desenho "Drawing1" sem nome faria o ⌘S abrir o
+      // Salvar como, e o Castwork não receberia o arquivo. A aba do CADCraft leva o nome que o joalheiro deu ao arquivo.
+      await this.ponte.carregar(await this.conteudoOuVazio(arquivo), nomeDeArquivo(arquivo?.nome, 'dxf', 'desenho'));
+      this.atualId.set(arquivo?.id ?? null);
+    } catch (erro) {
+      this.falha.set(true);
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
+    } finally {
+      this.sincronizando.set(null);
+      this.aberturaConcluida();
+    }
   }
 
   /** A IA mudou (ou desfez) o desenho: traz a versão nova sem recarregar à vista. */
@@ -122,23 +175,38 @@ export class Desenho2dComponent {
 
   /** Salvar não muda o arquivo final da peça: vira mais uma versão no histórico. */
   protected async salvar(): Promise<void> {
-    if (!this.ponte) return;
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: nada do que você mudar aqui é salvo.');
+      return;
+    }
+    if (!this.ponte || this.ocupado()) return;
     try {
       this.sincronizando.set('Guardando o desenho...');
       await this.guardar(await this.ponte.salvar(), 'Desenho salvo no Castwork.');
-    } catch {
-      this.toast.erro('Não foi possível salvar o desenho.');
+    } catch (erro) {
+      // Os erros da API já viram toast no interceptor.
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível salvar o desenho.');
     } finally {
       this.sincronizando.set(null);
     }
   }
 
   protected async abrirHistorico(): Promise<void> {
-    this.historico.set(await firstValueFrom(this.ferramentas.getHistorico(this.projetoId, this.escopo(), FERRAMENTA)));
+    try {
+      this.historico.set(await firstValueFrom(this.ferramentas.getHistorico(this.projetoId, this.escopo(), FERRAMENTA)));
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o histórico.');
+    }
   }
 
   /** Antes de trocar o desenho, guarda o que foi feito à mão: vira mais uma versão no histórico. */
   protected async restaurar(versao: VersaoDoArquivoDto): Promise<void> {
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: não dá para restaurar.');
+      return;
+    }
+    if (this.ocupado()) return;
+    this.sincronizando.set('Restaurando o desenho...');
     try {
       if (this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu desenho...');
@@ -148,10 +216,13 @@ export class Desenho2dComponent {
       const arquivoId = await firstValueFrom(this.ferramentas.postRestaurar(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
       this.conversa().registrarArquivo(arquivoId);
       this.historico.set(null);
+      // Solta a prancheta antes da troca: o desenho novo abre por trás, só com o aviso discreto.
+      this.sincronizando.set(null);
       await this.trazerArquivo();
       this.toast.sucesso('Desenho restaurado.');
     } catch (erro) {
       if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível restaurar o desenho.');
+    } finally {
       this.sincronizando.set(null);
     }
   }
@@ -161,7 +232,11 @@ export class Desenho2dComponent {
    * antes). Numa peça publicada, trocar o final faz dela outra peça: confirma antes.
    */
   protected async marcarComoFinal(arquivoId?: number): Promise<void> {
-    if (!this.daPeca() || this.sincronizando() || this.pensando() || !(await this.avisoPublicada().confirmar())) return;
+    if (!this.daPeca() || !this.podeEditar() || this.ocupado()) return;
+    // O Histórico é um diálogo modal: a confirmação da peça publicada ficaria atrás dele, sem dar para clicar.
+    this.historico.set(null);
+    // A resposta pode demorar: a IA pode ter começado a trabalhar nesse meio-tempo.
+    if (!(await this.avisoPublicada().confirmar()) || this.ocupado()) return;
     try {
       if (arquivoId === undefined && this.ponte?.temAlteracoes()) {
         this.sincronizando.set('Guardando o seu desenho...');
@@ -187,9 +262,37 @@ export class Desenho2dComponent {
 
   /** Na peça, o arquivo baixado leva o nome dela ("Elo oval.dxf"). */
   protected async baixar(versao: VersaoDoArquivoDto): Promise<void> {
-    const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
-    const nome = this.daPeca() ? nomeDeArquivoDaPeca(this.peca.value()?.nome, 'dxf') : `desenho-${versao.id}.dxf`;
-    if (arquivo) this.download.salvar(arquivo, nome);
+    try {
+      const arquivo = await firstValueFrom(this.ferramentas.getVersaoDoArquivo(this.projetoId, this.escopo(), FERRAMENTA, versao.id));
+      const nome = this.daPeca() ? nomeDeArquivoDaPeca(valorDe(this.peca)?.nome, 'dxf') : `desenho-${versao.id}.dxf`;
+      if (arquivo) this.download.salvar(arquivo, nome);
+      else this.toast.erro('Esta versão está em branco: não há arquivo para baixar.');
+    } catch (erro) {
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível baixar o desenho.');
+    }
+  }
+
+  /** Sair da ferramenta (rota): com desenho feito à mão e não salvo, confirma antes. */
+  podeSair(): Promise<boolean> {
+    return Promise.resolve(!this.temTrabalhoNaoSalvo() || window.confirm('Há alterações que ainda não foram salvas no Castwork. Sair sem salvar?'));
+  }
+
+  /** Fechar ou recarregar a aba: o navegador mostra o aviso dele quando há desenho não salvo. */
+  protected aoFecharAPagina(evento: BeforeUnloadEvent): void {
+    if (this.temTrabalhoNaoSalvo()) evento.preventDefault();
+  }
+
+  private temTrabalhoNaoSalvo(): boolean {
+    try {
+      return !this.falha() && (!!this.naoEnviado || !!this.ponte?.temAlteracoes());
+    } catch {
+      return false;
+    }
+  }
+
+  /** Depois de uma falha ao abrir ou trocar: abre de novo o arquivo atual. */
+  protected tentarDeNovo(): void {
+    void this.trazerArquivo();
   }
 
   private get projetoId(): number {
@@ -200,67 +303,69 @@ export class Desenho2dComponent {
     const arquivoId = await firstValueFrom(this.ferramentas.putArquivo(this.projetoId, this.escopo(), FERRAMENTA, await emBase64(arquivo)));
     this.conversa().registrarArquivo(arquivoId);
     this.atualId.set(arquivoId);
+    this.naoEnviado = null;
     if (aviso) this.toast.sucesso(aviso);
   }
 
-  /**
-   * Traz o arquivo atual sem recarregar à vista: o outro CADCraft abre o desenho por trás e, pronto, troca
-   * de lugar com o que estava na tela, que é liberado.
-   */
-  private async trazerArquivo(): Promise<void> {
-    const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
-    this.atualId.set(arquivo?.id ?? null);
+  /** Traz o arquivo atual sem recarregar à vista, uma troca por vez (ver `FilaDeTrocas`). Nunca rejeita. */
+  private trazerArquivo(): Promise<void> {
+    return this.fila.pedir();
+  }
+
+  private async trocar(): Promise<void> {
     const atras = this.ativo() === 0 ? 1 : 0;
     const nova = this.criarPonte(atras);
-    this.trocando.set(true);
     try {
+      const arquivo = await firstValueFrom(this.ferramentas.getArquivo(this.projetoId, this.escopo(), FERRAMENTA));
       await nova.carregar(await this.conteudoOuVazio(arquivo), nomeDeArquivo(arquivo?.nome, 'dxf', 'desenho'));
       const antiga = this.ponte;
       this.ponte = nova;
       this.ativo.set(atras);
       antiga?.descarregar();
-    } catch {
+      // Só agora o arquivo novo é o que está à vista (e um ⌘S antigo que não foi enviado não vale mais).
+      this.naoEnviado = null;
+      this.atualId.set(arquivo?.id ?? null);
+      this.falha.set(false);
+    } catch (erro) {
       nova.descarregar();
-      this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
-    } finally {
-      this.trocando.set(false);
+      this.falha.set(true);
+      if (!(erro instanceof HttpErrorResponse)) this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
     }
   }
 
   private criarPonte(indice: 0 | 1): PonteCadCraft {
     const iframe = indice === 0 ? this.cadcraftA() : this.cadcraftB();
     // O ⌘S do joalheiro dentro do CADCraft também salva no Castwork (sem mudar o arquivo final da peça).
-    return new PonteCadCraft(iframe.nativeElement, (arquivo) => void this.guardar(arquivo, 'Desenho salvo no Castwork.'));
+    const ponte: PonteCadCraft = new PonteCadCraft(iframe.nativeElement, (arquivo) => void this.salvoPeloJoalheiro(ponte, arquivo));
+    return ponte;
+  }
+
+  /**
+   * O ⌘S dentro do CADCraft. Não vale o de um CADCraft que já saiu de cena, nem durante outra operação ou uma troca:
+   * gravaria o desenho antigo por cima do atual.
+   */
+  private async salvoPeloJoalheiro(ponte: PonteCadCraft, arquivo: Blob): Promise<void> {
+    if (ponte !== this.ponte) return;
+    if (!this.podeEditar()) {
+      this.toast.erro('Seu acesso é só de leitura: nada do que você mudar aqui é salvo.');
+      return;
+    }
+    if (this.ocupado()) {
+      this.naoEnviado = arquivo;
+      this.toast.erro('O desenho está sendo atualizado. Salve de novo em instantes.');
+      return;
+    }
+    try {
+      await this.guardar(arquivo, 'Desenho salvo no Castwork.');
+    } catch {
+      // O CADCraft já tirou o "•" do título: sem guardar o arquivo aqui, ele nunca mais seria enviado.
+      this.naoEnviado = arquivo;
+      this.toast.erro('O desenho não chegou ao Castwork. Toque em Salvar para enviar de novo.');
+    }
   }
 
   /** Arquivo estático do próprio front (fora da API): fetch direto, sem os interceptors. */
   private async conteudoOuVazio(arquivo: ArquivoFerramenta | null): Promise<Blob> {
     return arquivo?.conteudo ?? (await (await fetch('/desenho-vazio.dxf')).blob());
   }
-
-  /**
-   * Sem arquivo na versão, abre um DXF vazio em milímetros com nome: um desenho "Drawing1" sem nome
-   * faria o ⌘S abrir o Salvar como, e o Castwork não receberia o arquivo.
-   */
-  private async abrir(arquivo: ArquivoFerramenta | null, mensagem: string): Promise<void> {
-    this.sincronizando.set(mensagem);
-    try {
-      const desenho = await this.conteudoOuVazio(arquivo);
-      // A aba do CADCraft leva o nome que o joalheiro deu ao arquivo (sem acento e sem espaço).
-      await this.ponte?.carregar(desenho, nomeDeArquivo(arquivo?.nome, 'dxf', 'desenho'));
-    } catch {
-      this.toast.erro('Não foi possível abrir o desenho no CADCraft.');
-    } finally {
-      this.sincronizando.set(null);
-    }
-  }
-}
-
-async function emBase64(arquivo: Blob): Promise<string> {
-  const bytes = new Uint8Array(await arquivo.arrayBuffer());
-  let binario = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binario);
 }

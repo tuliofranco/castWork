@@ -54,4 +54,16 @@ describe('dadosGql (com ApolloTestingModule)', () => {
     controller.expectOne(PECAS).flush({ errors: [new GraphQLError('falhou tudo')] });
     await expect(promessa).rejects.toBeInstanceOf(RespostaGqlSemDadosError);
   });
+
+  it('deve lançar quando o campo raiz vem nulo junto de errors (o resolver falhou)', async () => {
+    const promessa = consultar();
+    controller.expectOne(PECAS).flush({ data: { pecas: null }, errors: [new GraphQLError('resolver de pecas falhou')] });
+    await expect(promessa).rejects.toBeInstanceOf(RespostaGqlSemDadosError);
+  });
+
+  it('deve emitir o campo raiz nulo quando não há errors (não encontrado de verdade)', async () => {
+    const promessa = consultar();
+    controller.expectOne(PECAS).flush({ data: { pecas: null } });
+    expect((await promessa).pecas).toBeNull();
+  });
 });

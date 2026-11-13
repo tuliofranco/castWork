@@ -59,15 +59,30 @@ describe('jwtInterceptor', () => {
     expect(resposta).toEqual({ ok: true });
   });
 
-  it('se o refresh falhar, deve deslogar e propagar o 401 original', () => {
-    auth.renovarToken.mockReturnValue(throwError(() => new Error('refresh inválido')));
+  it.each([
+    ['sem refresh token', new Error('Sem refresh token')],
+    ['refresh recusado (401)', new HttpErrorResponse({ status: 401 })],
+    ['refresh inválido (400)', new HttpErrorResponse({ status: 400 })],
+  ])('se o refresh falhar de vez (%s), deve deslogar e propagar o 401 original', (_caso, falha) => {
+    auth.renovarToken.mockReturnValue(throwError(() => falha));
     let erro: unknown;
     cliente.get(`${API}/pecas`).subscribe({ error: (e: unknown) => (erro = e) });
 
     http.expectOne(`${API}/pecas`).flush(null, { status: 401, statusText: 'Unauthorized' });
 
-    expect(auth.logout).toHaveBeenCalled();
+    expect(auth.logout).toHaveBeenCalledWith('/');
     expect((erro as HttpErrorResponse).status).toBe(401);
+  });
+
+  it.each([0, 429, 500, 503])('se o refresh falhar por rede ou servidor (%i), deve manter a sessão e propagar esse erro', (status) => {
+    auth.renovarToken.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
+    let erro: unknown;
+    cliente.get(`${API}/pecas`).subscribe({ error: (e: unknown) => (erro = e) });
+
+    http.expectOne(`${API}/pecas`).flush(null, { status: 401, statusText: 'Unauthorized' });
+
+    expect(auth.logout).not.toHaveBeenCalled();
+    expect((erro as HttpErrorResponse).status).toBe(status);
   });
 
   it('não deve tentar refresh para erros diferentes de 401', () => {

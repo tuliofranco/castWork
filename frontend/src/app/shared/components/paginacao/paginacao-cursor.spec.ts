@@ -29,4 +29,13 @@ describe('PaginacaoCursor', () => {
       temAnterior: false,
     });
   });
+
+  it('deve ignorar o mesmo cursor repetido (duplo clique em próxima)', () => {
+    const paginacao = new PaginacaoCursor();
+
+    paginacao.proxima('c1');
+    paginacao.proxima('c1');
+
+    expect({ apos: paginacao.apos(), numero: paginacao.numero() }).toEqual({ apos: 'c1', numero: 2 });
+  });
 });

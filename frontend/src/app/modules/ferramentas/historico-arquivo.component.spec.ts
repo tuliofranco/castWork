@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import type { VersaoDoArquivoDto } from '@data/assistente/dto/ferramenta.dto';
 
-import { HistoricoModeloComponent } from './historico-modelo.component';
+import { HistoricoArquivoComponent } from './historico-arquivo.component';
 
-describe('HistoricoModeloComponent', () => {
+describe('HistoricoArquivoComponent', () => {
   const versoes: readonly VersaoDoArquivoDto[] = [
     { id: 3, origem: 'Joalheiro', criadoEm: '2026-11-10T12:00:00Z', tamanho: 10, nome: null },
     { id: 2, origem: 'NomesDaPeca', criadoEm: '2026-11-10T11:00:00Z', tamanho: 10, nome: null },
@@ -13,8 +13,9 @@ describe('HistoricoModeloComponent', () => {
     HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
       this.open = true;
     };
-    TestBed.configureTestingModule({ imports: [HistoricoModeloComponent] });
-    const fixture = TestBed.createComponent(HistoricoModeloComponent);
+    TestBed.configureTestingModule({ imports: [HistoricoArquivoComponent] });
+    const fixture = TestBed.createComponent(HistoricoArquivoComponent);
+    fixture.componentRef.setInput('tipo', 'modelo');
     fixture.componentRef.setInput('versoes', versoes);
     fixture.componentRef.setInput('titulo', 'Elo Infinito 2,5 cm · Modelo 3D');
     fixture.componentRef.setInput('finalId', 2);
@@ -40,5 +41,18 @@ describe('HistoricoModeloComponent', () => {
     const { el } = abrir(false);
 
     expect(el.textContent).not.toContain('Marcar como final');
+  });
+
+  it('deve usar os textos do desenho no histórico do Desenho 2D', () => {
+    TestBed.configureTestingModule({ imports: [HistoricoArquivoComponent] });
+    const fixture = TestBed.createComponent(HistoricoArquivoComponent);
+    fixture.componentRef.setInput('tipo', 'desenho');
+    fixture.componentRef.setInput('versoes', [{ id: 1, origem: 'Ia', criadoEm: '2026-11-10T12:00:00Z', tamanho: 10, nome: null }]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('h2')!.textContent).toBe('Histórico do desenho');
+    expect(el.textContent).toContain('Desenhado pela IA');
+    expect(el.querySelector('button[aria-label="Baixar o DXF"]')).not.toBeNull();
   });
 });

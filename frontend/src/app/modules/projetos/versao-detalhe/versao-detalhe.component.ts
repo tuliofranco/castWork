@@ -1,5 +1,6 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -52,6 +53,7 @@ import { PrecoVersaoComponent } from './preco-versao.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class VersaoDetalheComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
@@ -73,6 +75,8 @@ export class VersaoDetalheComponent {
   protected readonly iconeTipo = iconeTipoPeca;
   protected readonly formatarTeor = formatarTeor;
   protected readonly salvando = signal(false);
+  /** Gravações que falharam: os steppers de quantidade voltam ao valor salvo. */
+  protected readonly falhas = signal(0);
 
   /** O briefing do projeto, só para ver aqui (a edição é na página do projeto). */
   protected readonly briefing = rxResource({
@@ -82,13 +86,17 @@ export class VersaoDetalheComponent {
 
   protected readonly pdfDoBriefing = signal<{ readonly arquivo: Blob; readonly titulo: string; readonly nome: string } | null>(null);
 
+  /**
+   * Relido também quando só o `:versaoId` muda: ao duplicar, o router reaproveita esta página e a cópia ainda não está
+   * no projeto que já foi lido.
+   */
   protected readonly projeto = rxResource({
-    params: () => Number(this.id()),
-    stream: ({ params }) => this.projetosService.getProjeto(params),
+    params: () => ({ id: Number(this.id()), versaoId: Number(this.versaoId()) }),
+    stream: ({ params }) => this.projetosService.getProjeto(params.id),
   });
 
   protected readonly versao = computed<VersaoProjetoDto | undefined>(() =>
-    this.projeto.value()?.versoes.find((v) => v.id === Number(this.versaoId())),
+    valorDe(this.projeto)?.versoes.find((v) => v.id === Number(this.versaoId())),
   );
   protected readonly voltarPara = computed(() => `/projetos/${this.id()}`);
   protected readonly editavel = computed(() => this.podeEditar && this.versao()?.status === 'EM_DESENVOLVIMENTO');
@@ -104,7 +112,7 @@ export class VersaoDetalheComponent {
 
   /** Soma do peso das peças que têm peso (quantidade × peso da peça, o do modelo 3D quando ela tem). */
   protected readonly pesoTotal = computed(() => {
-    const pesos = this.pesos.value();
+    const pesos = valorDe(this.pesos);
     return (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade * (pesos?.get(item.peca.id) ?? item.peca.pesoGramas ?? 0), 0);
   });
   protected readonly unidades = computed(() => (this.versao()?.itens ?? []).reduce((total, item) => total + item.quantidade, 0));
@@ -114,7 +122,7 @@ export class VersaoDetalheComponent {
   private readonly termoPeca = toSignal(this.buscaPeca.valueChanges.pipe(debounceTime(150), distinctUntilChanged()), { initialValue: '' });
   protected readonly pecasDoProjeto = computed(() => {
     const termo = this.termoPeca().trim().toLocaleLowerCase('pt-BR');
-    return (this.projeto.value()?.pecas ?? [])
+    return (valorDe(this.projeto)?.pecas ?? [])
       .filter((p) => p.ativo)
       .filter((p) => !termo || p.nome.toLocaleLowerCase('pt-BR').includes(termo) || (p.material?.toLocaleLowerCase('pt-BR').includes(termo) ?? false));
   });
@@ -124,11 +132,11 @@ export class VersaoDetalheComponent {
     const versao = this.versao();
     return versao ? pecasEmRascunho(versao) : [];
   });
-  /** Mostra o aviso das peças em rascunho depois de tocar em Publicar. */
-  protected readonly publicacaoBloqueada = signal(false);
+  /** Mostra o aviso das peças em rascunho depois de tocar em Publicar (some ao trocar de versão). */
+  protected readonly publicacaoBloqueada = linkedSignal({ source: this.versaoId, computation: () => false });
 
-  /** Quantidade escolhida para cada peça do projeto antes de tocar em Adicionar. */
-  private readonly quantidadesNovas = signal<Readonly<Record<number, number>>>({});
+  /** Quantidade escolhida para cada peça do projeto antes de tocar em Adicionar (volta a 1 ao trocar de versão). */
+  private readonly quantidadesNovas = linkedSignal<string, Readonly<Record<number, number>>>({ source: this.versaoId, computation: () => ({}) });
 
   protected quantidadeNova(peca: PecaDoProjetoResumoDto): number {
     return this.quantidadesNovas()[peca.id] ?? 1;
@@ -183,9 +191,12 @@ export class VersaoDetalheComponent {
     this.projetosService
       .postArquivarVersao(this.projetoId(), versao.id)
       .pipe(finalize(() => this.salvando.set(false)))
-      .subscribe(() => {
-        this.toast.sucesso(`Versão ${versao.numero} arquivada.`);
-        void this.router.navigateByUrl(this.voltarPara());
+      .subscribe({
+        next: () => {
+          this.toast.sucesso(`Versão ${versao.numero} arquivada.`);
+          void this.router.navigateByUrl(this.voltarPara());
+        },
+        error: () => this.projeto.reload(),
       });
   }
 
@@ -197,9 +208,12 @@ export class VersaoDetalheComponent {
     this.projetosService
       .postDuplicarVersao(this.projetoId(), versao.id)
       .pipe(finalize(() => this.salvando.set(false)))
-      .subscribe(({ id }) => {
-        this.toast.sucesso(`Nova versão criada a partir da v${versao.numero}.`);
-        void this.router.navigate(['/projetos', this.projetoId(), 'versoes', id]);
+      .subscribe({
+        next: ({ id }) => {
+          this.toast.sucesso(`Nova versão criada a partir da v${versao.numero}.`);
+          void this.router.navigate(['/projetos', this.projetoId(), 'versoes', id]);
+        },
+        error: () => this.projeto.reload(),
       });
   }
 
@@ -216,7 +230,11 @@ export class VersaoDetalheComponent {
         depois?.();
         this.projeto.reload();
       },
-      error: () => this.projeto.reload(),
+      error: () => {
+        // O número que não foi gravado sai da tela (o interceptor já avisou o erro).
+        this.falhas.update((n) => n + 1);
+        this.projeto.reload();
+      },
     });
   }
 

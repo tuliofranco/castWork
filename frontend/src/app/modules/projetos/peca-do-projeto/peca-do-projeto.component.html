@@ -1,10 +1,10 @@
-<cw-cabecalho-pagina [titulo]="editando() ? (peca.value()?.nome ?? 'Peça do projeto') : 'Nova peça'" [voltarPara]="voltarPara()" voltarRotulo="Projeto" />
+<cw-cabecalho-pagina [titulo]="editando() ? (valorDe(peca)?.nome ?? 'Peça do projeto') : 'Nova peça'" [voltarPara]="voltarPara()" voltarRotulo="Projeto" />
 
 <cw-estado-lista
-  [carregando]="editando() && peca.isLoading()"
+  [carregando]="editando() && !peca.hasValue() && peca.isLoading()"
   [erro]="!!peca.error()"
   mensagemErro="Não foi possível carregar a peça."
-  [vazio]="editando() && peca.hasValue() && !peca.value()"
+  [vazio]="editando() && peca.hasValue() && !valorDe(peca)"
   iconeVazio="gem"
   tituloVazio="Peça não encontrada neste projeto."
   descricaoVazio="O endereço pode estar incompleto."
@@ -12,7 +12,7 @@
 >
   <a acaoVazio class="btn btn-secundario" [routerLink]="voltarPara()">Voltar para o projeto</a>
 
-  @if (peca.value(); as p) {
+  @if (valorDe(peca); as p) {
     <p class="situacao">
       <cw-selo [tom]="status[p.status].tom" [icone]="status[p.status].icone">{{ status[p.status].rotulo }}</cw-selo>
       @if (!p.ativo) {
@@ -45,7 +45,7 @@
           </span>
         </a>
       </div>
-      @if (peso.value(); as w) {
+      @if (valorDe(peso); as w) {
         <p class="peso">
           Peso:
           <strong>{{ w.gramas === null ? '—' : (w.gramas | number: '1.3-3') + ' g' }}</strong>
@@ -169,7 +169,7 @@
   </form>
 </cw-estado-lista>
 
-<cw-painel-pdf [arquivo]="fichaAberta()" [titulo]="'Ficha técnica · ' + (peca.value()?.nome ?? '')" (fechado)="fichaAberta.set(null)">
+<cw-painel-pdf [arquivo]="fichaAberta()" [titulo]="'Ficha técnica · ' + (valorDe(peca)?.nome ?? '')" (fechado)="fichaAberta.set(null)">
   @if (fichaAberta(); as pdf) {
     <button type="button" class="btn btn-primary" (click)="salvarArquivo(pdf)"><i class="bi bi-download" aria-hidden="true"></i> Baixar</button>
   }

@@ -2,7 +2,10 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { CHAVE_ACCESS_TOKEN } from '@core/services/auth.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { CHAVE_ACCESS_TOKEN, CHAVE_REFRESH_TOKEN } from '@core/services/auth.service';
+import { RefreshTokenService } from '@data/auth/refresh-token/refresh-token.service';
+import { of, throwError } from 'rxjs';
 import { criarTokenMock } from '@data/auth/login/mocks/token-payload.mock';
 
 import { authGuard } from './auth.guard';
@@ -44,7 +47,42 @@ describe('Guards', () => {
       expect(url()).toBe('/login?returnTo=%2Fpecas%3Fstatus%3Dproducao');
     });
 
-    it('deve redirecionar e limpar o storage quando o token venceu', async () => {
+    const vencido = () => logar(['pecas.ler'], Math.floor(Date.now() / 1000) - 60);
+    const comRefresh = (postRefreshToken: () => unknown) => {
+      vencido();
+      localStorage.setItem(CHAVE_REFRESH_TOKEN, 'refresh-guardado');
+      TestBed.overrideProvider(RefreshTokenService, { useValue: { postRefreshToken } });
+    };
+
+    it('deve renovar a sessão e seguir quando o token venceu mas há refresh token', async () => {
+      const novo = criarTokenMock({ permissoes: ['pecas.ler'], exp: Math.floor(Date.now() / 1000) + 3600 });
+      comRefresh(() => of({ accessToken: novo, refreshToken: 'refresh-novo' }));
+
+      await RouterTestingHarness.create('/pecas');
+
+      expect(url()).toBe('/pecas');
+      expect(localStorage.getItem(CHAVE_REFRESH_TOKEN)).toBe('refresh-novo');
+    });
+
+    it('deve ir ao login e limpar a sessão quando o refresh é recusado', async () => {
+      comRefresh(() => throwError(() => new HttpErrorResponse({ status: 401 })));
+
+      await RouterTestingHarness.create('/pecas');
+
+      expect(url()).toBe('/login?returnTo=%2Fpecas');
+      expect(localStorage.getItem(CHAVE_REFRESH_TOKEN)).toBeNull();
+    });
+
+    it('deve ir ao login sem jogar fora o refresh token quando a renovação falha por rede', async () => {
+      comRefresh(() => throwError(() => new HttpErrorResponse({ status: 0 })));
+
+      await RouterTestingHarness.create('/pecas');
+
+      expect(url()).toBe('/login?returnTo=%2Fpecas');
+      expect(localStorage.getItem(CHAVE_REFRESH_TOKEN)).toBe('refresh-guardado');
+    });
+
+    it('deve redirecionar e limpar o storage quando o token venceu e não há refresh token', async () => {
       logar(['pecas.ler'], Math.floor(Date.now() / 1000) - 60);
       await RouterTestingHarness.create('/pecas');
       expect(url()).toMatch(/^\/login/);

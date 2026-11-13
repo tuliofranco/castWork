@@ -1,3 +1,4 @@
+import { semErro } from '@shared/injection-tokens/http-context.tokens';
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, effect, inject, input, signal, viewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
@@ -9,9 +10,11 @@ import { HttpClient } from '@angular/common/http';
 @Component({
   selector: 'cw-imagem-protegida',
   template: `
-    <button type="button" class="miniatura" [attr.aria-label]="'Ampliar ' + rotulo()" [disabled]="!url()" (click)="ampliar()">
+    <button type="button" class="miniatura" [attr.aria-label]="falhou() ? 'Imagem indisponível: ' + rotulo() + '. Tentar de novo' : 'Ampliar ' + rotulo()" [disabled]="!url() && !falhou()" (click)="falhou() ? tentarDeNovo() : ampliar()">
       @if (url(); as u) {
         <img [src]="u" [alt]="rotulo()" />
+      } @else if (falhou()) {
+        <span class="carregando" aria-hidden="true" title="Imagem indisponível"><i class="bi bi-arrow-clockwise"></i></span>
       } @else {
         <span class="carregando" aria-hidden="true"><i class="bi bi-image"></i></span>
       }
@@ -92,23 +95,45 @@ export class ImagemProtegidaComponent {
   readonly rotulo = input('Imagem enviada');
 
   protected readonly url = signal<string | null>(null);
+  /** A imagem não veio (rede, 404, 500): a miniatura vira um "tentar de novo". */
+  protected readonly falhou = signal(false);
+  private readonly tentativa = signal(0);
   private readonly ampliadaRef = viewChild.required<ElementRef<HTMLDialogElement>>('ampliada');
 
   constructor() {
     effect((onCleanup) => {
       const src = this.src();
+      this.tentativa();
+      this.falhou.set(false);
       if (/^(data|blob):/.test(src)) {
         this.url.set(src);
         return;
       }
 
-      const assinatura = this.http.get(src, { responseType: 'blob' }).subscribe((blob) => this.url.set(URL.createObjectURL(blob)));
-      onCleanup(() => assinatura.unsubscribe());
+      // A imagem anterior sai de cena (e da memória) quando o `src` muda.
+      this.url.set(null);
+      let criada: string | null = null;
+      const assinatura = this.http.get(src, { responseType: 'blob', context: semErro() }).subscribe({
+        next: (blob) => {
+          criada = URL.createObjectURL(blob);
+          this.url.set(criada);
+        },
+        // Sem isto a miniatura ficava "carregando" para sempre.
+        error: () => this.falhou.set(true),
+      });
+      onCleanup(() => {
+        assinatura.unsubscribe();
+        if (criada) URL.revokeObjectURL(criada);
+      });
     });
     inject(DestroyRef).onDestroy(() => {
       const url = this.url();
       if (url?.startsWith('blob:') && !this.src().startsWith('blob:')) URL.revokeObjectURL(url);
     });
+  }
+
+  protected tentarDeNovo(): void {
+    this.tentativa.update((n) => n + 1);
   }
 
   protected ampliar(): void {

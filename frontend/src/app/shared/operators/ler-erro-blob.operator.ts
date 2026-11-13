@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { type MonoTypeOperatorFunction, catchError, from, switchMap, throwError } from 'rxjs';
 
-async function converter(erro: HttpErrorResponse): Promise<HttpErrorResponse> {
+/** O mesmo erro, com o corpo em Blob trocado pelo JSON (ou texto) que ele carrega. */
+export async function erroLegivel(erro: HttpErrorResponse): Promise<HttpErrorResponse> {
   if (!(erro.error instanceof Blob)) return erro;
   const texto = await erro.error.text();
   let corpo: unknown = texto;
@@ -20,7 +21,7 @@ async function converter(erro: HttpErrorResponse): Promise<HttpErrorResponse> {
 export function lerErroBlob<T>(): MonoTypeOperatorFunction<T> {
   return catchError((erro: unknown) =>
     erro instanceof HttpErrorResponse
-      ? from(converter(erro)).pipe(switchMap((convertido) => throwError(() => convertido)))
+      ? from(erroLegivel(erro)).pipe(switchMap((convertido) => throwError(() => convertido)))
       : throwError(() => erro),
   );
 }

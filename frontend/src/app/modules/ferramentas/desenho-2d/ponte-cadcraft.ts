@@ -47,8 +47,16 @@ export class PonteCadCraft {
     const janela = this.janela();
     const canvas = await this.canvas(janela);
     const salvo = new Promise<Blob>((resolve, reject) => {
-      this.esperandoSalvar = resolve;
-      setTimeout(() => reject(new Error('O CADCraft não salvou o desenho.')), 10_000);
+      const receber = (arquivo: Blob) => {
+        clearTimeout(limite);
+        resolve(arquivo);
+      };
+      const limite = setTimeout(() => {
+        // Sem isto, o próximo ⌘S do joalheiro seria entregue a esta chamada que já desistiu, e se perderia.
+        if (this.esperandoSalvar === receber) this.esperandoSalvar = null;
+        reject(new Error('O CADCraft não salvou o desenho.'));
+      }, 10_000);
+      this.esperandoSalvar = receber;
     });
 
     const mac = /Mac|iPad|iPhone/.test(janela.navigator.userAgent);
@@ -90,7 +98,14 @@ export class PonteCadCraft {
 
   /** Libera o CADCraft deste iframe (memória do WebAssembly) quando ele sai de cena. */
   descarregar(): void {
-    this.iframe.src = 'about:blank';
+    this.navegar('about:blank');
+  }
+
+  /** Troca a página do iframe sem criar entrada no histórico: o Voltar do navegador não pode apagar o desenho à vista. */
+  private navegar(url: string): void {
+    const janela = this.iframe.contentWindow;
+    if (janela) janela.location.replace(url);
+    else this.iframe.src = url;
   }
 
   /** Recarrega o CADCraft, ou o carrega pela primeira vez num iframe ainda vazio. */
@@ -98,7 +113,7 @@ export class PonteCadCraft {
     await new Promise<void>((resolve) => {
       this.iframe.addEventListener('load', () => resolve(), { once: true });
       if (this.iframe.contentWindow?.location.pathname.startsWith('/cadcraft')) this.iframe.contentWindow.location.reload();
-      else this.iframe.src = '/cadcraft/';
+      else this.navegar('/cadcraft/');
     });
     const janela = this.janela();
     await this.canvas(janela);

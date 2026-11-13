@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -47,6 +48,7 @@ interface SobreposicaoNaTela {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConferenciaModeloComponent {
+  protected readonly valorDe = valorDe;
   private readonly modelo3d = inject(Modelo3dService);
   private readonly ferramentas = inject(FerramentasService);
   private readonly toast = inject(ToastService);
@@ -80,15 +82,15 @@ export class ConferenciaModeloComponent {
     stream: ({ params }) => this.modelo3d.getConferencia(params.projetoId, params.versaoId),
   });
 
-  protected readonly editavel = computed(() => this.podeEditar() && !!this.conferencia.value()?.alteravel);
+  protected readonly editavel = computed(() => this.podeEditar() && !!valorDe(this.conferencia)?.alteravel);
 
-  protected readonly semMaterial = computed(() => (this.conferencia.value()?.corpos ?? []).filter((c) => c.uso === 'SEM_MATERIAL').length);
+  protected readonly semMaterial = computed(() => (valorDe(this.conferencia)?.corpos ?? []).filter((c) => c.uso === 'SEM_MATERIAL').length);
 
   protected readonly pendentes = computed(() => Object.keys(this.escolhas()).length);
 
   /** As sobreposições que importam para o peso: entre corpos de metal ou sem material (pedra e apoio ficam fora). */
   protected readonly sobreposicoes = computed<readonly SobreposicaoNaTela[]>(() => {
-    const conferencia = this.conferencia.value();
+    const conferencia = valorDe(this.conferencia);
     if (!conferencia) return [];
     const corpos = new Map(conferencia.corpos.map((c) => [c.nome, c]));
     return conferencia.sobreposicoes

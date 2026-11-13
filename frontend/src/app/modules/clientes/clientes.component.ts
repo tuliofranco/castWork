@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
@@ -23,6 +24,7 @@ const POR_PAGINA = 20;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ClientesComponent {
+  protected readonly valorDe = valorDe;
   private readonly clientesService = inject(ClientesService);
   protected readonly podeCriar = inject(PermissaoService).temAlguma(['clientes.criar']);
   protected readonly paginacao = new PaginacaoCursor();

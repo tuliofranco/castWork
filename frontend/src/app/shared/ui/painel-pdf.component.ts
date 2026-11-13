@@ -6,14 +6,16 @@ import { VisualizadorPdfComponent } from './visualizador-pdf.component';
  * PDF em tela cheia, com a barra de ações sempre à mão no topo. Abre quando recebe um arquivo e avisa
  * em `fechado` (botão, Esc ou toque fora): quem usa só limpa o arquivo. As ações vêm por projeção.
  */
+let paineis = 0;
+
 @Component({
   selector: 'cw-painel-pdf',
   imports: [VisualizadorPdfComponent],
   template: `
-    <dialog #dialogo class="painel-pdf" aria-labelledby="titulo-pdf" (close)="fechado.emit()">
+    <dialog #dialogo class="painel-pdf" [attr.aria-labelledby]="idTitulo" (close)="fechado.emit()">
       @if (arquivo(); as pdf) {
         <header class="barra-pdf">
-          <h2 id="titulo-pdf">{{ titulo() }}</h2>
+          <h2 [id]="idTitulo">{{ titulo() }}</h2>
           <div class="acoes">
             <ng-content />
             <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="dialogo.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
@@ -84,6 +86,8 @@ import { VisualizadorPdfComponent } from './visualizador-pdf.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PainelPdfComponent {
+  /** Pode haver mais de um painel na página: cada título tem o próprio id. */
+  protected readonly idTitulo = `titulo-pdf-${++paineis}`;
   readonly arquivo = input<Blob | null>(null);
   readonly titulo = input.required<string>();
   readonly fechado = output();

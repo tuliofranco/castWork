@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -26,6 +27,7 @@ import { finalize, of } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProjetoConfiguracoesComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly clientesService = inject(ClientesService);
   private readonly briefingService = inject(BriefingService);
@@ -34,7 +36,8 @@ export class ProjetoConfiguracoesComponent {
   /** `:id` da rota (withComponentInputBinding). */
   readonly id = input.required<string>();
 
-  protected readonly podeEditar = inject(PermissaoService).temAlguma(['projetos.editar']);
+  private readonly permissao = inject(PermissaoService);
+  protected readonly podeEditar = this.permissao.temAlguma(['projetos.editar']);
   protected readonly salvando = signal(false);
 
   protected readonly projeto = rxResource({
@@ -48,25 +51,26 @@ export class ProjetoConfiguracoesComponent {
   });
 
   protected readonly clientes = rxResource({
-    params: () => this.podeEditar,
+    // A lista pede `clientes.ler`; sem a regra, o seletor fica só com o cliente atual e "Sem cliente".
+    params: () => this.podeEditar && this.permissao.temAlguma(['clientes.ler']),
     stream: ({ params }) => (params ? this.clientesService.getClientesOpcoes() : of([])),
   });
 
   /** Mesmo limite do backend (`Projeto.NomeMaxLength`). */
   protected readonly nomeMaximo = 150;
   /** Nome digitado; volta ao do projeto sempre que o projeto é relido. */
-  protected readonly nome = linkedSignal(() => this.projeto.value()?.nome ?? '');
+  protected readonly nome = linkedSignal(() => valorDe(this.projeto)?.nome ?? '');
   protected readonly editandoNome = signal(false);
   protected readonly nomeValido = computed(() => {
     const nome = this.nome().trim();
-    return nome.length > 0 && nome !== this.projeto.value()?.nome;
+    return nome.length > 0 && nome !== valorDe(this.projeto)?.nome;
   });
 
   /** Cliente escolhido no seletor; volta ao do projeto sempre que o projeto é relido. */
-  protected readonly clienteEscolhido = linkedSignal<number | null>(() => this.projeto.value()?.cliente?.id ?? null);
+  protected readonly clienteEscolhido = linkedSignal<number | null>(() => valorDe(this.projeto)?.cliente?.id ?? null);
   /** Com cliente vinculado, o seletor só aparece ao pedir para trocar. */
   protected readonly trocandoCliente = signal(false);
-  protected readonly clienteMudou = computed(() => this.clienteEscolhido() !== (this.projeto.value()?.cliente?.id ?? null));
+  protected readonly clienteMudou = computed(() => this.clienteEscolhido() !== (valorDe(this.projeto)?.cliente?.id ?? null));
 
   /** PDF do briefing aberto no painel de tela cheia. */
   protected readonly documentoAberto = signal<{ readonly projetoId: number; readonly id: number; readonly nome: string; readonly titulo: string; readonly arquivo: Blob } | null>(
@@ -74,7 +78,7 @@ export class ProjetoConfiguracoesComponent {
   );
 
   protected cancelarNome(): void {
-    this.nome.set(this.projeto.value()?.nome ?? '');
+    this.nome.set(valorDe(this.projeto)?.nome ?? '');
     this.editandoNome.set(false);
   }
 
@@ -94,7 +98,7 @@ export class ProjetoConfiguracoesComponent {
   }
 
   protected cancelarCliente(): void {
-    this.clienteEscolhido.set(this.projeto.value()?.cliente?.id ?? null);
+    this.clienteEscolhido.set(valorDe(this.projeto)?.cliente?.id ?? null);
     this.trocandoCliente.set(false);
   }
 

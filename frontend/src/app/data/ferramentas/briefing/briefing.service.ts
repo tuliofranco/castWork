@@ -1,3 +1,4 @@
+import { semErro } from '@shared/injection-tokens/http-context.tokens';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { IdCriadoDto } from '@data/common/http/id-criado.dto';
@@ -28,7 +29,7 @@ export class BriefingService {
 
   /** PDF com os dados atuais, sem guardar. */
   getPrevia(projetoId: number): Observable<Blob> {
-    return this.http.get(`projetos/${projetoId}/briefing/pdf/previa`, { responseType: 'blob' });
+    return this.http.get(`projetos/${projetoId}/briefing/pdf/previa`, { responseType: 'blob', context: semErro() });
   }
 
   getDocumento(projetoId: number, documentoId: number): Observable<Blob> {

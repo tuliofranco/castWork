@@ -1,8 +1,8 @@
 @if (projeto.error()) {
   <cw-estado-lista [erro]="true" mensagemErro="Não foi possível carregar o projeto." (tentarDeNovo)="projeto.reload()" />
-} @else if (projeto.value() === null) {
+} @else if (valorDe(projeto) === null) {
   <cw-cabecalho-pagina titulo="Projeto não encontrado" voltarPara="/projetos" voltarRotulo="Projetos" subtitulo="Ele pode ter sido removido, ou o endereço está incompleto." />
-} @else if (projeto.value(); as p) {
+} @else if (valorDe(projeto); as p) {
   <cw-cabecalho-pagina [titulo]="p.nome" [subtitulo]="p.descricao ?? undefined">
     <ng-container acoes>
       <span class="etiqueta-cliente" [class.autoral]="!p.cliente"><i class="bi bi-person" aria-hidden="true"></i> {{ p.cliente?.nome ?? 'Projeto autoral' }}</span>
@@ -10,7 +10,7 @@
     </ng-container>
   </cw-cabecalho-pagina>
 
-  @if (briefing.value() === null && podeEditar) {
+  @if (valorDe(briefing) === null && podeEditar) {
     <a class="lembrete" routerLink="configuracoes">
       <i class="bi bi-journal-text" aria-hidden="true"></i> Falta definir o briefing <i class="bi bi-chevron-right" aria-hidden="true"></i>
     </a>
@@ -25,7 +25,7 @@
         <span>
           <strong>Briefing</strong>
           <small>
-            @if (briefing.value(); as b) {
+            @if (valorDe(briefing); as b) {
               @if (b.documentos[0]; as ultimo) {
                 PDF de {{ ultimo.geradoEm | date: 'dd/MM/yyyy' }}
               } @else {

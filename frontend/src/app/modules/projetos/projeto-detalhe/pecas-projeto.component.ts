@@ -1,3 +1,4 @@
+import { valorDe } from '@shared/recursos/valor-de';
 import { CurrencyPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
@@ -41,7 +42,7 @@ import { STATUS_PECA_DO_PROJETO } from '../status-peca-do-projeto';
       @if (importando()) {
         <div class="importar">
           <cw-campo-busca [controle]="busca" placeholder="Nome ou material" rotulo="Buscar na biblioteca" />
-          @let resultados = biblioteca.value();
+          @let resultados = valorDe(biblioteca);
           <cw-estado-lista
             [carregando]="!biblioteca.hasValue() && biblioteca.isLoading()"
             [erro]="!!biblioteca.error()"
@@ -75,7 +76,7 @@ import { STATUS_PECA_DO_PROJETO } from '../status-peca-do-projeto';
 
       @if (pecas.error()) {
         <p class="falha" role="alert">Não foi possível carregar as peças do projeto.</p>
-      } @else if (pecas.value(); as lista) {
+      } @else if (valorDe(pecas); as lista) {
         @if (lista.length === 0) {
           <p class="vazia">Nenhuma peça ainda. Crie uma peça ou importe da biblioteca para usar nas versões.</p>
         } @else {
@@ -101,7 +102,8 @@ import { STATUS_PECA_DO_PROJETO } from '../status-peca-do-projeto';
                   }
                 </a>
                 <span class="acoes">
-                  @if (podeEditarValor()) {
+                  <!-- Sem ver o valor atual, "Definir valor" abriria vazio e salvar apagaria o que existe. -->
+                  @if (podeEditarValor() && podeVerValor()) {
                     <button type="button" class="btn btn-sutil" [disabled]="salvando()" (click)="abrirValor(p)">Definir valor</button>
                   }
                   @if (podeEditar() && p.status === 'RASCUNHO' && p.ativo) {
@@ -147,6 +149,7 @@ import { STATUS_PECA_DO_PROJETO } from '../status-peca-do-projeto';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PecasProjetoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly pecasService = inject(PecasService);
   private readonly toast = inject(ToastService);
@@ -177,7 +180,7 @@ export class PecasProjetoComponent {
   });
 
   /** Peças da biblioteca que já têm cópia vinculada neste projeto (não se importa duas vezes). */
-  protected readonly importadas = computed(() => new Set((this.pecas.value() ?? []).map((p) => p.pecaId).filter((id): id is number => id !== null)));
+  protected readonly importadas = computed(() => new Set((valorDe(this.pecas) ?? []).map((p) => p.pecaId).filter((id): id is number => id !== null)));
 
   protected readonly busca = new FormControl('', { nonNullable: true });
   private readonly termo = toSignal(this.busca.valueChanges.pipe(debounceTime(300), distinctUntilChanged()), { initialValue: '' });

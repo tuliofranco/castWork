@@ -1,3 +1,5 @@
+import { moeda, numero } from '@shared/formatos/numeros';
+import { valorDe } from '@shared/recursos/valor-de';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -26,16 +28,6 @@ const ICONE_DO_AVISO: Readonly<Record<TipoDeAviso, string>> = {
   CORPOS_SOBREPOSTOS: 'bi-intersect',
   CORPO_ABERTO: 'bi-exclamation-circle',
 };
-
-/** 7850 → "R$ 7.850,00". */
-function moeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-/** 1.8 → "1,8". */
-function numero(valor: number): string {
-  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-}
 
 /** 5 → "5,00 g"; 5.125 → "5,125 g". */
 function gramas(valor: number): string {
@@ -71,6 +63,7 @@ function linhaDoMetal(m: CustoDoMetalDto, perda: number): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrecoVersaoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly precosService = inject(PrecosService);
   private readonly toast = inject(ToastService);

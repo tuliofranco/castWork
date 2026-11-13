@@ -136,22 +136,30 @@ const ORIGENS: Record<OrigemArquivo, string> = {
                     <i class="bi bi-download" aria-hidden="true"></i>
                   </button>
                   @if (arquivados()) {
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Desarquivar ' + nome(arquivo)" [disabled]="ocupado()" (click)="desarquivar(arquivo)">
                       <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                     </button>
+                    }
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-perigo-sutil btn-icone" [attr.aria-label]="'Apagar ' + nome(arquivo)" (click)="apagando.set(arquivo.id)">
                       <i class="bi bi-trash3" aria-hidden="true"></i>
                     </button>
+                    }
                   } @else {
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Renomear ' + nome(arquivo)" (click)="renomeando.set(arquivo.id)">
                       <i class="bi bi-pencil" aria-hidden="true"></i>
                     </button>
+                    }
                     <a class="btn btn-sutil btn-icone" [routerLink]="arquivo.ferramenta" [attr.aria-label]="'Abrir no ' + ferramenta(arquivo).nome" (click)="dialogo.close()">
                       <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
                     </a>
+                    @if (podeEditar()) {
                     <button type="button" class="btn btn-sutil btn-icone" [attr.aria-label]="'Arquivar ' + nome(arquivo)" [disabled]="ocupado()" (click)="arquivar(arquivo)">
                       <i class="bi bi-archive" aria-hidden="true"></i>
                     </button>
+                    }
                   }
                 </span>
                 }
@@ -174,6 +182,11 @@ const ORIGENS: Record<OrigemArquivo, string> = {
               (proxima)="carregar(p.pagina + 1)"
             />
           }
+        } @else if (erro()) {
+          <p class="carregando" role="alert">
+            Não foi possível carregar os arquivos.
+            <button type="button" class="btn btn-sutil" (click)="carregar(1)">Tentar de novo</button>
+          </p>
         } @else {
           <p class="carregando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Carregando...</p>
         }
@@ -404,9 +417,15 @@ export class ArquivosVersaoComponent {
 
   readonly projetoId = input.required<number>();
   readonly versaoId = input.required<number>();
+  /** `projetos.editar`: sem a regra, a pasta é só para ver e baixar (sem renomear, arquivar nem apagar). */
+  readonly podeEditar = input(false);
 
   protected readonly pagina = signal<ListaDeArquivosDto | null>(null);
   protected readonly arquivados = signal(false);
+  /** A listagem falhou (o modal mostra "Tentar de novo" em vez de ficar carregando para sempre). */
+  protected readonly erro = signal(false);
+  /** Número do último pedido de listagem: a resposta de um pedido antigo (aba trocada no meio) é descartada. */
+  private pedido = 0;
   /** Arquivo com o campo de nome aberto. */
   protected readonly renomeando = signal<number | null>(null);
   /** Arquivo pedindo a confirmação de apagar. */
@@ -455,7 +474,11 @@ export class ArquivosVersaoComponent {
   }
 
   protected async baixarBriefing(documento: DocumentoBriefingDto): Promise<void> {
-    this.download.salvar(await firstValueFrom(this.briefings.getDocumento(this.projetoId(), documento.id)), documento.nomeArquivo);
+    try {
+      this.download.salvar(await firstValueFrom(this.briefings.getDocumento(this.projetoId(), documento.id)), documento.nomeArquivo);
+    } catch {
+      // O interceptor já avisou a falha do download.
+    }
   }
 
   protected semExtensao(nomeArquivo: string): string {
@@ -465,7 +488,17 @@ export class ArquivosVersaoComponent {
   protected async carregar(pagina: number): Promise<void> {
     this.renomeando.set(null);
     this.apagando.set(null);
-    const lista = await firstValueFrom(this.ferramentas.getArquivosDaVersao(this.projetoId(), this.versaoId(), this.arquivados(), pagina, POR_PAGINA));
+    const pedido = ++this.pedido;
+    this.erro.set(false);
+    let lista: ListaDeArquivosDto;
+    try {
+      lista = await firstValueFrom(this.ferramentas.getArquivosDaVersao(this.projetoId(), this.versaoId(), this.arquivados(), pagina, POR_PAGINA));
+    } catch {
+      // O interceptor já avisou. Sem lista na tela, o modal oferece tentar de novo; com lista, ela continua à vista.
+      if (pedido === this.pedido) this.erro.set(this.pagina() === null);
+      return;
+    }
+    if (pedido !== this.pedido) return;
     // A última página pode ficar vazia depois de arquivar ou apagar: volta uma.
     if (lista.lista.length === 0 && pagina > 1) return this.carregar(pagina - 1);
     this.pagina.set(lista);

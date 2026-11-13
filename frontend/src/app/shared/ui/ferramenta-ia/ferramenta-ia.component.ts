@@ -81,10 +81,10 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
           @if (menuAberto()) {
             <div class="menu-painel" role="menu">
               @if (!chatUnico()) {
-                <button type="button" role="menuitem" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo chat</button>
+                <button type="button" role="menuitem" [disabled]="somenteLeitura() || pensando() || mensagens().length === 0" (click)="pedirNovoChat()"><i class="bi bi-plus-lg" aria-hidden="true"></i> Novo chat</button>
                 <button type="button" role="menuitem" (click)="pedirChats()"><i class="bi bi-clock-history" aria-hidden="true"></i> Conversas anteriores</button>
               }
-              <button type="button" role="menuitem" class="perigo" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar este chat</button>
+              <button type="button" role="menuitem" class="perigo" [disabled]="somenteLeitura() || pensando() || mensagens().length === 0" (click)="pedirApagar()"><i class="bi bi-trash3" aria-hidden="true"></i> Apagar este chat</button>
               <ng-content select="[menu]" />
             </div>
           }
@@ -117,14 +117,14 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
             <i class="bi seta" [class]="chatAberto() ? 'bi-chevron-down' : 'bi-chevron-up'" aria-hidden="true"></i>
           </button>
           @if (!chatUnico()) {
-            <button type="button" class="btn btn-sutil btn-icone" aria-label="Novo chat" title="Novo chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirNovoChat()">
+            <button type="button" class="btn btn-sutil btn-icone" aria-label="Novo chat" title="Novo chat" [disabled]="somenteLeitura() || pensando() || mensagens().length === 0" (click)="pedirNovoChat()">
               <i class="bi bi-plus-lg" aria-hidden="true"></i>
             </button>
             <button type="button" class="btn btn-sutil btn-icone" aria-label="Conversas anteriores" title="Conversas anteriores" (click)="pedirChats()">
               <i class="bi bi-clock-history" aria-hidden="true"></i>
             </button>
           }
-          <button type="button" class="btn btn-sutil btn-icone" aria-label="Apagar este chat" title="Apagar este chat" [disabled]="pensando() || mensagens().length === 0" (click)="pedirApagar()">
+          <button type="button" class="btn btn-sutil btn-icone" aria-label="Apagar este chat" title="Apagar este chat" [disabled]="somenteLeitura() || pensando() || mensagens().length === 0" (click)="pedirApagar()">
             <i class="bi bi-trash3" aria-hidden="true"></i>
           </button>
           <button
@@ -191,7 +191,9 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
                   <i class="bi" [class]="acao.desfeita ? 'bi-arrow-counterclockwise' : 'bi-check2-circle'" aria-hidden="true"></i>
                   <span>{{ acao.desfeita ? 'Desfeito: ' : 'Aplicou: ' }}{{ acao.descricao }}</span>
                   @if (!acao.desfeita) {
-                    <button type="button" class="btn btn-sutil" (click)="desfazer.emit(m.id)">Desfazer</button>
+                    @if (!somenteLeitura()) {
+                      <button type="button" class="btn btn-sutil" (click)="desfazer.emit(m.id)">Desfazer</button>
+                    }
                   }
                 </div>
               }
@@ -208,6 +210,9 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
           }
           <li #fim aria-hidden="true"></li>
         </ol>
+        @if (somenteLeitura()) {
+          <p class="small text-body-secondary m-0 p-3" role="note"><i class="bi bi-eye" aria-hidden="true"></i> Seu acesso é só de leitura: a conversa fica para consulta.</p>
+        } @else {
         <form class="entrada" (ngSubmit)="enviarFala()" (dragover)="$event.preventDefault()" (drop)="soltar($event, anexador)">
           <cw-anexos-imagem #anexador class="anexos" [(imagens)]="anexos" />
           @if (arquivos().length > 0) {
@@ -248,6 +253,7 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
           <textarea
             id="fala-ferramenta"
             name="fala"
+            maxlength="4000"
             class="form-control"
             rows="1"
             placeholder="Peça uma mudança no desenho..."
@@ -260,6 +266,7 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
           </button>
           <cw-escolha-ia [desabilitado]="pensando()" [escolha]="escolha()" (escolhaChange)="escolher($event)" />
         </form>
+        }
       </aside>
     </div>
 
@@ -271,9 +278,9 @@ const CHAVE_ESCOLHA = 'castwork.ferramenta-ia.modelo.';
       (fechado)="arquivosDisponiveis.set(null)"
     />
 
-    <dialog #historico class="historico" aria-labelledby="titulo-historico" (close)="fecharChats.emit()">
+    <dialog #historico class="historico" aria-labelledby="titulo-conversas-anteriores" (close)="fecharChats.emit()">
       <header>
-        <h2 id="titulo-historico">Conversas anteriores</h2>
+        <h2 id="titulo-conversas-anteriores">Conversas anteriores</h2>
         <button type="button" class="btn btn-sutil btn-icone" aria-label="Fechar" (click)="historico.close()"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
       </header>
       @if (chats(); as lista) {
@@ -324,6 +331,8 @@ export class FerramentaIaComponent {
   readonly ferramenta = input('');
   /** Uma conversa só (na peça do projeto): sem "Novo chat" nem "Conversas anteriores". */
   readonly chatUnico = input(false);
+  /** Sem `projetos.editar`: a conversa aparece, mas sem enviar, desfazer, apagar nem abrir chat novo. */
+  readonly somenteLeitura = input(false);
 
   protected readonly menuAberto = signal(false);
   /** No tablet em pé o assistente vira gaveta; deitado ou no computador fica sempre aberto. */
@@ -492,7 +501,8 @@ export class FerramentaIaComponent {
 function lerLarguraSalva(): number {
   try {
     const salva = Number(localStorage.getItem(CHAVE_LARGURA));
-    return salva >= LARGURA_MINIMA ? salva : LARGURA_PADRAO;
+    // A largura foi salva numa janela talvez maior: o mesmo teto do arrasto vale na leitura.
+    return salva >= LARGURA_MINIMA ? Math.round(Math.min(salva, Math.max(LARGURA_MINIMA, window.innerWidth * 0.7))) : LARGURA_PADRAO;
   } catch {
     return LARGURA_PADRAO;
   }

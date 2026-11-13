@@ -1,3 +1,8 @@
+import { idsNumericos } from '@core/guards/ids-numericos.guard';
+import { sairDaFerramentaGuard } from '@core/guards/sair-da-ferramenta.guard';
+import { inject } from '@angular/core';
+import { PermissaoService } from '@core/services/permissao.service';
+import { montarMenu } from '@layout/content-layout/menu/montar-menu';
 import { authGuard } from '@core/guards/auth.guard';
 import { convidadoGuard } from '@core/guards/convidado.guard';
 import { permissionGuard } from '@core/guards/permission.guard';
@@ -5,6 +10,12 @@ import type { CastworkRoute } from '@core/models/rota-data.model';
 import { ContentLayoutComponent } from '@layout/content-layout/content-layout.component';
 import { ErrorLayoutComponent } from '@layout/error-layout/error-layout.component';
 import { PaginaErroComponent } from '@layout/error-layout/pagina-erro/pagina-erro.component';
+
+function inicioPermitido(): string {
+  const permissao = inject(PermissaoService);
+  const abas = routes.find((rota) => rota.component === ContentLayoutComponent)?.children ?? [];
+  return montarMenu(abas, (permissoes) => permissao.temAlguma(permissoes))[0]?.caminho ?? '/403';
+}
 
 /**
  * O `data` (title, menu, order, icon, permissoes) fica AQUI, no nível do lazy load:
@@ -20,32 +31,41 @@ export const routes: CastworkRoute[] = [
   {
     // Ferramentas com IA abrem em tela cheia, fora do layout com menu (modo de foco).
     path: 'projetos/:id/versoes/:versaoId/desenho-2d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
   },
   {
     path: 'projetos/:id/versoes/:versaoId/modelo-3d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Modelo 3D', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/modelo-3d/modelo-3d.component').then((m) => m.Modelo3dComponent),
   },
   {
     // O desenho 2D e o modelo 3D de cada peça do projeto: as mesmas ferramentas, com conversa e arquivo só da peça.
     path: 'projetos/:id/pecas/:pecaId/desenho-2d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho 2D da peça', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/desenho-2d/desenho-2d.component').then((m) => m.Desenho2dComponent),
   },
   {
     path: 'projetos/:id/pecas/:pecaId/modelo-3d',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Modelo 3D da peça', permissoes: ['projetos.ler'] },
+    canDeactivate: [sairDaFerramentaGuard],
     loadComponent: () => import('@modules/ferramentas/modelo-3d/modelo-3d.component').then((m) => m.Modelo3dComponent),
   },
   {
     // O desenho atual de uma peça do projeto, só para ver (aberto pela composição da versão); editar é na página da peça.
     path: 'projetos/:id/pecas/:pecaId/desenhos/:ferramenta',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho da peça', permissoes: ['projetos.ler'] },
     loadComponent: () => import('@modules/pecas/desenho-da-peca/desenho-da-peca.component').then((m) => m.DesenhoDaPecaComponent),
@@ -53,6 +73,7 @@ export const routes: CastworkRoute[] = [
   {
     // O desenho da peça da biblioteca, só para ver, também em tela cheia.
     path: 'pecas/:id/desenhos/:ferramenta',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Desenho da peça', permissoes: ['pecas.ler'] },
     loadComponent: () => import('@modules/pecas/desenho-da-peca/desenho-da-peca.component').then((m) => m.DesenhoDaPecaComponent),
@@ -60,6 +81,7 @@ export const routes: CastworkRoute[] = [
   {
     // O briefing é a ferramenta do projeto que escreve o documento: tela de foco, como o desenho 2D.
     path: 'projetos/:id/briefing',
+    canMatch: [idsNumericos],
     canActivate: [authGuard, permissionGuard],
     data: { title: 'Briefing', permissoes: ['projetos.ler'] },
     loadComponent: () => import('@modules/ferramentas/briefing/briefing.component').then((m) => m.BriefingComponent),
@@ -71,7 +93,8 @@ export const routes: CastworkRoute[] = [
     canActivate: [authGuard],
     canActivateChild: [permissionGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'projetos' },
+      // O início é a primeira aba do menu que a pessoa pode ver (a mesma conta do menu); sem nenhuma, 403.
+      { path: '', pathMatch: 'full', redirectTo: () => inicioPermitido() },
       {
         path: 'projetos',
         data: { title: 'Projetos', menu: true, order: 1, icon: 'collection', permissoes: ['projetos.ler'] },

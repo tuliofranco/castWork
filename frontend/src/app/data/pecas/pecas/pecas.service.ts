@@ -1,3 +1,4 @@
+import { semErro } from '@shared/injection-tokens/http-context.tokens';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { ImagemGuardadaDto, VistaDaImagem } from '@data/assistente/dto/ferramenta.dto';
@@ -134,7 +135,7 @@ export class PecasService {
   /** Prévia (SVG) do desenho da peça da biblioteca; nulo se ela não tem esse desenho. */
   getPreviaDoDesenho(id: number, ferramenta: string): Observable<Blob | null> {
     return this.http
-      .get(`pecas/${id}/desenhos/${ferramenta}/previa`, { observe: 'response', responseType: 'blob' })
+      .get(`pecas/${id}/desenhos/${ferramenta}/previa`, { observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 
@@ -147,7 +148,7 @@ export class PecasService {
   getImagemDoDesenho(id: number, ferramenta: string, vista: VistaDaImagem, formato?: 'png' | 'svg'): Observable<Blob | null> {
     const params: Record<string, string> = formato ? { formato } : {};
     return this.http
-      .get(`pecas/${id}/desenhos/${ferramenta}/imagens/${vista}`, { params, observe: 'response', responseType: 'blob' })
+      .get(`pecas/${id}/desenhos/${ferramenta}/imagens/${vista}`, { params, observe: 'response', responseType: 'blob', context: semErro() })
       .pipe(map((r) => (r.status === 204 || !r.body ? null : r.body)));
   }
 }

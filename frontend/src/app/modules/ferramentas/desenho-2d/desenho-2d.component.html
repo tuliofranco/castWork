@@ -6,21 +6,24 @@
   [voltarPara]="voltarPara()"
   [voltarRotulo]="daPeca() ? 'Peça' : 'Versão'"
   [antesDeEnviar]="antesDeEnviar"
+  [somenteLeitura]="!podeEditar()"
   (arquivoMudou)="arquivoMudou()"
 >
   <ng-container acoes>
     @if (daPeca() && podeEditar()) {
       <!-- O arquivo à vista vira o final da peça: o que vale para a publicação e a ficha técnica. -->
-      <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando() || !atualNaoEFinal()" (click)="marcarComoFinal()">
+      <button type="button" class="btn btn-sutil" [disabled]="ocupado() || !atualNaoEFinal()" (click)="marcarComoFinal()">
         <i class="bi bi-patch-check" aria-hidden="true"></i> Marcar como final
       </button>
     }
-    <button type="button" class="btn btn-sutil" [disabled]="!!sincronizando() || pensando()" (click)="abrirHistorico()">
+    <button type="button" class="btn btn-sutil" [disabled]="ocupado()" (click)="abrirHistorico()">
       <i class="bi bi-clock-history" aria-hidden="true"></i> Histórico
     </button>
-    <button type="button" class="btn btn-secundario" [disabled]="!!sincronizando() || pensando()" (click)="salvar()">
+@if (podeEditar()) {
+        <button type="button" class="btn btn-secundario" [disabled]="ocupado()" (click)="salvar()">
       <i class="bi bi-cloud-check" aria-hidden="true"></i> Salvar
     </button>
+    }
   </ng-container>
 
   <div area class="prancheta">
@@ -28,7 +31,15 @@
     @if (sincronizando(); as aviso) {
       <p class="sincronizando" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ aviso }}</p>
     }
-    @if (pensando() && !sincronizando()) {
+    @if (falha() && !trocando() && !sincronizando()) {
+      <p class="sincronizando" role="alert">
+        Não foi possível abrir o desenho atual.
+        <button type="button" class="btn btn-secundario" (click)="tentarDeNovo()">Tentar de novo</button>
+      </p>
+    }
+    @if (!podeEditar() && !sincronizando() && !falha()) {
+      <p class="aviso-ia" role="status"><i class="bi bi-eye" aria-hidden="true"></i> Seu acesso é só de leitura: nada do que você mudar aqui é salvo.</p>
+    } @else if (pensando() && !sincronizando()) {
       <p class="aviso-ia" role="status"><i class="bi bi-stars" aria-hidden="true"></i> A IA está editando o desenho. O que você mudar agora será substituído.</p>
     } @else if (trocando()) {
       <p class="aviso-ia" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Atualizando o desenho…</p>
@@ -66,13 +77,14 @@
   </div>
 </cw-conversa-ia>
 
-<cw-historico-desenho
+<cw-historico-arquivo
+  tipo="desenho"
   [versoes]="historico()"
-  [titulo]="daPeca() ? titulo() : 'Histórico do desenho'"
+  [titulo]="daPeca() ? titulo() : null"
   [finalId]="finalId()"
   [podeMarcarFinal]="daPeca() && podeEditar()"
   (marcarFinal)="marcarComoFinal($event.id)"
-  [ocupado]="!!sincronizando() || pensando()"
+  [ocupado]="ocupado()"
   (restaurar)="restaurar($event)"
   (baixar)="baixar($event)"
   (fechado)="historico.set(null)"

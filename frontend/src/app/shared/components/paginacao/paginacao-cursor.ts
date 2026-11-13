@@ -13,7 +13,8 @@ export class PaginacaoCursor {
   readonly temAnterior = computed(() => this.historico().length > 0);
 
   proxima(endCursor: string | null): void {
-    if (!endCursor) return;
+    // O mesmo cursor de novo (duplo clique em "próxima") empilharia a página atual no histórico.
+    if (!endCursor || endCursor === this._atual()) return;
     this.historico.update((h) => [...h, this._atual()]);
     this._atual.set(endCursor);
   }

@@ -11,7 +11,7 @@
   [quantidadeEsqueleto]="4"
   (tentarDeNovo)="precos.reload()"
 >
-  @if (precos.value(); as p) {
+  @if (valorDe(precos); as p) {
     <section class="bloco" aria-labelledby="titulo-cotacoes">
       <h2 id="titulo-cotacoes">Cotações</h2>
       <p class="explicacao">Sempre do metal puro (ouro 24k, prata fina): a pureza de cada liga entra no cálculo pelo teor.</p>

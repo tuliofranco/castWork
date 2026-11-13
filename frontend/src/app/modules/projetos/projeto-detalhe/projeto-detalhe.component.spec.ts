@@ -7,7 +7,7 @@ import { PecasService } from '@data/pecas/pecas/pecas.service';
 import { PrecosService } from '@data/precificacao/precos/precos.service';
 import { ProjetosService } from '@data/projetos/projetos/projetos.service';
 import { ToastService } from '@shared/services/toast.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { ProjetoDetalheComponent } from './projeto-detalhe.component';
 
@@ -43,14 +43,17 @@ describe('ProjetoDetalheComponent', () => {
     postVersao: vi.fn(() => of({ id: 24 })),
   };
 
+  const briefing = { getBriefing: vi.fn(() => of<null>(null)) };
+
   async function abrir(podeEditar = true) {
+    briefing.getBriefing.mockClear();
     Object.values(servico).forEach((f) => f.mockClear());
     TestBed.configureTestingModule({
       imports: [ProjetoDetalheComponent],
       providers: [
         provideRouter([{ path: '**', children: [] }]),
         { provide: ProjetosService, useValue: servico },
-        { provide: BriefingService, useValue: { getBriefing: () => of(null) } },
+        { provide: BriefingService, useValue: briefing },
         { provide: PrecosService, useValue: { getPrecos: () => of({ cotacoes: [], ligas: [], parametros: precos.parametros }) } },
         { provide: PecasService, useValue: { getPecas: () => of(null) } },
         { provide: PermissaoService, useValue: { temAlguma: () => podeEditar } },
@@ -149,5 +152,16 @@ describe('ProjetoDetalheComponent', () => {
 
     expect(semRegra.el.querySelector('cw-precos-projeto')).toBeNull();
     expect(servico.getPrecosDoProjeto).not.toHaveBeenCalled();
+  });
+
+  // O briefing é secundário aqui: a falha dele não pode levar junto o título, as versões e os preços.
+  it('deve mostrar o projeto mesmo quando o briefing não carrega', async () => {
+    briefing.getBriefing.mockReturnValueOnce(throwError(() => new Error('API fora')));
+
+    const { el } = await abrir();
+
+    expect(el.querySelector('h1')!.textContent).toBe('Colar Raízes');
+    expect(versoes(el).length).toBe(3);
+    expect(el.querySelector('.lembrete')).toBeNull();
   });
 });

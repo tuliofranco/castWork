@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
+    "knip": "knip",
     "test:ci": "ng test --watch=false",
     "cadcraft:instalar": "bash scripts/instalar-cadcraft.sh",
     "solidcraft:instalar": "bash scripts/instalar-solidcraft.sh"
@@ -45,6 +46,7 @@
     "eslint-plugin-sonarjs": "^4.2.2",
     "eslint-plugin-unused-imports": "^4.4.1",
     "jsdom": "^28.0.0",
+    "knip": "6.45.1",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.72.1",

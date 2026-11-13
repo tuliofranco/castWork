@@ -1,3 +1,5 @@
+import { moeda, numero } from '@shared/formatos/numeros';
+import { valorDe } from '@shared/recursos/valor-de';
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -20,16 +22,6 @@ const PERCENTUAL = [Validators.required, Validators.min(0), Validators.max(50)];
 const MENSAGENS_PERCENTUAL = { required: 'Informe o percentual.', min: 'Entre 0% e 50%.', max: 'Entre 0% e 50%.' };
 const MENSAGENS_COTACAO = { min: 'Deve ser maior que zero.' };
 
-/** 640 → "R$ 640,00". */
-function moeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-/** 1.8 → "1,8". */
-function numero(valor: number): string {
-  return valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-}
-
 /** Cada parâmetro como aparece no resumo ("Perda 8 %"). */
 const PARAMETROS: readonly { readonly chave: keyof ParametrosDePrecoDto; readonly rotulo: (v: number) => string }[] = [
   { chave: 'perdaPercentual', rotulo: (v) => `Perda ${numero(v)} %` },
@@ -51,14 +43,14 @@ const PARAMETROS: readonly { readonly chave: keyof ParametrosDePrecoDto; readonl
     <section class="secao" aria-labelledby="titulo-precos-projeto">
       <div class="cabecalho-secao">
         <h2 id="titulo-precos-projeto">Preços deste projeto</h2>
-        @if (podeEditar() && precos.value() && !editando()) {
+        @if (podeEditar() && valorDe(precos) && !editando()) {
           <button type="button" class="btn btn-sutil" [disabled]="salvando()" (click)="abrirEdicao()"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</button>
         }
       </div>
 
       @if (precos.error()) {
         <p class="falha" role="alert">Não foi possível carregar os preços do projeto.</p>
-      } @else if (precos.value(); as p) {
+      } @else if (valorDe(precos); as p) {
         @if (editando()) {
           <form class="cw-formulario" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
             <div class="grade">
@@ -201,6 +193,7 @@ const PARAMETROS: readonly { readonly chave: keyof ParametrosDePrecoDto; readonl
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PrecosProjetoComponent {
+  protected readonly valorDe = valorDe;
   private readonly projetosService = inject(ProjetosService);
   private readonly precosService = inject(PrecosService);
   private readonly toast = inject(ToastService);
@@ -236,7 +229,7 @@ export class PrecosProjetoComponent {
 
   /** "Ouro R$ 640,00/g · Prata R$ 6,80/g · Perda 8 % · Hora R$ 90,00 · Markup 1,8×". */
   protected readonly resumo = computed(() => {
-    const p = this.precos.value();
+    const p = valorDe(this.precos);
     if (!p) return '';
     const cotacoes = METAIS.flatMap((m) => {
       const cotacao = p.cotacoes.find((c) => c.metal === m.valor);
@@ -248,8 +241,8 @@ export class PrecosProjetoComponent {
 
   /** O que o ateliê tem hoje de diferente do projeto (editado aqui ou mudado lá depois da herança). */
   protected readonly diferencas = computed(() => {
-    const p = this.precos.value();
-    const a = this.atelie.value();
+    const p = valorDe(this.precos);
+    const a = valorDe(this.atelie);
     if (!p || !a) return [];
     const cotacoes = METAIS.flatMap((m) => {
       const hoje = a.cotacoes.find((c) => c.metal === m.valor)?.atual?.valor ?? null;
@@ -261,7 +254,7 @@ export class PrecosProjetoComponent {
   });
 
   protected abrirEdicao(): void {
-    const p = this.precos.value();
+    const p = valorDe(this.precos);
     if (!p) return;
     this.preencher(p);
     this.confirmandoAtualizar.set(false);
